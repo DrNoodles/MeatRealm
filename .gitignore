@@ -1,0 +1,23 @@
+*.sln
+
+##########################
+# Unreal Generated Files #
+##########################
+/Build
+/Binaries
+/DerivedDataCache
+/Intermediate
+/Saved
+/Content/NewMap_BuiltData.uasset
+/Content/StarterContent
+#BuildingEscape/Content/StarterContent/Textures
+#BuildingEscape/Content/StarterContent/HDRI
+
+#################################
+# Visual Studio Generated Files #
+#################################
+*.VC.db
+.vs/
+*.DotSettings.user
+*/_ReSharper.Caches/
+*_BuiltData.uasset
