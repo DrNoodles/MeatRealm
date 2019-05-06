@@ -6,7 +6,7 @@
 #include "GameFramework/GameModeBase.h"
 #include "MeatRealmGameMode.generated.h"
 
-UCLASS(MinimalAPI)
+UCLASS(minimalapi)
 class AMeatRealmGameMode : public AGameModeBase
 {
 	GENERATED_BODY()
