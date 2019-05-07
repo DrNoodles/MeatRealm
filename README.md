@@ -1,6 +1,9 @@
-\|/          (__)    
+```
+\|/          (__)
      `\------(oo)
        ||    (__)
        ||w--||     \|/
    \|/
+
 Welcome to the wonderous MeatRealm.
+```
