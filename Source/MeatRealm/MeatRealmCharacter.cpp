@@ -17,13 +17,13 @@ AMeatRealmCharacter::AMeatRealmCharacter()
 	// Set size for collision capsule
 	GetCapsuleComponent()->InitCapsuleSize(42.f, 96.0f);
 
-	// set our turn rates for input
+	// Set our turn rates for input
 	BaseTurnRate = 45.f;
 	BaseLookUpRate = 45.f;
 
 	// Don't rotate when the controller rotates. Let that just affect the camera.
+	bUseControllerRotationYaw = true;
 	bUseControllerRotationPitch = false;
-	bUseControllerRotationYaw = false;
 	bUseControllerRotationRoll = false;
 
 	// Configure character movement
@@ -35,9 +35,9 @@ AMeatRealmCharacter::AMeatRealmCharacter()
 	// Create a camera boom (pulls in towards the player if there is a collision)
 	CameraBoom = CreateDefaultSubobject<USpringArmComponent>(TEXT("CameraBoom"));
 	CameraBoom->SetupAttachment(RootComponent);
-	CameraBoom->TargetArmLength = 800.f;
 	CameraBoom->bAbsoluteRotation = true; // Don't rotate with the character
-	CameraBoom->RelativeRotation = FRotator(-80.f, 0.f, 0.f);
+	CameraBoom->RelativeRotation = FRotator(-70.f, 0.f, 0.f);
+	CameraBoom->TargetArmLength = 800.f;
 	CameraBoom->bDoCollisionTest = false; // Don't want to pull camera in when it collides with level
 	CameraBoom->bEnableCameraLag = true;
 
@@ -81,7 +81,6 @@ void AMeatRealmCharacter::SetupPlayerInputComponent(class UInputComponent* Playe
 	// VR headset functionality
 	PlayerInputComponent->BindAction("ResetVR", IE_Pressed, this, &AMeatRealmCharacter::OnResetVR);
 }
-
 
 void AMeatRealmCharacter::OnResetVR()
 {
@@ -144,14 +143,15 @@ void AMeatRealmCharacter::MoveRight(float Value)
 	}
 }
 
-
 void AMeatRealmCharacter::FaceUp(float Value)
 {
-	if ((Controller != NULL) && (Value != 0.0f))
+	float deadzone = 0.25f;
+	if ((Controller != NULL) && (Value > deadzone))
 	{
 		// find out which way is forward
 		const FRotator Rotation = Controller->GetControlRotation();
 		const FRotator YawRotation(0, Rotation.Yaw, 0);
+
 		Controller->SetControlRotation(YawRotation);
 
 		//FRotator()
