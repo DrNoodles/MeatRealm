@@ -92,7 +92,6 @@ void AMeatRealmCharacter::TouchStopped(ETouchIndex::Type FingerIndex, FVector Lo
 void AMeatRealmCharacter::Tick(float DeltaSeconds)
 {
 	// Handle Input
-
 	if (Controller == nullptr) return;
 
 	const auto deadzoneSquared = 0.25f * 0.25f;
@@ -101,11 +100,8 @@ void AMeatRealmCharacter::Tick(float DeltaSeconds)
 	const auto moveVec = FVector{	GetInputAxisValue("MoveUp"), GetInputAxisValue("MoveRight"), 0 };
 	if (moveVec.SizeSquared() >= deadzoneSquared)
 	{
-		FVector xAxis{ 1.f,0,0 };
-		FVector yAxis{ 0,1.f,0 };
-
-		AddMovementInput(xAxis, moveVec.X);
-		AddMovementInput(yAxis, moveVec.Y);
+		AddMovementInput(FVector{ 1.f, 0.f, 0.f }, moveVec.X);
+		AddMovementInput(FVector{ 0.f, 1.f, 0.f }, moveVec.Y);
 	}
 
 	// Aim character with look, if look is below deadzone then try use move vec
