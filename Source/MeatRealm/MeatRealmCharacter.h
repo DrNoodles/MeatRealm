@@ -18,6 +18,7 @@ class AMeatRealmCharacter : public ACharacter
 	/** Follow camera */
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Camera, meta = (AllowPrivateAccess = "true"))
 	class UCameraComponent* FollowCamera;
+
 public:
 	AMeatRealmCharacter();
 
@@ -28,6 +29,7 @@ public:
 	/** Base look up/down rate, in deg/sec. Other scaling may affect final rate. */
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category=Camera)
 	float BaseLookUpRate;
+
 
 protected:
 
@@ -40,11 +42,11 @@ protected:
 	/** Called for side to side input */
 	void MoveRight(float Value);
 
-	/** Called for up/down aim input */
-	void FaceUp(float Value);
+	///** Called for up/down aim input */
+	//void FaceUpBinding(float Value);
 
-	/** Called for left/right aim input */
-	void FaceRight(float Value);
+	///** Called for left/right aim input */
+	//void FaceRightBinding(float Value);
 
 	///** 
 	// * Called via input to turn at a given rate. 
@@ -63,6 +65,8 @@ protected:
 
 	/** Handler for when a touch input stops. */
 	void TouchStopped(ETouchIndex::Type FingerIndex, FVector Location);
+
+	virtual void Tick(float DeltaSeconds) override;
 
 protected:
 	// APawn interface

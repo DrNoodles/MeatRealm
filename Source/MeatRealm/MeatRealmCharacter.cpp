@@ -63,16 +63,8 @@ void AMeatRealmCharacter::SetupPlayerInputComponent(class UInputComponent* Playe
 
 	PlayerInputComponent->BindAxis("MoveUp", this, &AMeatRealmCharacter::MoveUp);
 	PlayerInputComponent->BindAxis("MoveRight", this, &AMeatRealmCharacter::MoveRight);
-	PlayerInputComponent->BindAxis("FaceUp", this, &AMeatRealmCharacter::FaceUp);
-	PlayerInputComponent->BindAxis("FaceRight", this, &AMeatRealmCharacter::FaceRight);
-
-	// We have 2 versions of the rotation bindings to handle different kinds of devices differently
-	// "turn" handles devices that provide an absolute delta, such as a mouse.
-	// "turnrate" is for devices that we choose to treat as a rate of change, such as an analog joystick
-	//PlayerInputComponent->BindAxis("Turn", this, &APawn::AddControllerYawInput);
-	//PlayerInputComponent->BindAxis("TurnRate", this, &AMeatRealmCharacter::TurnAtRate);
-	//PlayerInputComponent->BindAxis("LookUp", this, &APawn::AddControllerPitchInput);
-	//PlayerInputComponent->BindAxis("LookUpRate", this, &AMeatRealmCharacter::LookUpAtRate);
+	PlayerInputComponent->BindAxis("FaceUp");
+	PlayerInputComponent->BindAxis("FaceRight");
 
 	// handle touch devices
 	PlayerInputComponent->BindTouch(IE_Pressed, this, &AMeatRealmCharacter::TouchStarted);
@@ -97,30 +89,22 @@ void AMeatRealmCharacter::TouchStopped(ETouchIndex::Type FingerIndex, FVector Lo
 		StopJumping();
 }
 
-//void AMeatRealmCharacter::TurnAtRate(float Rate)
-//{
-//	// calculate delta for this frame from the rate information
-//	AddControllerYawInput(Rate * BaseTurnRate * GetWorld()->GetDeltaSeconds());
-//	
-//}
-//
-//void AMeatRealmCharacter::LookUpAtRate(float Rate)
-//{
-//	// calculate delta for this frame from the rate information
-//	AddControllerPitchInput(Rate * BaseLookUpRate * GetWorld()->GetDeltaSeconds());
-//}
+void AMeatRealmCharacter::Tick(float DeltaSeconds)
+{
+	auto faceVec = FVector{
+		GetInputAxisValue("FaceUp"), 
+		GetInputAxisValue("FaceRight"), 0 };
+
+	auto deadzoneSquared = 0.25f * 0.25f;
+	if (Controller == NULL || faceVec.SizeSquared() < deadzoneSquared) return;
+
+	Controller->SetControlRotation(faceVec.Rotation());
+}
 
 void AMeatRealmCharacter::MoveUp(float Value)
 {
 	if ((Controller != NULL) && (Value != 0.0f))
 	{
-		//// find out which way is forward
-		//const FRotator Rotation = Controller->GetControlRotation();
-		//const FRotator YawRotation(0, Rotation.Yaw, 0);
-
-		//// get forward vector
-		//const FVector Direction = FRotationMatrix(YawRotation).GetUnitAxis(EAxis::X);
-
 		FVector xAxis{ 1.f,0,0 };
 		AddMovementInput(xAxis, Value);
 	}
@@ -130,53 +114,7 @@ void AMeatRealmCharacter::MoveRight(float Value)
 {
 	if ( (Controller != NULL) && (Value != 0.0f) )
 	{
-		//// find out which way is right
-		//const FRotator Rotation = Controller->GetControlRotation();
-		//const FRotator YawRotation(0, Rotation.Yaw, 0);
-	
-		//// get right vector 
-		//const FVector Direction = FRotationMatrix(YawRotation).GetUnitAxis(EAxis::Y);
-		//// add movement in that direction
-
 		FVector yAxis{ 0,1.f,0 };
 		AddMovementInput(yAxis, Value);
-	}
-}
-
-void AMeatRealmCharacter::FaceUp(float Value)
-{
-	float deadzone = 0.25f;
-	if ((Controller != NULL) && (Value > deadzone))
-	{
-		// find out which way is forward
-		const FRotator Rotation = Controller->GetControlRotation();
-		const FRotator YawRotation(0, Rotation.Yaw, 0);
-
-		Controller->SetControlRotation(YawRotation);
-
-		//FRotator()
-	}
-	//	//// get forward vector
-	//	//const FVector Direction = FRotationMatrix(YawRotation).GetUnitAxis(EAxis::X);
-
-
-	//	auto rot = Controller->GetControlRotation();
-	//	
-	//	FRotator(rot.Pitch, rot.Yaw, rot.Roll);
-
-	//	const FRotator Rotation = Controller->GetControlRotation();
-	//	const FRotator YawRotation(0, Rotation.Yaw, 0);
-	//	Controller->SetActorRotation()
-	//}
-}
-
-void AMeatRealmCharacter::FaceRight(float Value)
-{
-	if ((Controller != NULL) && (Value != 0.0f))
-	{
-		// find out which way is forward
-		const FRotator Rotation = Controller->GetControlRotation();
-		const FRotator YawRotation(0, Rotation.Yaw, 0);
-		Controller->SetControlRotation(YawRotation);
 	}
 }
