@@ -36,39 +36,18 @@ protected:
 	/** Resets HMD orientation in VR. */
 	void OnResetVR();
 
-	/** Called for forwards/backward input */
-	void MoveUp(float Value);
-
-	/** Called for side to side input */
-	void MoveRight(float Value);
-
-	///** Called for up/down aim input */
-	//void FaceUpBinding(float Value);
-
-	///** Called for left/right aim input */
-	//void FaceRightBinding(float Value);
-
-	///** 
-	// * Called via input to turn at a given rate. 
-	// * @param Rate	This is a normalized rate, i.e. 1.0 means 100% of desired turn rate
-	// */
-	//void TurnAtRate(float Rate);
-
-	///**
-	// * Called via input to turn look up/down at a given rate. 
-	// * @param Rate	This is a normalized rate, i.e. 1.0 means 100% of desired turn rate
-	// */
-	//void LookUpAtRate(float Rate);
-
 	/** Handler for when a touch input begins. */
 	void TouchStarted(ETouchIndex::Type FingerIndex, FVector Location);
 
 	/** Handler for when a touch input stops. */
 	void TouchStopped(ETouchIndex::Type FingerIndex, FVector Location);
 
-	virtual void Tick(float DeltaSeconds) override;
 
 protected:
+	// AActor interface
+	virtual void Tick(float DeltaSeconds) override;
+	// End of AActor interface
+
 	// APawn interface
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
 	// End of APawn interface

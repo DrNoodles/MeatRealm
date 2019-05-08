@@ -61,8 +61,8 @@ void AMeatRealmCharacter::SetupPlayerInputComponent(class UInputComponent* Playe
 	PlayerInputComponent->BindAction("Jump", IE_Pressed, this, &ACharacter::Jump);
 	PlayerInputComponent->BindAction("Jump", IE_Released, this, &ACharacter::StopJumping);
 
-	PlayerInputComponent->BindAxis("MoveUp", this, &AMeatRealmCharacter::MoveUp);
-	PlayerInputComponent->BindAxis("MoveRight", this, &AMeatRealmCharacter::MoveRight);
+	PlayerInputComponent->BindAxis("MoveUp");
+	PlayerInputComponent->BindAxis("MoveRight");
 	PlayerInputComponent->BindAxis("FaceUp");
 	PlayerInputComponent->BindAxis("FaceRight");
 
@@ -91,30 +91,31 @@ void AMeatRealmCharacter::TouchStopped(ETouchIndex::Type FingerIndex, FVector Lo
 
 void AMeatRealmCharacter::Tick(float DeltaSeconds)
 {
-	auto faceVec = FVector{
-		GetInputAxisValue("FaceUp"), 
-		GetInputAxisValue("FaceRight"), 0 };
+	// Handle Input
 
-	auto deadzoneSquared = 0.25f * 0.25f;
-	if (Controller == NULL || faceVec.SizeSquared() < deadzoneSquared) return;
+	if (Controller == nullptr) return;
 
-	Controller->SetControlRotation(faceVec.Rotation());
-}
+	const auto deadzoneSquared = 0.25f * 0.25f;
 
-void AMeatRealmCharacter::MoveUp(float Value)
-{
-	if ((Controller != NULL) && (Value != 0.0f))
+	// Move character
+	const auto moveVec = FVector{	GetInputAxisValue("MoveUp"), GetInputAxisValue("MoveRight"), 0 };
+	if (moveVec.SizeSquared() >= deadzoneSquared)
 	{
 		FVector xAxis{ 1.f,0,0 };
-		AddMovementInput(xAxis, Value);
-	}
-}
-
-void AMeatRealmCharacter::MoveRight(float Value)
-{
-	if ( (Controller != NULL) && (Value != 0.0f) )
-	{
 		FVector yAxis{ 0,1.f,0 };
-		AddMovementInput(yAxis, Value);
+
+		AddMovementInput(xAxis, moveVec.X);
+		AddMovementInput(yAxis, moveVec.Y);
+	}
+
+	// Aim character with look, if look is below deadzone then try use move vec
+	const auto lookVec = FVector{ GetInputAxisValue("FaceUp"), GetInputAxisValue("FaceRight"), 0 };
+	if (lookVec.SizeSquared() >= deadzoneSquared)
+	{
+		Controller->SetControlRotation(lookVec.Rotation());
+	}
+	else if (moveVec.SizeSquared() >= deadzoneSquared)
+	{
+		Controller->SetControlRotation(moveVec.Rotation());
 	}
 }
