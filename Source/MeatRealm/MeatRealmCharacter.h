@@ -31,16 +31,28 @@ public:
 	float BaseLookUpRate;
 
 
-protected:
+	UPROPERTY(BlueprintReadOnly, VisibleAnywhere, Category = "MeatRealm Character")
+	bool isDead = false;
 
+	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "MeatRealm Character")
+	float Health = 100.f;
+
+
+	UFUNCTION(BlueprintCallable, Category = "MeatRealm Character")
+	void ChangeHealth(float delta);
+
+	//void CalculateDead();
+
+
+protected:
 	/** Resets HMD orientation in VR. */
 	void OnResetVR();
 
 	/** Handler for when a touch input begins. */
-	void TouchStarted(ETouchIndex::Type FingerIndex, FVector Location);
+	void OnTouchStarted(ETouchIndex::Type FingerIndex, FVector Location);
 
 	/** Handler for when a touch input stops. */
-	void TouchStopped(ETouchIndex::Type FingerIndex, FVector Location);
+	void OnTouchStopped(ETouchIndex::Type FingerIndex, FVector Location);
 
 
 protected:

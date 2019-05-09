@@ -9,8 +9,8 @@
 #include "GameFramework/Controller.h"
 #include "GameFramework/SpringArmComponent.h"
 
-//////////////////////////////////////////////////////////////////////////
-// AMeatRealmCharacter
+
+/// Lifecycle
 
 AMeatRealmCharacter::AMeatRealmCharacter()
 {
@@ -51,9 +51,6 @@ AMeatRealmCharacter::AMeatRealmCharacter()
 	// are set in the derived blueprint asset named MyCharacter (to avoid direct content references in C++)
 }
 
-//////////////////////////////////////////////////////////////////////////
-// Input
-
 void AMeatRealmCharacter::SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent)
 {
 	// Set up gameplay key bindings
@@ -67,27 +64,15 @@ void AMeatRealmCharacter::SetupPlayerInputComponent(class UInputComponent* Playe
 	PlayerInputComponent->BindAxis("FaceRight");
 
 	// handle touch devices
-	PlayerInputComponent->BindTouch(IE_Pressed, this, &AMeatRealmCharacter::TouchStarted);
-	PlayerInputComponent->BindTouch(IE_Released, this, &AMeatRealmCharacter::TouchStopped);
+	PlayerInputComponent->BindTouch(IE_Pressed, this, &AMeatRealmCharacter::OnTouchStarted);
+	PlayerInputComponent->BindTouch(IE_Released, this, &AMeatRealmCharacter::OnTouchStopped);
 
 	// VR headset functionality
 	PlayerInputComponent->BindAction("ResetVR", IE_Pressed, this, &AMeatRealmCharacter::OnResetVR);
 }
 
-void AMeatRealmCharacter::OnResetVR()
-{
-	UHeadMountedDisplayFunctionLibrary::ResetOrientationAndPosition();
-}
 
-void AMeatRealmCharacter::TouchStarted(ETouchIndex::Type FingerIndex, FVector Location)
-{
-		Jump();
-}
-
-void AMeatRealmCharacter::TouchStopped(ETouchIndex::Type FingerIndex, FVector Location)
-{
-		StopJumping();
-}
+/// Methods
 
 void AMeatRealmCharacter::Tick(float DeltaSeconds)
 {
@@ -97,7 +82,7 @@ void AMeatRealmCharacter::Tick(float DeltaSeconds)
 	const auto deadzoneSquared = 0.25f * 0.25f;
 
 	// Move character
-	const auto moveVec = FVector{	GetInputAxisValue("MoveUp"), GetInputAxisValue("MoveRight"), 0 };
+	const auto moveVec = FVector{ GetInputAxisValue("MoveUp"), GetInputAxisValue("MoveRight"), 0 };
 	if (moveVec.SizeSquared() >= deadzoneSquared)
 	{
 		AddMovementInput(FVector{ 1.f, 0.f, 0.f }, moveVec.X);
@@ -114,4 +99,34 @@ void AMeatRealmCharacter::Tick(float DeltaSeconds)
 	{
 		Controller->SetControlRotation(moveVec.Rotation());
 	}
+}
+
+void AMeatRealmCharacter::ChangeHealth(float delta)
+{
+	Health += delta;
+	isDead = Health <= 0;
+}
+//
+//void AMeatRealmCharacter::CalculateDead()
+//{
+//	
+//}
+
+
+
+/// Event Handlers
+
+void AMeatRealmCharacter::OnResetVR()
+{
+	UHeadMountedDisplayFunctionLibrary::ResetOrientationAndPosition();
+}
+
+void AMeatRealmCharacter::OnTouchStarted(ETouchIndex::Type FingerIndex, FVector Location)
+{
+	Jump();
+}
+
+void AMeatRealmCharacter::OnTouchStopped(ETouchIndex::Type FingerIndex, FVector Location)
+{
+	StopJumping();
 }
