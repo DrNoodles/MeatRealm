@@ -60,12 +60,16 @@ void AMeatRealmCharacter::BeginPlay()
 {
 	Super::BeginPlay();
 
-	CurrentWeapon = GetWorld()->SpawnActorAbsolute<AWeapon>(
-		AWeapon::StaticClass(),
-		WeaponAnchor->GetComponentTransform());
+	if (WeaponClass != nullptr)
+	{
+		CurrentWeapon = GetWorld()->SpawnActorAbsolute<AWeapon>(
+			WeaponClass,
+			WeaponAnchor->GetComponentTransform());
+		
+		//CurrentWeapon->AttachToComponent(
+		//	WeaponAnchor, FAttachmentTransformRules{ EAttachmentRule::KeepWorld, true });
+	}
 
-	CurrentWeapon->AttachToComponent(
-		WeaponAnchor, FAttachmentTransformRules{ EAttachmentRule::KeepWorld, true });
 }
 
 void AMeatRealmCharacter::SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent)

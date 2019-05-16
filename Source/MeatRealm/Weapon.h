@@ -5,7 +5,7 @@
 #include "CoreMinimal.h"
 #include "GameFramework/Actor.h"
 #include "Engine/Public/TimerManager.h"
-
+#include "Projectile.h"
 #include "Weapon.generated.h"
 
 class UArrowComponent;
@@ -29,7 +29,10 @@ public:
 	void ReleaseTrigger();
 
 
-private:
+	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = Gameplay)
+		UArrowComponent* ShotSpawnLocation = nullptr;
+
+public:
 	FTimerHandle CycleTimerHandle;
 
 
@@ -41,8 +44,11 @@ private:
 	UPROPERTY(VisibleAnywhere)
 		UStaticMeshComponent* Mesh = nullptr;
 
-	UPROPERTY(VisibleAnywhere)
-		UArrowComponent* ShotSpawnLocation = nullptr;
+
+	// Projectile class to spawn.
+	UPROPERTY(EditDefaultsOnly, Category = Projectile)
+		TSubclassOf<class AProjectile> ProjectileClass;
+
 
 	UPROPERTY(EditAnywhere)
 		float ShotsPerSecond = 1.0f;

@@ -27,19 +27,15 @@ public:
 	// Called every frame
 	virtual void Tick(float DeltaTime) override;
 
-private:
-
-	//UPROPERTY(VisibleAnywhere)
-	//	USceneComponent* Root = nullptr;
 
 	UPROPERTY(VisibleAnywhere)
-		UStaticMeshComponent* Mesh = nullptr;
+		UStaticMeshComponent* MeshComp = nullptr;
 
-	UPROPERTY(VisibleDefaultsOnly, Category = Projectile)
-		USphereComponent* Collision = nullptr;
+	UPROPERTY(EditAnywhere , Category = Projectile)
+		USphereComponent* CollisionComp = nullptr;
 
 	UPROPERTY(VisibleAnywhere, Category = Movement)
-		UProjectileMovementComponent* ProjectileMovementComponent;
+		UProjectileMovementComponent* ProjectileMovementComp;
 
 	UPROPERTY(EditAnywhere)
 		float ShotsPerSecond = 1.0f;
@@ -49,4 +45,7 @@ private:
 
 	UPROPERTY(EditAnywhere)
 		bool bRepeats = true;
+
+	// Function that initializes the projectile's velocity in the shoot direction.
+	void FireInDirection(const FVector& ShootDirection);
 };

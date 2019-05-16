@@ -32,7 +32,7 @@ void AWeapon::BeginPlay()
 // Called every frame
 void AWeapon::Tick(float DeltaTime)
 {
-	Super::Tick(DeltaTime);
+	//Super::Tick(DeltaTime);
 }
 
 void AWeapon::PullTrigger()
@@ -62,7 +62,30 @@ void AWeapon::ReleaseTrigger()
 void AWeapon::OnFire()
 {
 	UE_LOG(LogTemp, Warning, TEXT("Fire!"));
+	
+	if (ProjectileClass == nullptr) return;
+
+	UWorld* World = GetWorld();
+	if (World == nullptr) return;
 
 	
+	FActorSpawnParameters SpawnParams;
+	SpawnParams.Owner = this;
+	SpawnParams.Instigator = Instigator;
+
+	// Spawn the projectile at the muzzle.
+	AProjectile* Projectile = nullptr;// = GetWorld()->SpawnActorAbsolute<AProjectile>(
+		//ProjectileClass,
+		//ShotSpawnLocation->GetComponentTransform());
+
+	/*AProjectile* Projectile = World->SpawnActor<AProjectile>(
+		ProjectileClass, ShotSpawnLocation->GetComponentTransform(), SpawnParams);*/
+
+	/*AProjectile* Projectile = World->SpawnActor<AProjectile>(
+		ProjectileClass, MuzzleLocation, MuzzleRotation, SpawnParams);*/
+
+	if (Projectile == nullptr) return;
+
+	Projectile->FireInDirection(ShotSpawnLocation->GetForwardVector());
 }
 

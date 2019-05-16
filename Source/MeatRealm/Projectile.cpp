@@ -13,27 +13,22 @@ AProjectile::AProjectile()
 
 	SetReplicates(true);
 
-	//Root = CreateDefaultSubobject<USceneComponent>(TEXT("Root"));
-	//RootComponent = Root;
+	CollisionComp = CreateDefaultSubobject<USphereComponent>(TEXT("Collision"));
+	CollisionComp->SetupAttachment(RootComponent);
+	CollisionComp->InitSphereRadius(15.f);
 
-	Collision = CreateDefaultSubobject<USphereComponent>(TEXT("Collision"));
-	Collision->SetupAttachment(RootComponent);
-	Collision->InitSphereRadius(15.f);
+	RootComponent = CollisionComp;
 
-	RootComponent = Collision;
+	MeshComp = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("Mesh"));
+	MeshComp->SetupAttachment(RootComponent);
 
-	Mesh = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("Mesh"));
-	Mesh->SetupAttachment(RootComponent);
-
-	ProjectileMovementComponent = CreateDefaultSubobject<UProjectileMovementComponent>(TEXT("ProjectileMovementComponent"));
-	ProjectileMovementComponent->SetUpdatedComponent(Collision);
-	ProjectileMovementComponent->InitialSpeed = 3000.0f;
-	ProjectileMovementComponent->MaxSpeed = 3000.0f;
-	ProjectileMovementComponent->bRotationFollowsVelocity = true;
-	ProjectileMovementComponent->bShouldBounce = true;
-	ProjectileMovementComponent->Bounciness = 0.3f;
-
-	
+	ProjectileMovementComp = CreateDefaultSubobject<UProjectileMovementComponent>(TEXT("ProjectileMovementComponent"));
+	ProjectileMovementComp->SetUpdatedComponent(CollisionComp);
+	ProjectileMovementComp->InitialSpeed = 3000.0f;
+	ProjectileMovementComp->MaxSpeed = 3000.0f;
+	ProjectileMovementComp->bRotationFollowsVelocity = true;
+	ProjectileMovementComp->bShouldBounce = true;
+	ProjectileMovementComp->Bounciness = 0.3f;
 }
 
 // Called when the game starts or when spawned
@@ -46,7 +41,12 @@ void AProjectile::BeginPlay()
 // Called every frame
 void AProjectile::Tick(float DeltaTime)
 {
-	Super::Tick(DeltaTime);
+	//Super::Tick(DeltaTime);
 
+}
+
+void AProjectile::FireInDirection(const FVector& ShootDirection)
+{
+	ProjectileMovementComp->Velocity = ShootDirection * ProjectileMovementComp->InitialSpeed;
 }
 
