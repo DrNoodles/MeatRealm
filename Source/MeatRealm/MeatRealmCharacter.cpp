@@ -66,8 +66,8 @@ void AMeatRealmCharacter::BeginPlay()
 			WeaponClass,
 			WeaponAnchor->GetComponentTransform());
 		
-		//CurrentWeapon->AttachToComponent(
-		//	WeaponAnchor, FAttachmentTransformRules{ EAttachmentRule::KeepWorld, true });
+		CurrentWeapon->AttachToComponent(
+			WeaponAnchor, FAttachmentTransformRules{ EAttachmentRule::KeepWorld, true });
 	}
 
 }

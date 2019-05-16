@@ -21,6 +21,10 @@ AWeapon::AWeapon()
 
 	ShotSpawnLocation = CreateDefaultSubobject<UArrowComponent>(TEXT("ShotSpawnLocation"));
 	ShotSpawnLocation->SetupAttachment(RootComponent);
+
+	ShotSpawnLocation2 = CreateDefaultSubobject<UArrowComponent>(TEXT("ShotSpawnLocation2"));
+	ShotSpawnLocation2->SetupAttachment(RootComponent);
+
 }
 
 // Called when the game starts or when spawned
@@ -74,7 +78,12 @@ void AWeapon::OnFire()
 	SpawnParams.Instigator = Instigator;
 
 	// Spawn the projectile at the muzzle.
-	AProjectile* Projectile = nullptr;// = GetWorld()->SpawnActorAbsolute<AProjectile>(
+	AProjectile* Projectile = GetWorld()->SpawnActorAbsolute<AProjectile>(
+		ProjectileClass,
+		ShotSpawnLocation2->GetComponentTransform());
+
+
+	//AProjectile* Projectile = nullptr;// = GetWorld()->SpawnActorAbsolute<AProjectile>(
 		//ProjectileClass,
 		//ShotSpawnLocation->GetComponentTransform());
 
@@ -86,6 +95,6 @@ void AWeapon::OnFire()
 
 	if (Projectile == nullptr) return;
 
-	Projectile->FireInDirection(ShotSpawnLocation->GetForwardVector());
+	Projectile->FireInDirection(ShotSpawnLocation2->GetForwardVector());
 }
 

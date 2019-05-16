@@ -28,9 +28,10 @@ public:
 	void PullTrigger();
 	void ReleaseTrigger();
 
+	
 
-	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = Gameplay)
-		UArrowComponent* ShotSpawnLocation = nullptr;
+	//UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = Gameplay)
+	//	UArrowComponent* ShotSpawnLocation = nullptr;
 
 public:
 	FTimerHandle CycleTimerHandle;
@@ -46,7 +47,7 @@ public:
 
 
 	// Projectile class to spawn.
-	UPROPERTY(EditDefaultsOnly, Category = Projectile)
+	UPROPERTY(EditDefaultsOnly, Category = Weapon)
 		TSubclassOf<class AProjectile> ProjectileClass;
 
 
@@ -58,10 +59,15 @@ public:
 
 	UPROPERTY(EditAnywhere)
 		bool bRepeats = true;
-	
+
+	UPROPERTY(VisibleAnywhere)
+		UArrowComponent* ShotSpawnLocation = nullptr;
 
 
 	UFUNCTION()
 	void OnFire();
+private:
 
+	UPROPERTY(VisibleAnywhere)
+		UArrowComponent* ShotSpawnLocation2 = nullptr;
 };
