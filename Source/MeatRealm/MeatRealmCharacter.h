@@ -4,7 +4,11 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/Character.h"
+#include "Weapon.h"
+
 #include "MeatRealmCharacter.generated.h"
+
+class UArrowComponent;
 
 UCLASS(config=Game)
 class AMeatRealmCharacter : public ACharacter
@@ -19,8 +23,11 @@ class AMeatRealmCharacter : public ACharacter
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Camera, meta = (AllowPrivateAccess = "true"))
 	class UCameraComponent* FollowCamera;
 
+
 public:
 	AMeatRealmCharacter();
+
+	virtual void BeginPlay() override;
 
 	/** Base turn rate, in deg/sec. Other scaling may affect final turn rate. */
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category=Camera)
@@ -32,27 +39,13 @@ public:
 
 
 	UPROPERTY(BlueprintReadOnly, VisibleAnywhere, Category = "MeatRealm Character")
-	bool isDead = false;
+	bool bIsDead = false;
 
-	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "MeatRealm Character")
+	UPROPERTY(BlueprintReadOnly, EditAnywhere, Category = "MeatRealm Character")
 	float Health = 100.f;
-
 
 	UFUNCTION(BlueprintCallable, Category = "MeatRealm Character")
 	void ChangeHealth(float delta);
-
-	//void CalculateDead();
-
-
-protected:
-	/** Resets HMD orientation in VR. */
-	void OnResetVR();
-
-	/** Handler for when a touch input begins. */
-	void OnTouchStarted(ETouchIndex::Type FingerIndex, FVector Location);
-
-	/** Handler for when a touch input stops. */
-	void OnTouchStopped(ETouchIndex::Type FingerIndex, FVector Location);
 
 
 protected:
@@ -69,5 +62,19 @@ public:
 	FORCEINLINE class USpringArmComponent* GetCameraBoom() const { return CameraBoom; }
 	/** Returns FollowCamera subobject **/
 	FORCEINLINE class UCameraComponent* GetFollowCamera() const { return FollowCamera; }
+
+
+private:
+	/// Input
+	
+	void OnFirePressed();
+	void OnFireReleased();
+
+	/// Components
+	
+	AWeapon* CurrentWeapon = nullptr;
+	
+	UPROPERTY(VisibleAnywhere)
+	UArrowComponent* WeaponAnchor = nullptr;
 };
 

@@ -4,6 +4,7 @@
 #include "HeadMountedDisplayFunctionLibrary.h"
 #include "Camera/CameraComponent.h"
 #include "Components/CapsuleComponent.h"
+#include "Components/ArrowComponent.h"
 #include "Components/InputComponent.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "GameFramework/Controller.h"
@@ -49,26 +50,49 @@ AMeatRealmCharacter::AMeatRealmCharacter()
 
 	// Note: The skeletal mesh and anim blueprint references on the Mesh component (inherited from Character) 
 	// are set in the derived blueprint asset named MyCharacter (to avoid direct content references in C++)
+
+	WeaponAnchor = CreateDefaultSubobject<UArrowComponent>(TEXT("WeaponAnchor"));
+	WeaponAnchor->SetupAttachment(RootComponent);
+
+}
+
+void AMeatRealmCharacter::BeginPlay()
+{
+	Super::BeginPlay();
+
+	CurrentWeapon = GetWorld()->SpawnActorAbsolute<AWeapon>(
+		AWeapon::StaticClass(),
+		WeaponAnchor->GetComponentTransform());
+
+	CurrentWeapon->AttachToComponent(
+		WeaponAnchor, FAttachmentTransformRules{ EAttachmentRule::KeepWorld, true });
 }
 
 void AMeatRealmCharacter::SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent)
 {
 	// Set up gameplay key bindings
 	check(PlayerInputComponent);
-	PlayerInputComponent->BindAction("Jump", IE_Pressed, this, &ACharacter::Jump);
-	PlayerInputComponent->BindAction("Jump", IE_Released, this, &ACharacter::StopJumping);
 
 	PlayerInputComponent->BindAxis("MoveUp");
 	PlayerInputComponent->BindAxis("MoveRight");
 	PlayerInputComponent->BindAxis("FaceUp");
 	PlayerInputComponent->BindAxis("FaceRight");
+	PlayerInputComponent->BindAction(
+		"FireWeapon", IE_Pressed, this, &AMeatRealmCharacter::OnFirePressed);
+	PlayerInputComponent->BindAction(
+		"FireWeapon", IE_Released, this, &AMeatRealmCharacter::OnFireReleased);
+}
 
-	// handle touch devices
-	PlayerInputComponent->BindTouch(IE_Pressed, this, &AMeatRealmCharacter::OnTouchStarted);
-	PlayerInputComponent->BindTouch(IE_Released, this, &AMeatRealmCharacter::OnTouchStopped);
+void AMeatRealmCharacter::OnFirePressed()
+{
+	if (CurrentWeapon == nullptr) return;
+	CurrentWeapon->PullTrigger();
+}
 
-	// VR headset functionality
-	PlayerInputComponent->BindAction("ResetVR", IE_Pressed, this, &AMeatRealmCharacter::OnResetVR);
+void AMeatRealmCharacter::OnFireReleased()
+{
+	if (CurrentWeapon == nullptr) return;
+	CurrentWeapon->ReleaseTrigger();
 }
 
 
@@ -104,29 +128,6 @@ void AMeatRealmCharacter::Tick(float DeltaSeconds)
 void AMeatRealmCharacter::ChangeHealth(float delta)
 {
 	Health += delta;
-	isDead = Health <= 0;
-}
-//
-//void AMeatRealmCharacter::CalculateDead()
-//{
-//	
-//}
-
-
-
-/// Event Handlers
-
-void AMeatRealmCharacter::OnResetVR()
-{
-	UHeadMountedDisplayFunctionLibrary::ResetOrientationAndPosition();
+	bIsDead = Health <= 0;
 }
 
-void AMeatRealmCharacter::OnTouchStarted(ETouchIndex::Type FingerIndex, FVector Location)
-{
-	Jump();
-}
-
-void AMeatRealmCharacter::OnTouchStopped(ETouchIndex::Type FingerIndex, FVector Location)
-{
-	StopJumping();
-}
