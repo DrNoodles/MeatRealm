@@ -28,6 +28,16 @@ public:
 	virtual void Tick(float DeltaTime) override;
 
 
+	UPROPERTY(EditAnywhere, BlueprintReadOnly)
+		float ShotDamage = 1.0f;
+
+	// Function that initializes the projectile's velocity in the shoot direction.
+	void FireInDirection(const FVector& ShootDirection, const FVector& AdditionalVelocity);
+
+	UFUNCTION()
+	void OnCompBeginOverlap(UPrimitiveComponent* OverlappedComp, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult);
+
+private:
 	UPROPERTY(VisibleAnywhere)
 		UStaticMeshComponent* MeshComp = nullptr;
 
@@ -37,9 +47,4 @@ public:
 	UPROPERTY(VisibleAnywhere, Category = Movement)
 		UProjectileMovementComponent* ProjectileMovementComp;
 
-	UPROPERTY(EditAnywhere)
-		float ShotDamage = 1.0f;
-
-	// Function that initializes the projectile's velocity in the shoot direction.
-	void FireInDirection(const FVector& ShootDirection, const FVector& AdditionalVelocity);
 };

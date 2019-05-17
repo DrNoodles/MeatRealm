@@ -17,6 +17,9 @@ AProjectile::AProjectile()
 	CollisionComp->SetupAttachment(RootComponent);
 	CollisionComp->InitSphereRadius(15.f);
 	CollisionComp->SetEnableGravity(false);
+	CollisionComp->SetGenerateOverlapEvents(true);
+
+	//CollisionComp->OnComponentBeginOverlap.AddDynamic(this, &AProjectile::OnCompBeginOverlap);
 
 
 	RootComponent = CollisionComp;
@@ -34,7 +37,6 @@ AProjectile::AProjectile()
 	ProjectileMovementComp->MaxSpeed = 3000.0f;
 	ProjectileMovementComp->bRotationFollowsVelocity = true;
 	ProjectileMovementComp->bShouldBounce = false;
-	//ProjectileMovementComp->Bounciness = 0.3f;
 
 	// TODO Show a billboard if by default on the placeholder
 }
@@ -59,3 +61,21 @@ void AProjectile::FireInDirection(const FVector& ShootDirection, const FVector& 
 		= (ShootDirection + AdditionalVelocity) * ProjectileMovementComp->InitialSpeed;
 }
 
+
+void AProjectile::OnCompBeginOverlap(UPrimitiveComponent* OverlappedComp, AActor* OtherActor,
+	UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult)
+{
+	UE_LOG(LogTemp, Warning, TEXT("BeginOverlap... "));
+
+	// TODO Test Owner and/or Instigator? Read up on these guys 
+
+	if ((OtherActor != nullptr) && (OtherActor != this) && (OtherComp != nullptr))
+	{
+		UE_LOG(LogTemp, Warning, TEXT(" ...with something!"));
+	}
+
+	if (OtherActor == this)
+	{
+		UE_LOG(LogTemp, Warning, TEXT(" ...with self!"));
+	}
+}
