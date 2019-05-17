@@ -41,12 +41,13 @@ void AProjectile::BeginPlay()
 // Called every frame
 void AProjectile::Tick(float DeltaTime)
 {
-	//Super::Tick(DeltaTime);
+	Super::Tick(DeltaTime);
 
 }
 
-void AProjectile::FireInDirection(const FVector& ShootDirection)
+void AProjectile::FireInDirection(const FVector& ShootDirection, const FVector& AdditionalVelocity)
 {
-	ProjectileMovementComp->Velocity = ShootDirection * ProjectileMovementComp->InitialSpeed;
+	ProjectileMovementComp->Velocity
+		= (ShootDirection + AdditionalVelocity) * ProjectileMovementComp->InitialSpeed;
 }
 

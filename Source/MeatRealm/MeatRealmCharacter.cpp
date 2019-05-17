@@ -62,9 +62,13 @@ void AMeatRealmCharacter::BeginPlay()
 
 	if (WeaponClass != nullptr)
 	{
+		FActorSpawnParameters params;
+		params.Instigator = this;
+		params.Owner = this;
+
 		CurrentWeapon = GetWorld()->SpawnActorAbsolute<AWeapon>(
 			WeaponClass,
-			WeaponAnchor->GetComponentTransform());
+			WeaponAnchor->GetComponentTransform(), params);
 		
 		CurrentWeapon->AttachToComponent(
 			WeaponAnchor, FAttachmentTransformRules{ EAttachmentRule::KeepWorld, true });

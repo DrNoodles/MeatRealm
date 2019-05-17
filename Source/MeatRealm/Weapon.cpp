@@ -82,19 +82,12 @@ void AWeapon::OnFire()
 		ProjectileClass,
 		ShotSpawnLocation2->GetComponentTransform());
 
-
-	//AProjectile* Projectile = nullptr;// = GetWorld()->SpawnActorAbsolute<AProjectile>(
-		//ProjectileClass,
-		//ShotSpawnLocation->GetComponentTransform());
-
-	/*AProjectile* Projectile = World->SpawnActor<AProjectile>(
-		ProjectileClass, ShotSpawnLocation->GetComponentTransform(), SpawnParams);*/
-
-	/*AProjectile* Projectile = World->SpawnActor<AProjectile>(
-		ProjectileClass, MuzzleLocation, MuzzleRotation, SpawnParams);*/
-
+	// Set the projectile velocity
 	if (Projectile == nullptr) return;
 
-	Projectile->FireInDirection(ShotSpawnLocation2->GetForwardVector());
+	const auto AdditionalVelocity = GetOwner()->GetVelocity(); // inherits player's velocity
+	const auto ShootDirection = ShotSpawnLocation2->GetForwardVector();
+
+	Projectile->FireInDirection(ShootDirection, AdditionalVelocity);
 }
 

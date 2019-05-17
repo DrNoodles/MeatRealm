@@ -47,5 +47,5 @@ public:
 		bool bRepeats = true;
 
 	// Function that initializes the projectile's velocity in the shoot direction.
-	void FireInDirection(const FVector& ShootDirection);
+	void FireInDirection(const FVector& ShootDirection, const FVector& AdditionalVelocity);
 };
