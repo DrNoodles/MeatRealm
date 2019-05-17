@@ -16,19 +16,27 @@ AProjectile::AProjectile()
 	CollisionComp = CreateDefaultSubobject<USphereComponent>(TEXT("Collision"));
 	CollisionComp->SetupAttachment(RootComponent);
 	CollisionComp->InitSphereRadius(15.f);
+	CollisionComp->SetEnableGravity(false);
+
 
 	RootComponent = CollisionComp;
 
 	MeshComp = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("Mesh"));
 	MeshComp->SetupAttachment(RootComponent);
+	MeshComp->SetGenerateOverlapEvents(false);
+	MeshComp->SetCollisionProfileName(TEXT("NoCollision"));
+	MeshComp->CanCharacterStepUpOn = ECB_No;
 
 	ProjectileMovementComp = CreateDefaultSubobject<UProjectileMovementComponent>(TEXT("ProjectileMovementComponent"));
 	ProjectileMovementComp->SetUpdatedComponent(CollisionComp);
+	ProjectileMovementComp->ProjectileGravityScale = 0.0f;
 	ProjectileMovementComp->InitialSpeed = 3000.0f;
 	ProjectileMovementComp->MaxSpeed = 3000.0f;
 	ProjectileMovementComp->bRotationFollowsVelocity = true;
-	ProjectileMovementComp->bShouldBounce = true;
-	ProjectileMovementComp->Bounciness = 0.3f;
+	ProjectileMovementComp->bShouldBounce = false;
+	//ProjectileMovementComp->Bounciness = 0.3f;
+
+	// TODO Show a billboard if by default on the placeholder
 }
 
 // Called when the game starts or when spawned

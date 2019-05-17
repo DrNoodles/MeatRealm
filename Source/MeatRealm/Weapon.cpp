@@ -13,18 +13,22 @@ AWeapon::AWeapon()
 	PrimaryActorTick.bCanEverTick = true;
 	SetReplicates(true);
 	
-	Root = CreateDefaultSubobject<USceneComponent>(TEXT("Root"));
-	RootComponent = Root;
+	RootComp = CreateDefaultSubobject<USceneComponent>(TEXT("Root"));
+	RootComponent = RootComp;
 
-	Mesh = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("Mesh"));
-	Mesh->SetupAttachment(RootComponent);
-
+	MeshComp = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("Mesh"));
+	MeshComp->SetupAttachment(RootComponent);
+	MeshComp->SetGenerateOverlapEvents(false);
+	MeshComp->SetCollisionProfileName(TEXT("NoCollision"));
+	MeshComp->CanCharacterStepUpOn = ECB_No;
+/*
 	ShotSpawnLocation = CreateDefaultSubobject<UArrowComponent>(TEXT("ShotSpawnLocation"));
-	ShotSpawnLocation->SetupAttachment(RootComponent);
+	ShotSpawnLocation->SetupAttachment(RootComponent);*/
 
-	ShotSpawnLocation2 = CreateDefaultSubobject<UArrowComponent>(TEXT("ShotSpawnLocation2"));
-	ShotSpawnLocation2->SetupAttachment(RootComponent);
+	MuzzleLocationComp = CreateDefaultSubobject<UArrowComponent>(TEXT("MuzzleLocationComp"));
+	MuzzleLocationComp->SetupAttachment(RootComponent);
 
+	// TODO Show a billboard if by default on the placeholder
 }
 
 // Called when the game starts or when spawned
@@ -48,7 +52,7 @@ void AWeapon::PullTrigger()
 	if (bRepeats)
 	{
 		GetWorld()->GetTimerManager().SetTimer(
-			CycleTimerHandle, this, &AWeapon::OnFire, ShotsPerSecond, bRepeats, -1);
+			CycleTimerHandle, this, &AWeapon::OnFire, 1.f / ShotsPerSecond, bRepeats, -1);
 	}
 
 }
@@ -65,9 +69,9 @@ void AWeapon::ReleaseTrigger()
 
 void AWeapon::OnFire()
 {
-	UE_LOG(LogTemp, Warning, TEXT("Fire!"));
 	
 	if (ProjectileClass == nullptr) return;
+	// TODO Set an error message in log suggesting the designer set a projectile class
 
 	UWorld* World = GetWorld();
 	if (World == nullptr) return;
@@ -80,14 +84,15 @@ void AWeapon::OnFire()
 	// Spawn the projectile at the muzzle.
 	AProjectile* Projectile = GetWorld()->SpawnActorAbsolute<AProjectile>(
 		ProjectileClass,
-		ShotSpawnLocation2->GetComponentTransform());
+		MuzzleLocationComp->GetComponentTransform());
 
 	// Set the projectile velocity
 	if (Projectile == nullptr) return;
 
 	const auto AdditionalVelocity = GetOwner()->GetVelocity(); // inherits player's velocity
-	const auto ShootDirection = ShotSpawnLocation2->GetForwardVector();
+	const auto ShootDirection = MuzzleLocationComp->GetForwardVector();
 
-	Projectile->FireInDirection(ShootDirection, AdditionalVelocity);
+	Projectile->FireInDirection(ShootDirection, FVector::ZeroVector);
+	UE_LOG(LogTemp, Warning, TEXT("Fired!"));
 }
 

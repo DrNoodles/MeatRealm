@@ -60,20 +60,23 @@ void AMeatRealmCharacter::BeginPlay()
 {
 	Super::BeginPlay();
 
-	if (WeaponClass != nullptr)
+	FActorSpawnParameters params;
+	params.Instigator = this;
+	params.Owner = this;
+
+
+	// Randomly select a weapon
+	if (WeaponClasses.Num() > 0)
 	{
-		FActorSpawnParameters params;
-		params.Instigator = this;
-		params.Owner = this;
+		const auto Choice = FMath::RandRange(0, WeaponClasses.Num() - 1);
 
 		CurrentWeapon = GetWorld()->SpawnActorAbsolute<AWeapon>(
-			WeaponClass,
+			WeaponClasses[Choice],
 			WeaponAnchor->GetComponentTransform(), params);
-		
+
 		CurrentWeapon->AttachToComponent(
 			WeaponAnchor, FAttachmentTransformRules{ EAttachmentRule::KeepWorld, true });
 	}
-
 }
 
 void AMeatRealmCharacter::SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent)

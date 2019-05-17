@@ -40,34 +40,32 @@ public:
 	/// Components
 
 	UPROPERTY(VisibleAnywhere)
-		USceneComponent* Root = nullptr;
+		USceneComponent* RootComp = nullptr;
 
 	UPROPERTY(VisibleAnywhere)
-		UStaticMeshComponent* Mesh = nullptr;
+		UStaticMeshComponent* MeshComp = nullptr;
+
+	UPROPERTY(VisibleAnywhere)
+		UArrowComponent* MuzzleLocationComp = nullptr;
+
 
 
 	// Projectile class to spawn.
 	UPROPERTY(EditDefaultsOnly, Category = Weapon)
 		TSubclassOf<class AProjectile> ProjectileClass;
 
-
 	UPROPERTY(EditAnywhere)
 		float ShotsPerSecond = 1.0f;
 
 	UPROPERTY(EditAnywhere)
-		float ShotDamage = 1.0f;
-
-	UPROPERTY(EditAnywhere)
 		bool bRepeats = true;
 
-	UPROPERTY(VisibleAnywhere)
-		UArrowComponent* ShotSpawnLocation = nullptr;
+	//UPROPERTY(VisibleAnywhere)
+	//	UArrowComponent* ShotSpawnLocation = nullptr;
 
 
 	UFUNCTION()
 	void OnFire();
 private:
 
-	UPROPERTY(VisibleAnywhere)
-		UArrowComponent* ShotSpawnLocation2 = nullptr;
 };

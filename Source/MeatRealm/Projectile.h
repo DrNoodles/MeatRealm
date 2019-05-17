@@ -31,20 +31,14 @@ public:
 	UPROPERTY(VisibleAnywhere)
 		UStaticMeshComponent* MeshComp = nullptr;
 
-	UPROPERTY(EditAnywhere , Category = Projectile)
+	UPROPERTY(VisibleAnywhere, Category = Projectile)
 		USphereComponent* CollisionComp = nullptr;
 
 	UPROPERTY(VisibleAnywhere, Category = Movement)
 		UProjectileMovementComponent* ProjectileMovementComp;
 
 	UPROPERTY(EditAnywhere)
-		float ShotsPerSecond = 1.0f;
-
-	UPROPERTY(EditAnywhere)
 		float ShotDamage = 1.0f;
-
-	UPROPERTY(EditAnywhere)
-		bool bRepeats = true;
 
 	// Function that initializes the projectile's velocity in the shoot direction.
 	void FireInDirection(const FVector& ShootDirection, const FVector& AdditionalVelocity);
