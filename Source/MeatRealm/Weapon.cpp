@@ -36,7 +36,7 @@ void AWeapon::BeginPlay()
 // Called every frame
 void AWeapon::Tick(float DeltaTime)
 {
-	//Super::Tick(DeltaTime);
+	Super::Tick(DeltaTime);
 }
 
 void AWeapon::PullTrigger()
