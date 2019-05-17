@@ -45,7 +45,7 @@ void AWeapon::Tick(float DeltaTime)
 
 void AWeapon::PullTrigger()
 {
-	UE_LOG(LogTemp, Warning, TEXT("PullTrigger!"));
+	//UE_LOG(LogTemp, Warning, TEXT("PullTrigger!"));
 
 	OnFire();
 
@@ -59,7 +59,7 @@ void AWeapon::PullTrigger()
 
 void AWeapon::ReleaseTrigger()
 {
-	UE_LOG(LogTemp, Warning, TEXT("ReleaseTrigger!"));
+	//UE_LOG(LogTemp, Warning, TEXT("ReleaseTrigger!"));
 
 	if (CycleTimerHandle.IsValid())
 	{
@@ -78,13 +78,13 @@ void AWeapon::OnFire()
 
 	
 	FActorSpawnParameters SpawnParams;
-	SpawnParams.Owner = this;
+	SpawnParams.Owner = GetOwner();
 	SpawnParams.Instigator = Instigator;
 
 	// Spawn the projectile at the muzzle.
 	AProjectile* Projectile = GetWorld()->SpawnActorAbsolute<AProjectile>(
 		ProjectileClass,
-		MuzzleLocationComp->GetComponentTransform());
+		MuzzleLocationComp->GetComponentTransform(), SpawnParams);
 
 	// Set the projectile velocity
 	if (Projectile == nullptr) return;
@@ -93,6 +93,6 @@ void AWeapon::OnFire()
 	const auto ShootDirection = MuzzleLocationComp->GetForwardVector();
 
 	Projectile->FireInDirection(ShootDirection, FVector::ZeroVector);
-	UE_LOG(LogTemp, Warning, TEXT("Fired!"));
+	//UE_LOG(LogTemp, Warning, TEXT("Fired!"));
 }
 

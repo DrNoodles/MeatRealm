@@ -9,6 +9,8 @@
 #include "GameFramework/CharacterMovementComponent.h"
 #include "GameFramework/Controller.h"
 #include "GameFramework/SpringArmComponent.h"
+#include "Engine/Public/DrawDebugHelpers.h"
+#include "Engine/Engine.h"
 
 
 /// Lifecycle
@@ -53,7 +55,6 @@ AMeatRealmCharacter::AMeatRealmCharacter()
 
 	WeaponAnchor = CreateDefaultSubobject<UArrowComponent>(TEXT("WeaponAnchor"));
 	WeaponAnchor->SetupAttachment(RootComponent);
-
 }
 
 void AMeatRealmCharacter::BeginPlay()
@@ -140,5 +141,10 @@ void AMeatRealmCharacter::ChangeHealth(float delta)
 {
 	Health += delta;
 	bIsDead = Health <= 0;
+	
+	//DrawDebugString()
+
+	if (GEngine) GEngine->AddOnScreenDebugMessage(-1, 1.f, FColor::Red, 
+		FString::Printf(TEXT("Health: %f"), Health));
 }
 
