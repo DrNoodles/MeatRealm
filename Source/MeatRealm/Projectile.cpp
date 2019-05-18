@@ -6,6 +6,8 @@
 #include "Components/SphereComponent.h"
 #include "GameFramework/ProjectileMovementComponent.h"
 #include "MeatRealmCharacter.h"
+#include "GameFramework/Controller.h"
+#include "GameFramework/PlayerState.h"
 
 // Sets default values
 AProjectile::AProjectile()
@@ -76,9 +78,19 @@ void AProjectile::OnCompBeginOverlap(UPrimitiveComponent* OverlappedComp, AActor
 			}
 			else
 			{
-				UE_LOG(LogTemp, Warning, TEXT(" ...with another Player. Comp:%s"), *CompName);
-				auto Enemy = (AMeatRealmCharacter*)OtherActor;
-				//Enemy->ChangeHealth(-ShotDamage);
+				
+
+				if (Role == ROLE_Authority)
+				{
+					auto Enemy = (AMeatRealmCharacter*)OtherActor;
+					Enemy->ChangeHealth(-ShotDamage);
+
+					APlayerState* PlayerState = Enemy->GetPlayerState();
+					FString PlayerName = PlayerState->GetPlayerName();
+
+					UE_LOG(LogTemp, Warning, TEXT("%s: %fhp"), *PlayerName, Enemy->Health);
+				}
+
 			}
 		}
 	}
