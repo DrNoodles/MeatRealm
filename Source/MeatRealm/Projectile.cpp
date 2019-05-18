@@ -14,6 +14,7 @@ AProjectile::AProjectile()
 	PrimaryActorTick.bCanEverTick = true;
 
 	SetReplicates(true);
+	//InitialLifeSpan = 10;
 
 	CollisionComp = CreateDefaultSubobject<USphereComponent>(TEXT("Collision"));
 	CollisionComp->InitSphereRadius(15.f);
@@ -65,29 +66,22 @@ void AProjectile::OnCompBeginOverlap(UPrimitiveComponent* OverlappedComp, AActor
 {
 	//	UE_LOG(LogTemp, Warning, TEXT("BeginOverlap... "));
 
-	if ((OtherActor != nullptr) && (OtherActor != this) && (OtherComp != nullptr))
-	{
-		if (OtherActor->IsA(AMeatRealmCharacter::StaticClass()))
-		{
-			FString CompName = OtherComp->StaticClass()->GetName();
-			//auto Owner = GetOwner();
-			if (OtherActor == Instigator)
-			{
-				return;
-				//UE_LOG(LogTemp, Warning, TEXT(" ...with Myself. Comp:%s"), *CompName);
-			}
-			else
-			{
-				if (HasAuthority())
-				{
-					auto Enemy = (AMeatRealmCharacter*)OtherActor;
-					Enemy->ChangeHealth(-ShotDamage);
-				}
+	if (!HasAuthority()) return;
 
-			}
-		}
+	const auto IsNotWorthChecking = OtherActor == nullptr || OtherActor == this || OtherComp == nullptr;
+	if (IsNotWorthChecking) return;
+
+	// Ignore other projectiles
+	if (OtherActor->IsA(AProjectile::StaticClass())) return;
+
+	if (OtherActor->IsA(AMeatRealmCharacter::StaticClass()))
+	{
+		// Dont shoot myself
+		if (OtherActor == Instigator) return;
+
+		// Damage enemy
+		static_cast<AMeatRealmCharacter*>(OtherActor)->ChangeHealth(-ShotDamage);
 	}
 
-	// TODO PROPERLY Destroy this projectile when it hits something. 
 	Destroy();
 }
