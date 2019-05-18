@@ -6,7 +6,6 @@
 #include "Components/ArrowComponent.h"
 #include "Components/StaticMeshComponent.h"
 
-// Sets default values
 AWeapon::AWeapon()
 {
 	PrimaryActorTick.bCanEverTick = true;
@@ -20,8 +19,8 @@ AWeapon::AWeapon()
 	MeshComp->SetGenerateOverlapEvents(false);
 	MeshComp->SetCollisionProfileName(TEXT("NoCollision"));
 	MeshComp->CanCharacterStepUpOn = ECB_No;
-/*
-	ShotSpawnLocation = CreateDefaultSubobject<UArrowComponent>(TEXT("ShotSpawnLocation"));
+
+	/*ShotSpawnLocation = CreateDefaultSubobject<UArrowComponent>(TEXT("ShotSpawnLocation"));
 	ShotSpawnLocation->SetupAttachment(RootComponent);*/
 
 	MuzzleLocationComp = CreateDefaultSubobject<UArrowComponent>(TEXT("MuzzleLocationComp"));
@@ -30,16 +29,38 @@ AWeapon::AWeapon()
 	// TODO Show a billboard if by default on the placeholder
 }
 
-// Called when the game starts or when spawned
 void AWeapon::BeginPlay()
 {
 	Super::BeginPlay();
+	bCanAction = true;
 }
 
-// Called every frame
 void AWeapon::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
+
+	if (!bCanAction) return;
+
+	const auto bWeaponCanFire = !bHasFiredThisTriggerPull || bRepeats;
+	if (bTriggerPulled && bWeaponCanFire)
+	{
+		bCanAction = false;
+		bHasFiredThisTriggerPull = true;
+
+		RPC_Fire_OnServer();
+
+		GetWorld()->GetTimerManager().SetTimer(
+			CycleTimerHandle, this, &AWeapon::EnableCanAction, 1.f / ShotsPerSecond, false, -1);
+	}
+}
+
+void AWeapon::EnableCanAction()
+{
+	bCanAction = true;
+	if (CycleTimerHandle.IsValid())
+	{
+		GetWorld()->GetTimerManager().ClearTimer(CycleTimerHandle);
+	}
 }
 
 void AWeapon::Shoot()
@@ -79,38 +100,19 @@ void AWeapon::Shoot()
 void AWeapon::PullTrigger()
 {
 	LogMethodWithRole("PullTrigger");
-
-	//UE_LOG(LogTemp, Warning, TEXT("PullTrigger!"));
-
-	RPC_Fire_OnServer();
-
-	if (bRepeats)
-	{
-		GetWorld()->GetTimerManager().SetTimer(
-			CycleTimerHandle, this, &AWeapon::RPC_Fire_OnServer , 1.f / ShotsPerSecond, bRepeats, -1);
-	}
+	bTriggerPulled = true;
+	bHasFiredThisTriggerPull = false;
 }
-
-//
-//
-//void AWeapon::OnInputFire()
-//{
-//	LogMethodWithRole("OnInputFire");
-//	RPC_Fire_OnServer();
-//
-//	// TODO Client side prediction of shooting
-//	//Shoot();
-//}
 
 void AWeapon::ReleaseTrigger()
 {
 	UE_LOG(LogTemp, Warning, TEXT("ReleaseTrigger!"));
-
-	if (CycleTimerHandle.IsValid())
-	{
-		GetWorld()->GetTimerManager().ClearTimer(CycleTimerHandle);
-	}
+	bTriggerPulled = false;
+	bHasFiredThisTriggerPull = false;
 }
+
+
+/// RPC
 
 void AWeapon::RPC_Fire_OnServer_Implementation()
 {

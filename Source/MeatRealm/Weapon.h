@@ -25,6 +25,7 @@ protected:
 
 public:	
 	virtual void Tick(float DeltaTime) override;
+	void EnableCanAction();
 	void PullTrigger();
 	void ReleaseTrigger();
 
@@ -78,4 +79,7 @@ private:
 	void LogMethodWithRole(FString message);
 	FString GetRoleText();
 
+	bool bCanAction;
+	bool bTriggerPulled;
+	bool bHasFiredThisTriggerPull;
 };
