@@ -196,7 +196,7 @@ void AMeatRealmCharacter::ChangeHealth(float delta)
 	bIsDead = Health <= 0;
 
 	// Report health to the screen
-	if (HasAuthority())
+	if (true||HasAuthority())
 	{
 		APlayerState* PlayerState = GetPlayerState();
 		FString PlayerName = PlayerState->GetPlayerName();
