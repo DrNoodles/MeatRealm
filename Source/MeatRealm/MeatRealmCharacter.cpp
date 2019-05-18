@@ -8,6 +8,7 @@
 #include "Components/InputComponent.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "GameFramework/Controller.h"
+#include "GameFramework/PlayerState.h"
 #include "GameFramework/SpringArmComponent.h"
 #include "Engine/Public/DrawDebugHelpers.h"
 #include "Engine/Engine.h"
@@ -199,10 +200,18 @@ void AMeatRealmCharacter::ChangeHealth(float delta)
 	// TODO Only on authority, then rep player state to all clients.
 	Health += delta;
 	bIsDead = Health <= 0;
-	
-	//DrawDebugString()
 
-	if (GEngine) GEngine->AddOnScreenDebugMessage(-1, 1.f, FColor::Red, 
-		FString::Printf(TEXT("Health: %f"), Health));
+	// Report health to the screen
+	if (HasAuthority())
+	{
+		APlayerState* PlayerState = GetPlayerState();
+		FString PlayerName = PlayerState->GetPlayerName();
+
+		if (GEngine)
+		{
+			GEngine->AddOnScreenDebugMessage(-1, 1.f, FColor::Red, 
+				FString::Printf(TEXT("%s: %fhp"), *PlayerName, Health));
+		}
+	}
 }
 
