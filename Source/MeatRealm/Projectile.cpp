@@ -73,6 +73,7 @@ void AProjectile::OnCompBeginOverlap(UPrimitiveComponent* OverlappedComp, AActor
 			//auto Owner = GetOwner();
 			if (OtherActor == Instigator)
 			{
+				return;
 				//UE_LOG(LogTemp, Warning, TEXT(" ...with Myself. Comp:%s"), *CompName);
 			}
 			else
