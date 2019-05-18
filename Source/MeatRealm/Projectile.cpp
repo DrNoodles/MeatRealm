@@ -95,5 +95,6 @@ void AProjectile::OnCompBeginOverlap(UPrimitiveComponent* OverlappedComp, AActor
 		}
 	}
 
-	// TODO Destroy this projectile when it hits something
+	// TODO PROPERLY Destroy this projectile when it hits something. 
+	Destroy();
 }
