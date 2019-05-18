@@ -27,6 +27,7 @@ class AMeatRealmCharacter : public ACharacter
 public:
 	AMeatRealmCharacter();
 
+	//bool Method(AActor* Owner, APawn* Instigator, AController* InstigatorController, AController* Controller);
 	virtual void BeginPlay() override;
 
 	// Projectile class to spawn.
@@ -68,6 +69,15 @@ public:
 	FORCEINLINE class UCameraComponent* GetFollowCamera() const { return FollowCamera; }
 
 
+	UFUNCTION(Server, Reliable, WithValidation)
+		void ServerRPC_SpawnWeapon(TSubclassOf<AWeapon> weaponClass);
+
+	UPROPERTY(ReplicatedUsing = OnRep_ServerStateChanged)
+	AWeapon* ServerCurrentWeapon;
+
+	UFUNCTION()
+		void OnRep_ServerStateChanged();
+
 private:
 	/// Input
 	
@@ -75,7 +85,8 @@ private:
 	void OnFireReleased();
 
 	/// Components
-	
+
+	UPROPERTY()
 	AWeapon* CurrentWeapon = nullptr;
 	
 	UPROPERTY(VisibleAnywhere)

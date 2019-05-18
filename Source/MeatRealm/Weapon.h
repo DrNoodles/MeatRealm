@@ -28,7 +28,6 @@ public:
 	void PullTrigger();
 	void ReleaseTrigger();
 
-	
 
 	//UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = Gameplay)
 	//	UArrowComponent* ShotSpawnLocation = nullptr;
@@ -64,8 +63,21 @@ public:
 	//	UArrowComponent* ShotSpawnLocation = nullptr;
 
 
+	//UFUNCTION()
+	//	void OnInputFire();
+
+	UFUNCTION(Server, Reliable, WithValidation)
+		void RPC_Fire_OnServer();
+
+	UFUNCTION(NetMulticast, Reliable)
+		void RPC_Fire_RepToClients();
+
 	UFUNCTION()
-	void OnFire();
+	void Shoot();
 private:
+
+
+	void LogMethodWithRole(FString message);
+	FString GetRoleText();
 
 };

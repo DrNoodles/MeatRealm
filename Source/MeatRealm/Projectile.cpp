@@ -62,16 +62,14 @@ void AProjectile::FireInDirection(const FVector& ShootDirection, const FVector& 
 void AProjectile::OnCompBeginOverlap(UPrimitiveComponent* OverlappedComp, AActor* OtherActor,
 	UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult)
 {
-	//UE_LOG(LogTemp, Warning, TEXT("BeginOverlap... "));
-
-	// TODO Test Owner and/or Instigator? Read up on these guys 
+	//	UE_LOG(LogTemp, Warning, TEXT("BeginOverlap... "));
 
 	if ((OtherActor != nullptr) && (OtherActor != this) && (OtherComp != nullptr))
 	{
 		if (OtherActor->IsA(AMeatRealmCharacter::StaticClass()))
 		{
 			FString CompName = OtherComp->StaticClass()->GetName();
-			auto Owner = GetOwner();
+			//auto Owner = GetOwner();
 			if (OtherActor == Instigator)
 			{
 				//UE_LOG(LogTemp, Warning, TEXT(" ...with Myself. Comp:%s"), *CompName);
@@ -80,8 +78,10 @@ void AProjectile::OnCompBeginOverlap(UPrimitiveComponent* OverlappedComp, AActor
 			{
 				UE_LOG(LogTemp, Warning, TEXT(" ...with another Player. Comp:%s"), *CompName);
 				auto Enemy = (AMeatRealmCharacter*)OtherActor;
-				Enemy->ChangeHealth(-ShotDamage);
+				//Enemy->ChangeHealth(-ShotDamage);
 			}
 		}
 	}
+
+	// TODO Destroy this projectile when it hits something
 }

@@ -11,6 +11,7 @@
 #include "GameFramework/SpringArmComponent.h"
 #include "Engine/Public/DrawDebugHelpers.h"
 #include "Engine/Engine.h"
+#include "UnrealNetwork.h"
 
 
 /// Lifecycle
@@ -57,26 +58,52 @@ AMeatRealmCharacter::AMeatRealmCharacter()
 	WeaponAnchor->SetupAttachment(RootComponent);
 }
 
+
+void AMeatRealmCharacter::GetLifetimeReplicatedProps(TArray< FLifetimeProperty >& OutLifetimeProps) const
+{
+	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
+	DOREPLIFETIME(AMeatRealmCharacter, ServerCurrentWeapon);
+}
+
+
+//
+//bool AMeatRealmCharacter::Method(AActor* Owner, APawn* Instigator, AController* InstigatorController, AController* Controller)
+//{
+//	FString a = Owner ? "Actor" : "";
+//	FString b = Instigator ? "Instigator" : "";
+//	FString c = InstigatorController ? " InstigatorController" : "";
+//	FString d = Controller ? " Controller" : "";
+//	UE_LOG(LogTemp, Warning, TEXT("%s %s %s %s"), *a, *b, *c, *d);
+//
+//	return Owner || Instigator || InstigatorController || Controller;
+//}
+
 void AMeatRealmCharacter::BeginPlay()
 {
 	Super::BeginPlay();
 
-	FActorSpawnParameters params;
-	params.Instigator = this;
-	params.Owner = this;
 
+
+	/*auto owner = GetOwner();
+	auto instigator = Instigator;
+	auto instigatorController = GetInstigatorController();
+	auto controller = GetController();
+	auto b = Method(owner, instigator, instigatorController, controller);*/
 
 	// Randomly select a weapon
 	if (WeaponClasses.Num() > 0)
 	{
 		const auto Choice = FMath::RandRange(0, WeaponClasses.Num() - 1);
+		ServerRPC_SpawnWeapon(WeaponClasses[Choice]);
+		
+/*
 
 		CurrentWeapon = GetWorld()->SpawnActorAbsolute<AWeapon>(
 			WeaponClasses[Choice],
 			WeaponAnchor->GetComponentTransform(), params);
 
 		CurrentWeapon->AttachToComponent(
-			WeaponAnchor, FAttachmentTransformRules{ EAttachmentRule::KeepWorld, true });
+			WeaponAnchor, FAttachmentTransformRules{ EAttachmentRule::KeepWorld, true });*/
 	}
 }
 
@@ -93,6 +120,36 @@ void AMeatRealmCharacter::SetupPlayerInputComponent(class UInputComponent* Playe
 		"FireWeapon", IE_Pressed, this, &AMeatRealmCharacter::OnFirePressed);
 	PlayerInputComponent->BindAction(
 		"FireWeapon", IE_Released, this, &AMeatRealmCharacter::OnFireReleased);
+}
+
+void AMeatRealmCharacter::ServerRPC_SpawnWeapon_Implementation(TSubclassOf<AWeapon> weaponClass)
+{
+	FActorSpawnParameters params;
+	params.Instigator = this;
+	params.Owner = this;
+
+	auto weapon = GetWorld()->SpawnActorAbsolute<AWeapon>(
+		weaponClass,
+		WeaponAnchor->GetComponentTransform(), params);
+
+	weapon->AttachToComponent(
+		WeaponAnchor, FAttachmentTransformRules{ EAttachmentRule::KeepWorld, true });
+
+	ServerCurrentWeapon = weapon;
+}
+
+bool AMeatRealmCharacter::ServerRPC_SpawnWeapon_Validate(TSubclassOf<AWeapon> weaponClass)
+{
+	return true;
+}
+
+void AMeatRealmCharacter::OnRep_ServerStateChanged()
+{
+	// TODO Destroy other current weapons?
+
+	// TODO Branch for ROLE_Auto, ROLE_Sim
+
+	CurrentWeapon = ServerCurrentWeapon;
 }
 
 void AMeatRealmCharacter::OnFirePressed()
@@ -139,6 +196,7 @@ void AMeatRealmCharacter::Tick(float DeltaSeconds)
 
 void AMeatRealmCharacter::ChangeHealth(float delta)
 {
+	// TODO Only on authority, then rep player state to all clients.
 	Health += delta;
 	bIsDead = Health <= 0;
 	
