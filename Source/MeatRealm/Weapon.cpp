@@ -83,15 +83,14 @@ void AWeapon::PullTrigger()
 	//UE_LOG(LogTemp, Warning, TEXT("PullTrigger!"));
 
 	RPC_Fire_OnServer();
-	LogMethodWithRole("PulledTrigger");
 
 	if (bRepeats)
 	{
 		GetWorld()->GetTimerManager().SetTimer(
 			CycleTimerHandle, this, &AWeapon::RPC_Fire_OnServer , 1.f / ShotsPerSecond, bRepeats, -1);
 	}
-
 }
+
 //
 //
 //void AWeapon::OnInputFire()
@@ -102,7 +101,6 @@ void AWeapon::PullTrigger()
 //	// TODO Client side prediction of shooting
 //	//Shoot();
 //}
-
 
 void AWeapon::ReleaseTrigger()
 {

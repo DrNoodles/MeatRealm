@@ -94,17 +94,11 @@ void AMeatRealmCharacter::BeginPlay()
 	// Randomly select a weapon
 	if (WeaponClasses.Num() > 0)
 	{
-		const auto Choice = FMath::RandRange(0, WeaponClasses.Num() - 1);
-		ServerRPC_SpawnWeapon(WeaponClasses[Choice]);
-		
-/*
-
-		CurrentWeapon = GetWorld()->SpawnActorAbsolute<AWeapon>(
-			WeaponClasses[Choice],
-			WeaponAnchor->GetComponentTransform(), params);
-
-		CurrentWeapon->AttachToComponent(
-			WeaponAnchor, FAttachmentTransformRules{ EAttachmentRule::KeepWorld, true });*/
+		if (ROLE_AutonomousProxy == Role)
+		{
+			const auto Choice = FMath::RandRange(0, WeaponClasses.Num() - 1);
+			ServerRPC_SpawnWeapon(WeaponClasses[Choice]);
+		}
 	}
 }
 

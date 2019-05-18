@@ -59,8 +59,6 @@ public:
 	UPROPERTY(EditAnywhere)
 		bool bRepeats = true;
 
-	//UPROPERTY(VisibleAnywhere)
-	//	UArrowComponent* ShotSpawnLocation = nullptr;
 
 
 	//UFUNCTION()
@@ -74,9 +72,9 @@ public:
 
 	UFUNCTION()
 	void Shoot();
+
+
 private:
-
-
 	void LogMethodWithRole(FString message);
 	FString GetRoleText();
 
