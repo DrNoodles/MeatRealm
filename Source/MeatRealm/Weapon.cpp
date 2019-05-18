@@ -85,11 +85,11 @@ void AWeapon::PullTrigger()
 	RPC_Fire_OnServer();
 	LogMethodWithRole("PulledTrigger");
 
-	//if (bRepeats)
-	//{
-	//	GetWorld()->GetTimerManager().SetTimer(
-	//		CycleTimerHandle, this, &AWeapon::RPC_Fire_OnServer , 1.f / ShotsPerSecond, bRepeats, -1);
-	//}
+	if (bRepeats)
+	{
+		GetWorld()->GetTimerManager().SetTimer(
+			CycleTimerHandle, this, &AWeapon::RPC_Fire_OnServer , 1.f / ShotsPerSecond, bRepeats, -1);
+	}
 
 }
 //
@@ -106,12 +106,12 @@ void AWeapon::PullTrigger()
 
 void AWeapon::ReleaseTrigger()
 {
-	//UE_LOG(LogTemp, Warning, TEXT("ReleaseTrigger!"));
+	UE_LOG(LogTemp, Warning, TEXT("ReleaseTrigger!"));
 
-	//if (CycleTimerHandle.IsValid())
-	//{
-	//	GetWorld()->GetTimerManager().ClearTimer(CycleTimerHandle);
-	//}
+	if (CycleTimerHandle.IsValid())
+	{
+		GetWorld()->GetTimerManager().ClearTimer(CycleTimerHandle);
+	}
 }
 
 void AWeapon::RPC_Fire_OnServer_Implementation()
