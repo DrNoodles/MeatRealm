@@ -5,6 +5,7 @@
 #include "Engine/World.h"
 #include "Components/ArrowComponent.h"
 #include "Components/StaticMeshComponent.h"
+#include "DrawDebugHelpers.h"
 
 AWeapon::AWeapon()
 {
@@ -34,6 +35,17 @@ void AWeapon::BeginPlay()
 void AWeapon::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
+
+	if (bReloading)
+	{
+		auto Text = "Reloading";
+		DrawDebugString(GetWorld(), FVector(0, 0, 200), "Reloading", this, FColor::Blue, DeltaTime * .8f);
+	}
+	else if (NeedsReload())
+	{
+		auto Text = "Empty!";
+		DrawDebugString(GetWorld(), FVector(0, 0, 200), "Empty!", this, FColor::Red, DeltaTime * .8f);
+	}
 
 	if (!bCanAction) return;
 
@@ -93,6 +105,7 @@ void AWeapon::ClientReloadStart()
 	if (!bUseClip) return;
 	//LogMsgWithRole("ClientReloadStart()");
 
+	bReloading = true;
 	bCanAction = false;
 	bHasActionedThisTriggerPull = true;
 
@@ -103,6 +116,7 @@ void AWeapon::ClientReloadEnd()
 {
 	//LogMsgWithRole("ClientReloadEnd()");
 
+	bReloading = false;
 	bCanAction = true;
 	AmmoInClip = ClipSize;
 	bReloadQueued = false;

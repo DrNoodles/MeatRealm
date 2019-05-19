@@ -94,4 +94,6 @@ private:
 	bool bTriggerPulled;
 	bool bHasActionedThisTriggerPull;
 	bool bReloadQueued;
+	bool bReloading;
+
 };
