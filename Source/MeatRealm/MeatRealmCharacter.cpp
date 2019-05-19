@@ -15,6 +15,8 @@
 #include "UnrealNetwork.h"
 
 
+
+
 /// Lifecycle
 
 AMeatRealmCharacter::AMeatRealmCharacter()
@@ -112,9 +114,11 @@ void AMeatRealmCharacter::SetupPlayerInputComponent(class UInputComponent* Playe
 	PlayerInputComponent->BindAxis("FaceUp");
 	PlayerInputComponent->BindAxis("FaceRight");
 	PlayerInputComponent->BindAction(
-		"FireWeapon", IE_Pressed, this, &AMeatRealmCharacter::OnFirePressed);
+		"FireWeapon", IE_Pressed, this, &AMeatRealmCharacter::Input_FirePressed);
 	PlayerInputComponent->BindAction(
-		"FireWeapon", IE_Released, this, &AMeatRealmCharacter::OnFireReleased);
+		"FireWeapon", IE_Released, this, &AMeatRealmCharacter::Input_FireReleased);
+	PlayerInputComponent->BindAction(
+		"Reload", IE_Released, this, &AMeatRealmCharacter::Input_Reload);
 }
 
 void AMeatRealmCharacter::ServerRPC_SpawnWeapon_Implementation(TSubclassOf<AWeapon> weaponClass)
@@ -147,19 +151,23 @@ void AMeatRealmCharacter::OnRep_ServerStateChanged()
 	CurrentWeapon = ServerCurrentWeapon;
 }
 
-void AMeatRealmCharacter::OnFirePressed()
+void AMeatRealmCharacter::Input_FirePressed()
 {
 	if (CurrentWeapon == nullptr) return;
-	CurrentWeapon->PullTrigger();
+	CurrentWeapon->Input_PullTrigger();
 }
 
-void AMeatRealmCharacter::OnFireReleased()
+void AMeatRealmCharacter::Input_FireReleased()
 {
 	if (CurrentWeapon == nullptr) return;
-	CurrentWeapon->ReleaseTrigger();
+	CurrentWeapon->Input_ReleaseTrigger();
 }
 
-
+void AMeatRealmCharacter::Input_Reload()
+{
+	if (CurrentWeapon == nullptr) return;
+	CurrentWeapon->Input_Reload();
+}
 /// Methods
 
 void AMeatRealmCharacter::Tick(float DeltaSeconds)

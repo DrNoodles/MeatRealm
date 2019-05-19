@@ -20,19 +20,15 @@ AWeapon::AWeapon()
 	MeshComp->SetCollisionProfileName(TEXT("NoCollision"));
 	MeshComp->CanCharacterStepUpOn = ECB_No;
 
-	/*ShotSpawnLocation = CreateDefaultSubobject<UArrowComponent>(TEXT("ShotSpawnLocation"));
-	ShotSpawnLocation->SetupAttachment(RootComponent);*/
-
 	MuzzleLocationComp = CreateDefaultSubobject<UArrowComponent>(TEXT("MuzzleLocationComp"));
 	MuzzleLocationComp->SetupAttachment(RootComponent);
-
-	// TODO Show a billboard if by default on the placeholder
 }
 
 void AWeapon::BeginPlay()
 {
 	Super::BeginPlay();
 	bCanAction = true;
+	AmmoInClip = ClipSize;
 }
 
 void AWeapon::Tick(float DeltaTime)
@@ -41,31 +37,95 @@ void AWeapon::Tick(float DeltaTime)
 
 	if (!bCanAction) return;
 
-	const auto bWeaponCanFire = !bHasFiredThisTriggerPull || bRepeats;
-	if (bTriggerPulled && bWeaponCanFire)
+
+
+	// Reload!
+	if (bReloadQueued)
 	{
-		bCanAction = false;
-		bHasFiredThisTriggerPull = true;
+		ClientReloadStart();
+		return;
+	}
 
-		RPC_Fire_OnServer();
 
-		GetWorld()->GetTimerManager().SetTimer(
-			CycleTimerHandle, this, &AWeapon::EnableCanAction, 1.f / ShotsPerSecond, false, -1);
+	// Fire!
+
+	// Behaviour: Holding the trigger on an auto gun will auto reload then auto resume firing. Whereas a semiauto requires a new trigger pull to reload and then a new trigger pull to fire again.
+	const auto bWeaponCanCycle = bFullAuto || !bHasActionedThisTriggerPull;
+	if (bTriggerPulled && bWeaponCanCycle)
+	{
+		if (NeedsReload())
+		{
+			ClientReloadStart();
+		}
+		else
+		{
+			ClientFireStart();
+		}
 	}
 }
 
-void AWeapon::EnableCanAction()
+void AWeapon::ClientFireStart()
+{
+	//LogMsgWithRole("ClientFireStart()");
+
+	bHasActionedThisTriggerPull = true;
+	bCanAction = false;
+	if (bUseClip) --AmmoInClip;
+
+	RPC_Fire_OnServer();
+
+	GetWorld()->GetTimerManager().SetTimer(
+		CanActionTimerHandle, this, &AWeapon::ClientFireEnd, 1.f / ShotsPerSecond, false, -1);
+}
+void AWeapon::ClientFireEnd()
 {
 	bCanAction = true;
-	if (CycleTimerHandle.IsValid())
+	//LogMsgWithRole("ClientFireEnd()");
+
+	if (CanActionTimerHandle.IsValid())
 	{
-		GetWorld()->GetTimerManager().ClearTimer(CycleTimerHandle);
+		GetWorld()->GetTimerManager().ClearTimer(CanActionTimerHandle);
 	}
+}
+
+void AWeapon::ClientReloadStart()
+{
+	if (!bUseClip) return;
+	//LogMsgWithRole("ClientReloadStart()");
+
+	bCanAction = false;
+	bHasActionedThisTriggerPull = true;
+
+	GetWorld()->GetTimerManager().SetTimer(
+		CanActionTimerHandle, this, &AWeapon::ClientReloadEnd, ReloadTime, false, -1);
+}
+void AWeapon::ClientReloadEnd()
+{
+	//LogMsgWithRole("ClientReloadEnd()");
+
+	bCanAction = true;
+	AmmoInClip = ClipSize;
+	bReloadQueued = false;
+
+	if (CanActionTimerHandle.IsValid())
+	{
+		GetWorld()->GetTimerManager().ClearTimer(CanActionTimerHandle);
+	}
+}
+
+bool AWeapon::CanReload() const
+{
+	return bUseClip && AmmoInClip < ClipSize;
+}
+
+bool AWeapon::NeedsReload() const
+{
+	return bUseClip && AmmoInClip < 1;
 }
 
 void AWeapon::Shoot()
 {
-	LogMethodWithRole("Shoot");
+	//LogMsgWithRole("Shoot");
 
 	if (ProjectileClass == nullptr) return;
 	// TODO Set an error message in log suggesting the designer set a projectile class
@@ -97,18 +157,25 @@ void AWeapon::Shoot()
 
 /// INPUT
 
-void AWeapon::PullTrigger()
+void AWeapon::Input_PullTrigger()
 {
-	LogMethodWithRole("PullTrigger");
+	//LogMsgWithRole("PullTrigger");
 	bTriggerPulled = true;
-	bHasFiredThisTriggerPull = false;
+	bHasActionedThisTriggerPull = false;
 }
 
-void AWeapon::ReleaseTrigger()
+void AWeapon::Input_ReleaseTrigger()
 {
-	UE_LOG(LogTemp, Warning, TEXT("ReleaseTrigger!"));
+	//UE_LOG(LogTemp, Warning, TEXT("ReleaseTrigger!"));
 	bTriggerPulled = false;
-	bHasFiredThisTriggerPull = false;
+	bHasActionedThisTriggerPull = false;
+}
+
+void AWeapon::Input_Reload()
+{
+	if (bTriggerPulled || !CanReload()) return;
+	//UE_LOG(LogTemp, Warning, TEXT("Input_Reload!"));
+	bReloadQueued = true;
 }
 
 
@@ -116,7 +183,7 @@ void AWeapon::ReleaseTrigger()
 
 void AWeapon::RPC_Fire_OnServer_Implementation()
 {
-	LogMethodWithRole("RPC_Fire_OnServer_Impl");
+	//LogMsgWithRole("RPC_Fire_OnServer_Impl");
 	RPC_Fire_RepToClients();
 }
 
@@ -127,14 +194,14 @@ bool AWeapon::RPC_Fire_OnServer_Validate()
 
 void AWeapon::RPC_Fire_RepToClients_Implementation()
 {
-	LogMethodWithRole("RPC_Fire_RepToClients_Impl");
+	//LogMsgWithRole("RPC_Fire_RepToClients_Impl");
 	Shoot();
 }
 
 
 
 
-void AWeapon::LogMethodWithRole(FString message)
+void AWeapon::LogMsgWithRole(FString message)
 {
 	FString m = GetRoleText() + ": " + message;
 	UE_LOG(LogTemp, Warning, TEXT("%s"), *m);

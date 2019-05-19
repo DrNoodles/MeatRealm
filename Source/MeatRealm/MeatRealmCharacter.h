@@ -81,8 +81,9 @@ public:
 private:
 	/// Input
 	
-	void OnFirePressed();
-	void OnFireReleased();
+	void Input_FirePressed();
+	void Input_FireReleased();
+	void Input_Reload();
 
 	/// Components
 

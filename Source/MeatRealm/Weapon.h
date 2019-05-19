@@ -23,18 +23,16 @@ public:
 protected:
 	virtual void BeginPlay() override;
 
-public:	
-	virtual void Tick(float DeltaTime) override;
-	void EnableCanAction();
-	void PullTrigger();
-	void ReleaseTrigger();
-
-
-	//UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = Gameplay)
-	//	UArrowComponent* ShotSpawnLocation = nullptr;
 
 public:
-	FTimerHandle CycleTimerHandle;
+	virtual void Tick(float DeltaTime) override;
+
+	void Input_PullTrigger();
+	void Input_ReleaseTrigger();
+	void Input_Reload();
+
+public:
+	FTimerHandle CanActionTimerHandle;
 
 
 	/// Components
@@ -58,12 +56,17 @@ public:
 		float ShotsPerSecond = 1.0f;
 
 	UPROPERTY(EditAnywhere)
-		bool bRepeats = true;
+		bool bFullAuto = true;
 
+	UPROPERTY(EditAnywhere)
+		bool bUseClip = true;
 
+	UPROPERTY(EditAnywhere)
+		int ClipSize = 10;
 
-	//UFUNCTION()
-	//	void OnInputFire();
+	UPROPERTY(EditAnywhere)
+		float ReloadTime = 3;
+
 
 	UFUNCTION(Server, Reliable, WithValidation)
 		void RPC_Fire_OnServer();
@@ -71,15 +74,24 @@ public:
 	UFUNCTION(NetMulticast, Reliable)
 		void RPC_Fire_RepToClients();
 
-	UFUNCTION()
-	void Shoot();
-
-
 private:
-	void LogMethodWithRole(FString message);
+	UFUNCTION()
+		void Shoot();
+
+	void ClientFireStart();
+	void ClientReloadStart();
+	void ClientReloadEnd();
+	void ClientFireEnd();
+
+	bool CanReload() const;
+	bool NeedsReload() const;
+
+	void LogMsgWithRole(FString message);
 	FString GetRoleText();
 
+	int AmmoInClip;
 	bool bCanAction;
 	bool bTriggerPulled;
-	bool bHasFiredThisTriggerPull;
+	bool bHasActionedThisTriggerPull;
+	bool bReloadQueued;
 };
