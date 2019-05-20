@@ -203,17 +203,24 @@ void AMeatRealmCharacter::ChangeHealth(float delta)
 	Health += delta;
 	bIsDead = Health <= 0;
 
-	// Report health to the screen
-	if (true||HasAuthority())
+	if (bIsDead)
 	{
-		APlayerState* PlayerState = GetPlayerState();
-		FString PlayerName = PlayerState->GetPlayerName();
-
-		if (GEngine)
-		{
-			GEngine->AddOnScreenDebugMessage(-1, 1.f, FColor::Red, 
-				FString::Printf(TEXT("%s: %fhp"), *PlayerName, Health));
-		}
+		Deaths++;
+		Health = 100;
+		bIsDead = false;
 	}
+
+	//// Report health to the screen
+	//if (true||HasAuthority())
+	//{
+	//	APlayerState* PlayerState = GetPlayerState();
+	//	FString PlayerName = PlayerState->GetPlayerName();
+
+	//	if (GEngine)
+	//	{
+	//		GEngine->AddOnScreenDebugMessage(-1, 1.f, FColor::Red, 
+	//			FString::Printf(TEXT("%s: %fhp"), *PlayerName, Health));
+	//	}
+	//}
 }
 

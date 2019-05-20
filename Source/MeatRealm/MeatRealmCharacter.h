@@ -43,6 +43,9 @@ public:
 	float BaseLookUpRate;
 
 
+	UPROPERTY(BlueprintReadOnly) // TODO Move to PlayerController (or PlayerState?)
+	int Deaths;
+
 	UPROPERTY(BlueprintReadOnly, VisibleAnywhere, Category = "MeatRealm Character")
 	bool bIsDead = false;
 
