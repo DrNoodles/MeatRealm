@@ -47,6 +47,8 @@ public:
 		UArrowComponent* MuzzleLocationComp = nullptr;
 
 
+	UPROPERTY(BlueprintReadOnly, Category = Weapon)
+	int AmmoInClip;
 
 	// Projectile class to spawn.
 	UPROPERTY(EditDefaultsOnly, Category = Weapon)
@@ -89,7 +91,6 @@ private:
 	void LogMsgWithRole(FString message);
 	FString GetRoleText();
 
-	int AmmoInClip;
 	bool bCanAction;
 	bool bTriggerPulled;
 	bool bHasActionedThisTriggerPull;

@@ -78,6 +78,10 @@ public:
 	UFUNCTION()
 		void OnRep_ServerStateChanged();
 
+
+	UPROPERTY(BlueprintReadOnly)
+		AWeapon* CurrentWeapon = nullptr;
+
 private:
 	/// Input
 	
@@ -87,8 +91,6 @@ private:
 
 	/// Components
 
-	UPROPERTY()
-	AWeapon* CurrentWeapon = nullptr;
 	
 	UPROPERTY(VisibleAnywhere)
 	UArrowComponent* WeaponAnchor = nullptr;
