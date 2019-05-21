@@ -33,18 +33,23 @@ AMeatRealmCharacter::AMeatRealmCharacter()
 	bUseControllerRotationPitch = false;
 	bUseControllerRotationRoll = false;
 
+	// Replication
+	bAlwaysRelevant = true;
+
+	JumpMaxCount = 0;
+
 	// Configure character movement
+	GetCharacterMovement()->MaxWalkSpeed = 450;
 	GetCharacterMovement()->bOrientRotationToMovement = false; // Character move independently of facing
 	GetCharacterMovement()->RotationRate = FRotator(0.0f, 540.0f, 0.0f); // ...at this rotation rate
-	GetCharacterMovement()->JumpZVelocity = 600.f;
 	GetCharacterMovement()->AirControl = 0.2f;
 
 	// Create a camera boom (pulls in towards the player if there is a collision)
 	CameraBoom = CreateDefaultSubobject<USpringArmComponent>(TEXT("CameraBoom"));
 	CameraBoom->SetupAttachment(RootComponent);
 	CameraBoom->bAbsoluteRotation = true; // Don't rotate with the character
-	CameraBoom->RelativeRotation = FRotator(-70.f, 0.f, 0.f);
-	CameraBoom->TargetArmLength = 800.f;
+	CameraBoom->RelativeRotation = FRotator(-56.f, 0.f, 0.f);
+	CameraBoom->TargetArmLength = 1500;
 	CameraBoom->bDoCollisionTest = false; // Don't want to pull camera in when it collides with level
 	CameraBoom->bEnableCameraLag = true;
 
@@ -53,6 +58,7 @@ AMeatRealmCharacter::AMeatRealmCharacter()
 	FollowCamera->SetupAttachment(CameraBoom, USpringArmComponent::SocketName); // Attach the camera to the end of the boom and let the boom adjust to match the controller orientation
 	FollowCamera->bAbsoluteRotation = false;
 	FollowCamera->bUsePawnControlRotation = false; // Camera does not rotate relative to arm
+	FollowCamera->SetFieldOfView(67);
 
 	// Note: The skeletal mesh and anim blueprint references on the Mesh component (inherited from Character) 
 	// are set in the derived blueprint asset named MyCharacter (to avoid direct content references in C++)
