@@ -13,5 +13,11 @@ UCLASS()
 class MEATREALM_API AHeroState : public APlayerState
 {
 	GENERATED_BODY()
-	
+
+public:
+	UPROPERTY(BlueprintReadOnly)
+		int Kills = 2;
+
+	UPROPERTY(BlueprintReadOnly)
+		int Deaths = 3;
 };
