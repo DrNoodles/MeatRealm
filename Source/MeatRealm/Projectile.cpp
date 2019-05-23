@@ -8,6 +8,9 @@
 #include "HeroCharacter.h"
 #include "GameFramework/Controller.h"
 
+
+
+
 // Sets default values
 AProjectile::AProjectile()
 {
@@ -80,7 +83,7 @@ void AProjectile::OnCompBeginOverlap(UPrimitiveComponent* OverlappedComp, AActor
 		if (OtherActor == Instigator) return;
 
 		// Damage enemy
-		static_cast<AHeroCharacter*>(OtherActor)->ChangeHealth(-ShotDamage);
+		static_cast<AHeroCharacter*>(OtherActor)->ApplyDamage(Instigator, ShotDamage);
 	}
 
 	Destroy();

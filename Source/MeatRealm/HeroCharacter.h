@@ -8,6 +8,9 @@
 
 #include "HeroCharacter.generated.h"
 
+
+DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnDied);
+
 UCLASS()
 class MEATREALM_API AHeroCharacter : public ACharacter
 {
@@ -25,6 +28,10 @@ public:
 	// Sets default values for this character's properties
 	AHeroCharacter();
 
+
+	UPROPERTY(BlueprintAssignable)
+		FOnDied OnDied;
+
 	//bool Method(AActor* Owner, APawn* Instigator, AController* InstigatorController, AController* Controller);
 	virtual void BeginPlay() override;
 
@@ -40,10 +47,6 @@ public:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Camera)
 		float BaseLookUpRate;
 
-
-	UPROPERTY(BlueprintReadOnly) // TODO Move to PlayerController (or PlayerState?)
-		int Deaths;
-
 	UPROPERTY(BlueprintReadOnly, VisibleAnywhere)
 		bool bIsDead = false;
 
@@ -51,7 +54,7 @@ public:
 		float Health = 100.f;
 
 	UFUNCTION(BlueprintCallable)
-		void ChangeHealth(float delta);
+		void ApplyDamage(const APawn* DamageCauser, float Damage);
 
 
 protected:
