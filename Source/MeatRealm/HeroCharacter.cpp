@@ -68,6 +68,15 @@ AHeroCharacter::AHeroCharacter()
 	WeaponAnchor->SetupAttachment(RootComponent);
 }
 
+void AHeroCharacter::EndPlay(const EEndPlayReason::Type EndPlayReason)
+{
+	if (ROLE_Authority == Role && ServerCurrentWeapon != nullptr)
+	{
+		ServerCurrentWeapon->Destroy();
+		ServerCurrentWeapon = nullptr;
+	}
+}
+
 
 void AHeroCharacter::GetLifetimeReplicatedProps(TArray< FLifetimeProperty >& OutLifetimeProps) const
 {
@@ -90,12 +99,12 @@ void AHeroCharacter::GetLifetimeReplicatedProps(TArray< FLifetimeProperty >& Out
 
 AHeroState* AHeroCharacter::GetHeroState() const
 {
-	return (AHeroState*)GetPlayerState();
+	return GetPlayerState<AHeroState>();
 }
 
 AHeroController* AHeroCharacter::GetHeroController() const
 {
-	return (AHeroController*)GetController();
+	return GetController<AHeroController>();
 }
 
 void AHeroCharacter::BeginPlay()
@@ -225,15 +234,11 @@ void AHeroCharacter::ApplyDamage(AHeroCharacter* DamageInstigator, float Damage)
 	if (Role == ROLE_Authority)
 	{
 		UE_LOG(LogTemp, Warning, TEXT("%fhp"), Health);
-
 	}
 
 	if (bIsDead)
 	{
 		HealthDepletedEvent.Broadcast(this, DamageInstigator);
-
-		// TODO Destroy weapon
-		// TODO Destroy character
 	}
 
 	//// Report health to the screen

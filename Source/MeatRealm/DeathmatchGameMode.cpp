@@ -24,14 +24,6 @@ ADeathmatchGameMode::ADeathmatchGameMode()
 
 	bStartPlayersAsSpectators = false;
 }
-//
-//void ADeathmatchGameMode::BeginPlay() 
-//{
-//	//auto state = (ADeathmatchGameState*)GameState;
-//
-//	
-//}
-//
 void ADeathmatchGameMode::PostLogin(APlayerController* NewPlayer)
 {
 	Super::PostLogin(NewPlayer);
@@ -54,6 +46,12 @@ void ADeathmatchGameMode::Logout(AController* Exiting)
 	ConnectedHeroControllers.Remove(Hero);
 
 	UE_LOG(LogTemp, Warning, TEXT("ConnectedHeroControllers: %d"), ConnectedHeroControllers.Num());
+}
+
+bool ADeathmatchGameMode::ShouldSpawnAtStartSpot(AController* Player)
+{
+	// Always pick a random spawn
+	return false;
 }
 
 void ADeathmatchGameMode::BindEvents(AHeroController* Controller)
@@ -84,30 +82,17 @@ void ADeathmatchGameMode::OnPlayerDie(AHeroCharacter* dead, AHeroCharacter* kill
 	dead->Destroy();
 
 	Controller->ServerRestartPlayer();
-
+	
 	auto loc = FVector{0,0,500};
 	FTransform tform{ loc };
-
-	/*FActorSpawnParameters params{};
-	params.Owner = Controller;
-	params.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AdjustIfPossibleButAlwaysSpawn;
-
-	auto actor = GetWorld()->SpawnActorAbsolute<AHeroCharacter>(
-		AHeroCharacter::StaticClass(), tform, params);*/
-	
-
-	//RestartPlayer(Controller);
 
 	auto heroChar = Controller->GetHeroCharacter();
 	auto heroState = heroChar->GetHeroState();
 
-	// TODO Is this event leaking? This is bad. Maybe put the event on the HeroState along with HP. Let the HeroCharacter be a dumb container. :D
+	// HACK! TODO Is this event leaking? This is bad. Maybe put the event on the HeroState along with HP. Let the HeroCharacter be a dumb container. :D
 	heroChar->OnHealthDepleted().AddUObject(this, &ADeathmatchGameMode::OnPlayerDie);
 
 	UE_LOG(LogTemp, Warning, TEXT("Respawned guy: %fhp %dk %dd"), heroChar->Health, heroState->Kills, heroState->Deaths);
-	//auto pawn = SpawnDefaultPawnAtTransform(Controller, tform);
-	//pawn->SetPlayerState(Controller->PlayerState);
-	//Controller->Possess(pawn);
 
 }
 

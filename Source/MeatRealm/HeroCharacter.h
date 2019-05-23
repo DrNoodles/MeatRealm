@@ -27,6 +27,7 @@ class MEATREALM_API AHeroCharacter : public ACharacter
 public:
 	// Sets default values for this character's properties
 	AHeroCharacter();
+	void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
 
 	DECLARE_EVENT_TwoParams(AHeroCharacter, FHealthDepleted, AHeroCharacter*, AHeroCharacter*)
 	FHealthDepleted& OnHealthDepleted() { return HealthDepletedEvent; }
@@ -36,6 +37,7 @@ public:
 
 	//bool Method(AActor* Owner, APawn* Instigator, AController* InstigatorController, AController* Controller);
 	virtual void BeginPlay() override;
+	
 
 	// Projectile class to spawn.
 	UPROPERTY(EditDefaultsOnly, Category = Weapon)
