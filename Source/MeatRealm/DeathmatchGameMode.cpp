@@ -80,14 +80,34 @@ void ADeathmatchGameMode::OnPlayerDie(AHeroCharacter* dead, AHeroCharacter* kill
 	UE_LOG(LogTemp, Warning, TEXT("Killer: %dk:%dd"), KillerState->Kills, KillerState->Deaths);
 
 
-	/*AHeroController* Controller = dead->GetHeroController();
-
+	AHeroController* Controller = dead->GetHeroController();
 	dead->Destroy();
 
-	FTransform location{ FVector{0,0,500} };
+	Controller->ServerRestartPlayer();
+
+	auto loc = FVector{0,0,500};
+	FTransform tform{ loc };
+
+	/*FActorSpawnParameters params{};
+	params.Owner = Controller;
+	params.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AdjustIfPossibleButAlwaysSpawn;
+
+	auto actor = GetWorld()->SpawnActorAbsolute<AHeroCharacter>(
+		AHeroCharacter::StaticClass(), tform, params);*/
 	
-	auto pawn = SpawnDefaultPawnAtTransform(Controller, location);
-	pawn->SetPlayerState(Controller->PlayerState);
-	Controller->Possess(pawn);*/
-	
+
+	//RestartPlayer(Controller);
+
+	auto heroChar = Controller->GetHeroCharacter();
+	auto heroState = heroChar->GetHeroState();
+
+	// TODO Is this event leaking? This is bad. Maybe put the event on the HeroState along with HP. Let the HeroCharacter be a dumb container. :D
+	heroChar->OnHealthDepleted().AddUObject(this, &ADeathmatchGameMode::OnPlayerDie);
+
+	UE_LOG(LogTemp, Warning, TEXT("Respawned guy: %fhp %dk %dd"), heroChar->Health, heroState->Kills, heroState->Deaths);
+	//auto pawn = SpawnDefaultPawnAtTransform(Controller, tform);
+	//pawn->SetPlayerState(Controller->PlayerState);
+	//Controller->Possess(pawn);
+
 }
+

@@ -110,6 +110,8 @@ void AHeroCharacter::BeginPlay()
 	auto controller = GetController();
 	auto b = Method(owner, instigator, instigatorController, controller);*/
 
+	Health = 100;
+
 	// Randomly select a weapon
 	if (WeaponClasses.Num() > 0)
 	{
@@ -219,6 +221,12 @@ void AHeroCharacter::ApplyDamage(AHeroCharacter* DamageInstigator, float Damage)
 	// TODO Only on authority, then rep player state to all clients.
 	Health -= Damage;
 	bIsDead = Health <= 0;
+
+	if (Role == ROLE_Authority)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("%fhp"), Health);
+
+	}
 
 	if (bIsDead)
 	{
