@@ -54,6 +54,16 @@ bool ADeathmatchGameMode::ShouldSpawnAtStartSpot(AController* Player)
 	return false;
 }
 
+void ADeathmatchGameMode::SetPlayerDefaults(APawn* PlayerPawn)
+{
+	UE_LOG(LogTemp, Warning, TEXT("SetPlayerDefaults"));
+	
+	auto heroChar = (AHeroCharacter*)PlayerPawn;
+	heroChar->GetHeroState()->Health = 100;
+
+	//heroChar->GetHeroController()->ShowHud(true);
+}
+
 void ADeathmatchGameMode::BindEvents(AHeroController* Controller)
 {
 	FDelegateHandle Handle = Controller->GetHeroCharacter()->OnHealthDepleted().AddUObject(this, &ADeathmatchGameMode::OnPlayerDie);
@@ -81,18 +91,18 @@ void ADeathmatchGameMode::OnPlayerDie(AHeroCharacter* dead, AHeroCharacter* kill
 	AHeroController* Controller = dead->GetHeroController();
 	dead->Destroy();
 
-	Controller->ServerRestartPlayer();
-	
-	auto loc = FVector{0,0,500};
-	FTransform tform{ loc };
+	RestartPlayer(Controller);
+
+	//auto loc = FVector{0,0,500};
+	//FTransform tform{ loc };
 
 	auto heroChar = Controller->GetHeroCharacter();
-	auto heroState = heroChar->GetHeroState();
+	//auto heroState = heroChar->GetHeroState();
 
 	// HACK! TODO Is this event leaking? This is bad. Maybe put the event on the HeroState along with HP. Let the HeroCharacter be a dumb container. :D
 	heroChar->OnHealthDepleted().AddUObject(this, &ADeathmatchGameMode::OnPlayerDie);
 
-	UE_LOG(LogTemp, Warning, TEXT("Respawned guy: %fhp %dk %dd"), heroChar->Health, heroState->Kills, heroState->Deaths);
+	//UE_LOG(LogTemp, Warning, TEXT("Respawned guy: %fhp %dk %dd"), heroChar->Health, heroState->Kills, heroState->Deaths);
 
 }
 

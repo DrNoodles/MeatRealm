@@ -23,7 +23,7 @@ public:
 	void PostLogin(APlayerController* NewPlayer) override;
 	void Logout(AController* Exiting) override;
 	bool ShouldSpawnAtStartSpot(AController* Player) override;
-	
+	void SetPlayerDefaults(APawn* PlayerPawn) override;
 
 private:
 	TArray<AHeroController*> ConnectedHeroControllers;
