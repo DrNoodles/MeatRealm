@@ -5,7 +5,7 @@
 #include "Components/StaticMeshComponent.h"
 #include "Components/SphereComponent.h"
 #include "GameFramework/ProjectileMovementComponent.h"
-#include "MeatRealmCharacter.h"
+#include "HeroCharacter.h"
 #include "GameFramework/Controller.h"
 
 // Sets default values
@@ -74,13 +74,13 @@ void AProjectile::OnCompBeginOverlap(UPrimitiveComponent* OverlappedComp, AActor
 	// Ignore other projectiles
 	if (OtherActor->IsA(AProjectile::StaticClass())) return;
 
-	if (OtherActor->IsA(AMeatRealmCharacter::StaticClass()))
+	if (OtherActor->IsA(AHeroCharacter::StaticClass())) // TODO Decouple from HeroCharacter. Introduce IDamageable interface
 	{
 		// Dont shoot myself
 		if (OtherActor == Instigator) return;
 
 		// Damage enemy
-		static_cast<AMeatRealmCharacter*>(OtherActor)->ChangeHealth(-ShotDamage);
+		static_cast<AHeroCharacter*>(OtherActor)->ChangeHealth(-ShotDamage);
 	}
 
 	Destroy();
