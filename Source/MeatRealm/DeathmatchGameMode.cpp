@@ -7,6 +7,7 @@
 #include "DrawDebugHelpers.h"
 #include "HeroCharacter.h"
 #include "HeroState.h"
+#include "Engine/World.h"
 
 ADeathmatchGameMode::ADeathmatchGameMode()
 {
@@ -20,6 +21,8 @@ ADeathmatchGameMode::ADeathmatchGameMode()
 	PlayerControllerClass = PlayerControllerFinder.Class;
 	PlayerStateClass = AHeroState::StaticClass();
 	GameStateClass = ADeathmatchGameState::StaticClass();
+
+	bStartPlayersAsSpectators = false;
 }
 //
 //void ADeathmatchGameMode::BeginPlay() 
@@ -53,30 +56,38 @@ void ADeathmatchGameMode::Logout(AController* Exiting)
 	UE_LOG(LogTemp, Warning, TEXT("ConnectedHeroControllers: %d"), ConnectedHeroControllers.Num());
 }
 
+void ADeathmatchGameMode::BindEvents(AHeroController* Controller)
+{
+	FDelegateHandle Handle = Controller->GetHeroCharacter()->OnHealthDepleted().AddUObject(this, &ADeathmatchGameMode::OnPlayerDie);
+}
+
+void ADeathmatchGameMode::UnbindEvents(AHeroController* Controller)
+{
+	//Controller->GetHeroCharacter()->OnHealthDepleted().Remove(Handle)
+}
+
+
+
 void ADeathmatchGameMode::OnPlayerDie(AHeroCharacter* dead, AHeroCharacter* killer)
 {
-	UE_LOG(LogTemp, Warning, TEXT("Player ded"));
-}
+	auto DeadState = dead->GetHeroState();
+	auto KillerState = killer->GetHeroState();
 
-void ADeathmatchGameMode::Blah()
-{
-	UE_LOG(LogTemp, Warning, TEXT("Player ded"));
-}
+	DeadState->Deaths++;
+	KillerState->Kills++;
 
-void ADeathmatchGameMode::BindEvents(AHeroController* c)
-{
-	auto ch = c->GetCharacter();
-	if (ch == nullptr) return;
+	UE_LOG(LogTemp, Warning, TEXT("Deadguy: %dk:%dd"), DeadState->Kills, DeadState->Deaths);
+	UE_LOG(LogTemp, Warning, TEXT("Killer: %dk:%dd"), KillerState->Kills, KillerState->Deaths);
 
-	auto hero = (AHeroCharacter*)ch;
-	hero->OnHealthDepleted().AddUObject(this, &ADeathmatchGameMode::OnPlayerDie);
-}
 
-void ADeathmatchGameMode::UnbindEvents(AHeroController* c)
-{
-	auto ch = c->GetCharacter();
-	if (ch == nullptr) return;
+	/*AHeroController* Controller = dead->GetHeroController();
 
-	auto hero = (AHeroCharacter*)ch;
-	//hero->NoHealthRemains.Unbind();
+	dead->Destroy();
+
+	FTransform location{ FVector{0,0,500} };
+	
+	auto pawn = SpawnDefaultPawnAtTransform(Controller, location);
+	pawn->SetPlayerState(Controller->PlayerState);
+	Controller->Possess(pawn);*/
+	
 }

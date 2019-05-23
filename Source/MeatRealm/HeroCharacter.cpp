@@ -13,7 +13,8 @@
 #include "Engine/Public/DrawDebugHelpers.h"
 #include "Engine/Engine.h"
 #include "UnrealNetwork.h"
-
+#include "HeroState.h"
+#include "HeroController.h"
 
 
 
@@ -86,6 +87,16 @@ void AHeroCharacter::GetLifetimeReplicatedProps(TArray< FLifetimeProperty >& Out
 //
 //	return Owner || Instigator || InstigatorController || Controller;
 //}
+
+AHeroState* AHeroCharacter::GetHeroState() const
+{
+	return (AHeroState*)GetPlayerState();
+}
+
+AHeroController* AHeroCharacter::GetHeroController() const
+{
+	return (AHeroController*)GetController();
+}
 
 void AHeroCharacter::BeginPlay()
 {

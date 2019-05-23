@@ -27,9 +27,8 @@ public:
 private:
 	TArray<AHeroController*> ConnectedHeroControllers;
 
-	void OnPlayerDie(AHeroCharacter* dead, AHeroCharacter* killer);
-	void BindEvents(AHeroController* c);
+	void BindEvents(AHeroController* Controller);
 	void UnbindEvents(AHeroController* c);
 
-	void Blah();
+	void OnPlayerDie(AHeroCharacter* dead, AHeroCharacter* killer);
 };

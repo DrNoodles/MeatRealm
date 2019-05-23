@@ -8,6 +8,8 @@
 
 #include "HeroCharacter.generated.h"
 
+class AHeroState;
+class AHeroController;
 
 UCLASS()
 class MEATREALM_API AHeroCharacter : public ACharacter
@@ -28,7 +30,9 @@ public:
 
 	DECLARE_EVENT_TwoParams(AHeroCharacter, FHealthDepleted, AHeroCharacter*, AHeroCharacter*)
 	FHealthDepleted& OnHealthDepleted() { return HealthDepletedEvent; }
-	
+
+	AHeroState* GetHeroState() const;
+	AHeroController* GetHeroController() const;
 
 	//bool Method(AActor* Owner, APawn* Instigator, AController* InstigatorController, AController* Controller);
 	virtual void BeginPlay() override;

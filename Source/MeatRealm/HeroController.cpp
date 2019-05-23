@@ -2,4 +2,9 @@
 
 
 #include "HeroController.h"
+#include "HeroCharacter.h"
 
+AHeroCharacter* AHeroController::GetHeroCharacter() const
+{
+	return (AHeroCharacter*)GetCharacter();
+}
