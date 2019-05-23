@@ -203,7 +203,7 @@ void AHeroCharacter::Tick(float DeltaSeconds)
 	}
 }
 
-void AHeroCharacter::ApplyDamage(const APawn* DamageCauser, float Damage)
+void AHeroCharacter::ApplyDamage(AHeroCharacter* DamageInstigator, float Damage)
 {
 	// TODO Only on authority, then rep player state to all clients.
 	Health -= Damage;
@@ -211,8 +211,7 @@ void AHeroCharacter::ApplyDamage(const APawn* DamageCauser, float Damage)
 
 	if (bIsDead)
 	{
-		
-		if (OnDied.IsBound()) OnDied.Broadcast();
+		HealthDepletedEvent.Broadcast(this, DamageInstigator);
 
 		// TODO Destroy weapon
 		// TODO Destroy character

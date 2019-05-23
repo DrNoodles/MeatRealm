@@ -5,6 +5,7 @@
 #include "CoreMinimal.h"
 #include "GameFramework/GameModeBase.h"
 #include "HeroController.h"
+#include "HeroCharacter.h"
 
 #include "DeathmatchGameMode.generated.h"
 
@@ -20,9 +21,15 @@ public:
 	ADeathmatchGameMode();
 	//void BeginPlay() override;
 	void PostLogin(APlayerController* NewPlayer) override;
-	//void Logout(AController* Exiting) override;
+	void Logout(AController* Exiting) override;
 
 
 private:
 	TArray<AHeroController*> ConnectedHeroControllers;
+
+	void OnPlayerDie(AHeroCharacter* dead, AHeroCharacter* killer);
+	void BindEvents(AHeroController* c);
+	void UnbindEvents(AHeroController* c);
+
+	void Blah();
 };

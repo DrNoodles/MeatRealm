@@ -82,8 +82,10 @@ void AProjectile::OnCompBeginOverlap(UPrimitiveComponent* OverlappedComp, AActor
 		// Dont shoot myself
 		if (OtherActor == Instigator) return;
 
+		const auto Enemy = static_cast<AHeroCharacter*>(Instigator); // TODO is this dangerous? 
+
 		// Damage enemy
-		static_cast<AHeroCharacter*>(OtherActor)->ApplyDamage(Instigator, ShotDamage);
+		static_cast<AHeroCharacter*>(OtherActor)->ApplyDamage(Enemy, ShotDamage);
 	}
 
 	Destroy();

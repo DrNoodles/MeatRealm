@@ -9,8 +9,6 @@
 #include "HeroCharacter.generated.h"
 
 
-DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnDied);
-
 UCLASS()
 class MEATREALM_API AHeroCharacter : public ACharacter
 {
@@ -28,9 +26,9 @@ public:
 	// Sets default values for this character's properties
 	AHeroCharacter();
 
-
-	UPROPERTY(BlueprintAssignable)
-		FOnDied OnDied;
+	DECLARE_EVENT_TwoParams(AHeroCharacter, FHealthDepleted, AHeroCharacter*, AHeroCharacter*)
+	FHealthDepleted& OnHealthDepleted() { return HealthDepletedEvent; }
+	
 
 	//bool Method(AActor* Owner, APawn* Instigator, AController* InstigatorController, AController* Controller);
 	virtual void BeginPlay() override;
@@ -54,7 +52,7 @@ public:
 		float Health = 100.f;
 
 	UFUNCTION(BlueprintCallable)
-		void ApplyDamage(const APawn* DamageCauser, float Damage);
+		void ApplyDamage(AHeroCharacter* DamageInstigator, float Damage);
 
 
 protected:
@@ -87,6 +85,10 @@ public:
 		AWeapon* CurrentWeapon = nullptr;
 
 private:
+	/// Events
+	FHealthDepleted HealthDepletedEvent;
+
+
 	/// Input
 
 	void Input_FirePressed();
