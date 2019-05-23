@@ -12,7 +12,7 @@ ADeathmatchGameMode::ADeathmatchGameMode()
 {
 	const ConstructorHelpers::FClassFinder<AHeroCharacter> PawnFinder(
 		TEXT("/Game/MeatRealm/Character/HeroCharacterBP"));
-	const ConstructorHelpers::FClassFinder<APlayerController> PlayerControllerFinder(
+	const ConstructorHelpers::FClassFinder<AHeroController> PlayerControllerFinder(
 		TEXT("/Game/MeatRealm/Game/HeroControllerBP"));
 
 	DefaultPlayerName = FText::FromString("Sasquatch");
