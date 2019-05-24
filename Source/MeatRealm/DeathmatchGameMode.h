@@ -27,8 +27,6 @@ public:
 private:
 	TArray<AHeroController*> ConnectedHeroControllers;
 
-	void BindEvents(AHeroController* Controller);
-	void UnbindEvents(AHeroController* c);
-
 	void OnPlayerDie(AHeroCharacter* dead, AHeroCharacter* killer);
+	void EndGameIfFragLimitReached() const;
 };

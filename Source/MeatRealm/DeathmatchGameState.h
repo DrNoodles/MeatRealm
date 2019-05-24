@@ -18,5 +18,12 @@ class MEATREALM_API ADeathmatchGameState : public AGameStateBase
 public:
 	UFUNCTION(BlueprintCallable)
 	TArray<UScoreboardEntryData*> GetScoreboard();
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly)
+		int FragLimit = 15;
+
+	// In Minutes
+	UPROPERTY(EditAnywhere, BlueprintReadOnly)
+		float TimeLimit = 10;
 };
 

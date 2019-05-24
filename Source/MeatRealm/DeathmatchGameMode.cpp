@@ -6,6 +6,7 @@
 #include "UObject/ConstructorHelpers.h"
 #include "HeroCharacter.h"
 #include "HeroState.h"
+#include "ScoreboardEntryData.h"
 
 ADeathmatchGameMode::ADeathmatchGameMode()
 {
@@ -62,7 +63,6 @@ void ADeathmatchGameMode::SetPlayerDefaults(APawn* PlayerPawn)
 	heroChar->OnHealthDepleted().AddUObject(this, &ADeathmatchGameMode::OnPlayerDie);
 }
 
-
 void ADeathmatchGameMode::OnPlayerDie(AHeroCharacter* dead, AHeroCharacter* killer)
 {
 	auto DeadState = dead->GetHeroState();
@@ -75,6 +75,24 @@ void ADeathmatchGameMode::OnPlayerDie(AHeroCharacter* dead, AHeroCharacter* kill
 
 	AHeroController* Controller = dead->GetHeroController();
 	dead->Destroy();
+
+
 	RestartPlayer(Controller);
+
+	EndGameIfFragLimitReached();
 }
+
+void ADeathmatchGameMode::EndGameIfFragLimitReached() const
+{
+	auto DMGameState = GetGameState<ADeathmatchGameState>();
+	auto Scores = DMGameState->GetScoreboard();
+	if (Scores.Num() > 0 && Scores[0]->Kills >= DMGameState->FragLimit)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("Hit Frag Limit!"));
+
+		const auto World = GetWorld();
+		if (World) World->ServerTravel("/Game/MeatRealm/Maps/TestMap");
+	}
+}
+
 
