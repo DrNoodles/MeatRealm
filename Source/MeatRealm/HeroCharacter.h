@@ -51,9 +51,6 @@ public:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Camera)
 		float BaseLookUpRate;
 
-	UPROPERTY(BlueprintReadOnly, VisibleAnywhere)
-		bool bIsDead = false;
-
 	UPROPERTY(BlueprintReadOnly, EditAnywhere)
 		float Health = 100.f;
 

@@ -221,17 +221,15 @@ void AHeroCharacter::ApplyDamage(AHeroCharacter* DamageInstigator, float Damage)
 {
 	// TODO Only on authority, then rep player state to all clients.
 	Health -= Damage;
-	bIsDead = Health <= 0;
-
 
 	if (Role == ROLE_Authority)
 	{
 		UE_LOG(LogTemp, Warning, TEXT("%fhp"), Health);
-	}
 
-	if (bIsDead)
-	{
-		HealthDepletedEvent.Broadcast(this, DamageInstigator);
+		if (Health <= 0)
+		{
+			HealthDepletedEvent.Broadcast(this, DamageInstigator);
+		}
 	}
 }
 
