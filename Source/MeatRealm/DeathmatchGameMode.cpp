@@ -76,13 +76,14 @@ void ADeathmatchGameMode::OnPlayerDie(AHeroCharacter* dead, AHeroCharacter* kill
 	AHeroController* Controller = dead->GetHeroController();
 	dead->Destroy();
 
+	if (EndGameIfFragLimitReached()) return;
 
 	RestartPlayer(Controller);
-
-	EndGameIfFragLimitReached();
 }
 
-void ADeathmatchGameMode::EndGameIfFragLimitReached() const
+
+
+bool ADeathmatchGameMode::EndGameIfFragLimitReached() const
 {
 	auto DMGameState = GetGameState<ADeathmatchGameState>();
 	auto Scores = DMGameState->GetScoreboard();
@@ -92,6 +93,7 @@ void ADeathmatchGameMode::EndGameIfFragLimitReached() const
 
 		const auto World = GetWorld();
 		if (World) World->ServerTravel("/Game/MeatRealm/Maps/TestMap");
+		return true;
 	}
 }
 
