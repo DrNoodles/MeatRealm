@@ -25,8 +25,11 @@ class MEATREALM_API AHeroCharacter : public ACharacter
 		class UCameraComponent* FollowCamera;
 
 public:
+
+
 	// Sets default values for this character's properties
 	AHeroCharacter();
+	void Restart() override;
 	void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
 
 	DECLARE_EVENT_TwoParams(AHeroCharacter, FHealthDepleted, AHeroCharacter*, AHeroCharacter*)
@@ -35,9 +38,6 @@ public:
 	AHeroState* GetHeroState() const;
 	AHeroController* GetHeroController() const;
 
-	//bool Method(AActor* Owner, APawn* Instigator, AController* InstigatorController, AController* Controller);
-	virtual void BeginPlay() override;
-	
 
 	// Projectile class to spawn.
 	UPROPERTY(EditDefaultsOnly, Category = Weapon)
@@ -106,4 +106,12 @@ private:
 
 	UPROPERTY(VisibleAnywhere)
 		UArrowComponent* WeaponAnchor = nullptr;
+
+
+
+
+
+	void LogMsgWithRole(FString message);
+	FString GetEnumText(ENetRole role);
+	FString GetRoleText();
 };

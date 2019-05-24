@@ -4,57 +4,114 @@
 #include "HeroController.h"
 #include "HeroCharacter.h"
 
-AHeroController::AHeroController()
+void AHeroController::OnPossess(APawn* InPawn)
 {
-	// TODO Get specific class of HUD. Then try set MyCharacter variable manually.
+	// Called on server upon possessing a pawn
+
+	LogMsgWithRole("AHeroController::OnPossess()");
+	Super::OnPossess(InPawn);
 }
 
-void AHeroController::BeginPlay()
+void AHeroController::AcknowledgePossession(APawn* P)
 {
-	ShowHud(true);
+	// Called on owning-client upon possessing a pawn
+
+	LogMsgWithRole("AHeroController::AcknowledgePossession()");
+	Super::AcknowledgePossession(P);
+}
+
+void AHeroController::OnUnPossess()
+{
+	// Called on server and owning-client upon depossessing a pawn
+
+	LogMsgWithRole("AHeroController::OnUnPossess()");
+	Super::OnUnPossess();
 }
 
 AHeroCharacter* AHeroController::GetHeroCharacter() const
 {
-	return (AHeroCharacter*)GetCharacter();
+	const auto Character = GetCharacter();
+	return Character == nullptr ? nullptr : (AHeroCharacter*)Character;
 }
 
 void AHeroController::ShowHud(bool bMakeVisible)
 {
-	bool bOwningClient = GetLocalRole() == ROLE_AutonomousProxy;
-	bool bListenServer = GetRemoteRole() == ROLE_SimulatedProxy;
-	
-	if (!bOwningClient && !bListenServer) return;
+	const bool bOwningClient = GetLocalRole() == ROLE_AutonomousProxy;
+	const bool bListenServer = GetRemoteRole() == ROLE_SimulatedProxy;
+	if (!bOwningClient && !bListenServer) 
+	{
+		return;
+	}
 
-	//if (IsRunningDedicatedServer()) return; // HeroController can only be on dedicated server or owning client/listen server
+	if (!HudClass)
+	{
+		UE_LOG(LogTemp, Error, TEXT("HeroControllerBP: Must set HUD class in BP to display it.")) 
+		return;
+	};
 
-	if (!wMainMenu) return;
-	// TODO asset this!
+
+	// If the hud exists, remove it!
+	if (HudInstance != nullptr)
+	{
+		HudInstance->RemoveFromParent();
+		HudInstance = nullptr;
+		UE_LOG(LogTemp, Warning, TEXT("Destroyed HUD"));
+	}
 
 	if (bMakeVisible)
 	{
-
-		// Create Hud Widget
-		if (MyMainMenu == nullptr)
+		// Create and attach a new hud
+		HudInstance = CreateWidget<UUserWidget>(this, HudClass);
+		if (HudInstance != nullptr)
 		{
-			MyMainMenu = CreateWidget<UUserWidget>(this, wMainMenu);
-		}
-
-		// Attach to Viewport
-		if (MyMainMenu != nullptr)
-		{
-			MyMainMenu->AddToViewport();
+			HudInstance->AddToViewport();
 			UE_LOG(LogTemp, Warning, TEXT("Created HUD"));
 		}
 	}
-	else
-	{
-		if (MyMainMenu != nullptr)
-		{
-			MyMainMenu->RemoveFromParent();
-			MyMainMenu = nullptr;
+}
 
-			UE_LOG(LogTemp, Warning, TEXT("Destroyed HUD"));
-		}
+
+
+
+void AHeroController::LogMsgWithRole(FString message)
+{
+	FString m = GetRoleText() + ": " + message;
+	UE_LOG(LogTemp, Warning, TEXT("%s"), *m);
+}
+FString AHeroController::GetEnumText(ENetRole role)
+{
+	switch (role) {
+	case ROLE_None:
+		return "None";
+	case ROLE_SimulatedProxy:
+		return "SimulatedProxy";
+	case ROLE_AutonomousProxy:
+		return "AutonomouseProxy";
+	case ROLE_Authority:
+		return "Authority";
+	case ROLE_MAX:
+	default:
+		return "ERROR";
 	}
 }
+FString AHeroController::GetRoleText()
+{
+	auto Local = Role;
+	auto Remote = GetRemoteRole();
+
+
+	if (Remote == ROLE_SimulatedProxy) //&& Local == ROLE_Authority
+		return "ListenServer";
+
+	if (Local == ROLE_Authority)
+		return "Server";
+
+	if (Local == ROLE_AutonomousProxy) // && Remote == ROLE_Authority
+		return "OwningClient";
+
+	if (Local == ROLE_SimulatedProxy) // && Remote == ROLE_Authority
+		return "SimClient";
+
+	return "Unknown: " + GetEnumText(Role) + " " + GetEnumText(GetRemoteRole());
+}
+

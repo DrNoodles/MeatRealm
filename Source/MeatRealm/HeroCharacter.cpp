@@ -77,47 +77,22 @@ void AHeroCharacter::EndPlay(const EEndPlayReason::Type EndPlayReason)
 	}
 }
 
-
-void AHeroCharacter::GetLifetimeReplicatedProps(TArray< FLifetimeProperty >& OutLifetimeProps) const
+void AHeroCharacter::Restart()
 {
-	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
-	DOREPLIFETIME(AHeroCharacter, ServerCurrentWeapon);
-}
+	Super::Restart();
+	LogMsgWithRole("AHeroCharacter::Restart()");
 
+	bool bIsOwningClient = Role == ROLE_AutonomousProxy;// || GetRemoteRole() == ROLE_SimulatedProxy;
+	if (bIsOwningClient)
+	{
+		auto cont = GetController();
+		if (cont != nullptr)
+		{
+			auto heroCont = (AHeroController*)cont;
+			heroCont->ShowHud(true);
+		}
+	}
 
-//
-//bool AHeroCharacter::Method(AActor* Owner, APawn* Instigator, AController* InstigatorController, AController* Controller)
-//{
-//	FString a = Owner ? "Actor" : "";
-//	FString b = Instigator ? "Instigator" : "";
-//	FString c = InstigatorController ? " InstigatorController" : "";
-//	FString d = Controller ? " Controller" : "";
-//	UE_LOG(LogTemp, Warning, TEXT("%s %s %s %s"), *a, *b, *c, *d);
-//
-//	return Owner || Instigator || InstigatorController || Controller;
-//}
-
-AHeroState* AHeroCharacter::GetHeroState() const
-{
-	return GetPlayerState<AHeroState>();
-}
-
-AHeroController* AHeroCharacter::GetHeroController() const
-{
-	return GetController<AHeroController>();
-}
-
-void AHeroCharacter::BeginPlay()
-{
-	Super::BeginPlay();
-
-
-
-	/*auto owner = GetOwner();
-	auto instigator = Instigator;
-	auto instigatorController = GetInstigatorController();
-	auto controller = GetController();
-	auto b = Method(owner, instigator, instigatorController, controller);*/
 
 	Health = 100;
 
@@ -131,6 +106,25 @@ void AHeroCharacter::BeginPlay()
 		}
 	}
 }
+
+void AHeroCharacter::GetLifetimeReplicatedProps(TArray< FLifetimeProperty >& OutLifetimeProps) const
+{
+	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
+	DOREPLIFETIME(AHeroCharacter, ServerCurrentWeapon);
+}
+
+
+AHeroState* AHeroCharacter::GetHeroState() const
+{
+	return GetPlayerState<AHeroState>();
+}
+
+
+AHeroController* AHeroCharacter::GetHeroController() const
+{
+	return GetController<AHeroController>();
+}
+
 
 void AHeroCharacter::SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent)
 {
@@ -173,9 +167,7 @@ bool AHeroCharacter::ServerRPC_SpawnWeapon_Validate(TSubclassOf<AWeapon> weaponC
 void AHeroCharacter::OnRep_ServerStateChanged()
 {
 	// TODO Destroy other current weapons?
-
 	// TODO Branch for ROLE_Auto, ROLE_Sim
-
 	CurrentWeapon = ServerCurrentWeapon;
 }
 
@@ -231,6 +223,7 @@ void AHeroCharacter::ApplyDamage(AHeroCharacter* DamageInstigator, float Damage)
 	Health -= Damage;
 	bIsDead = Health <= 0;
 
+
 	if (Role == ROLE_Authority)
 	{
 		UE_LOG(LogTemp, Warning, TEXT("%fhp"), Health);
@@ -240,18 +233,52 @@ void AHeroCharacter::ApplyDamage(AHeroCharacter* DamageInstigator, float Damage)
 	{
 		HealthDepletedEvent.Broadcast(this, DamageInstigator);
 	}
-
-	//// Report health to the screen
-	//if (true||HasAuthority())
-	//{
-	//	APlayerState* PlayerState = GetPlayerState();
-	//	FString PlayerName = PlayerState->GetPlayerName();
-
-	//	if (GEngine)
-	//	{
-	//		GEngine->AddOnScreenDebugMessage(-1, 1.f, FColor::Red, 
-	//			FString::Printf(TEXT("%s: %fhp"), *PlayerName, Health));
-	//	}
-	//}
 }
 
+
+
+
+
+
+
+void AHeroCharacter::LogMsgWithRole(FString message)
+{
+	FString m = GetRoleText() + ": " + message;
+	UE_LOG(LogTemp, Warning, TEXT("%s"), *m);
+}
+FString AHeroCharacter::GetEnumText(ENetRole role)
+{
+	switch (role) {
+	case ROLE_None:
+		return "None";
+	case ROLE_SimulatedProxy:
+		return "SimulatedProxy";
+	case ROLE_AutonomousProxy:
+		return "AutonomouseProxy";
+	case ROLE_Authority:
+		return "Authority";
+	case ROLE_MAX:
+	default:
+		return "ERROR";
+	}
+}
+FString AHeroCharacter::GetRoleText()
+{
+	auto Local = Role;
+	auto Remote = GetRemoteRole();
+
+
+	if (Remote == ROLE_SimulatedProxy) //&& Local == ROLE_Authority
+		return "ListenServer";
+
+	if (Local == ROLE_Authority)
+		return "Server";
+
+	if (Local == ROLE_AutonomousProxy) // && Remote == ROLE_Authority
+		return "OwningClient";
+
+	if (Local == ROLE_SimulatedProxy) // && Remote == ROLE_Authority
+		return "SimClient";
+
+	return "Unknown: " + GetEnumText(Role) + " " + GetEnumText(GetRemoteRole());
+}

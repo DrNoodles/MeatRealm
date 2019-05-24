@@ -16,17 +16,20 @@ class MEATREALM_API AHeroController : public APlayerController
 	GENERATED_BODY()
 
 public:
-	AHeroController();
-
-
 	UPROPERTY(EditDefaultsOnly, Category = "Widgets")
-		TSubclassOf<class UUserWidget> wMainMenu;
+		TSubclassOf<class UUserWidget> HudClass;
 
-	// Variable to hold the widget After Creating it.
-	UUserWidget* MyMainMenu;
+	UUserWidget* HudInstance;
 
-	void BeginPlay() override;
+	void OnPossess(APawn* InPawn) override;
+	void AcknowledgePossession(APawn* P) override;
+	void OnUnPossess() override;
+
 	AHeroCharacter* GetHeroCharacter() const;
 	void ShowHud(bool bMakeVisible);
-	
+
+	// Debug helpers
+	void LogMsgWithRole(FString message);
+	FString GetEnumText(ENetRole role);
+	FString GetRoleText();
 };

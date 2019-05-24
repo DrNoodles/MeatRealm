@@ -4,10 +4,8 @@
 #include "DeathmatchGameMode.h"
 #include "DeathmatchGameState.h"
 #include "UObject/ConstructorHelpers.h"
-#include "DrawDebugHelpers.h"
 #include "HeroCharacter.h"
 #include "HeroState.h"
-#include "Engine/World.h"
 
 ADeathmatchGameMode::ADeathmatchGameMode()
 {
@@ -24,29 +22,29 @@ ADeathmatchGameMode::ADeathmatchGameMode()
 
 	bStartPlayersAsSpectators = false;
 }
+
+
 void ADeathmatchGameMode::PostLogin(APlayerController* NewPlayer)
 {
 	Super::PostLogin(NewPlayer);
 
 	const auto Hero = static_cast<AHeroController*>(NewPlayer);
-	BindEvents(Hero);
-
 	ConnectedHeroControllers.AddUnique(Hero);
 
 	UE_LOG(LogTemp, Warning, TEXT("ConnectedHeroControllers: %d"), ConnectedHeroControllers.Num());
 }
+
 
 void ADeathmatchGameMode::Logout(AController* Exiting)
 {
 	Super::Logout(Exiting);
 
 	const auto Hero = static_cast<AHeroController*>(Exiting);
-	UnbindEvents(Hero);
-
 	ConnectedHeroControllers.Remove(Hero);
 
 	UE_LOG(LogTemp, Warning, TEXT("ConnectedHeroControllers: %d"), ConnectedHeroControllers.Num());
 }
+
 
 bool ADeathmatchGameMode::ShouldSpawnAtStartSpot(AController* Player)
 {
@@ -54,26 +52,15 @@ bool ADeathmatchGameMode::ShouldSpawnAtStartSpot(AController* Player)
 	return false;
 }
 
+
 void ADeathmatchGameMode::SetPlayerDefaults(APawn* PlayerPawn)
 {
 	UE_LOG(LogTemp, Warning, TEXT("SetPlayerDefaults"));
 	
 	auto heroChar = (AHeroCharacter*)PlayerPawn;
-	heroChar->GetHeroState()->Health = 100;
-
-	//heroChar->GetHeroController()->ShowHud(true);
+	heroChar->Health = 100;
+	heroChar->OnHealthDepleted().AddUObject(this, &ADeathmatchGameMode::OnPlayerDie);
 }
-
-void ADeathmatchGameMode::BindEvents(AHeroController* Controller)
-{
-	FDelegateHandle Handle = Controller->GetHeroCharacter()->OnHealthDepleted().AddUObject(this, &ADeathmatchGameMode::OnPlayerDie);
-}
-
-void ADeathmatchGameMode::UnbindEvents(AHeroController* Controller)
-{
-	//Controller->GetHeroCharacter()->OnHealthDepleted().Remove(Handle)
-}
-
 
 
 void ADeathmatchGameMode::OnPlayerDie(AHeroCharacter* dead, AHeroCharacter* killer)
@@ -83,26 +70,11 @@ void ADeathmatchGameMode::OnPlayerDie(AHeroCharacter* dead, AHeroCharacter* kill
 
 	DeadState->Deaths++;
 	KillerState->Kills++;
-
 	UE_LOG(LogTemp, Warning, TEXT("Deadguy: %dk:%dd"), DeadState->Kills, DeadState->Deaths);
 	UE_LOG(LogTemp, Warning, TEXT("Killer: %dk:%dd"), KillerState->Kills, KillerState->Deaths);
 
-
 	AHeroController* Controller = dead->GetHeroController();
 	dead->Destroy();
-
 	RestartPlayer(Controller);
-
-	//auto loc = FVector{0,0,500};
-	//FTransform tform{ loc };
-
-	auto heroChar = Controller->GetHeroCharacter();
-	//auto heroState = heroChar->GetHeroState();
-
-	// HACK! TODO Is this event leaking? This is bad. Maybe put the event on the HeroState along with HP. Let the HeroCharacter be a dumb container. :D
-	heroChar->OnHealthDepleted().AddUObject(this, &ADeathmatchGameMode::OnPlayerDie);
-
-	//UE_LOG(LogTemp, Warning, TEXT("Respawned guy: %fhp %dk %dd"), heroChar->Health, heroState->Kills, heroState->Deaths);
-
 }
 
