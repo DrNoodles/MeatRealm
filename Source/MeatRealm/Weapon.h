@@ -55,6 +55,9 @@ public:
 		TSubclassOf<class AProjectile> ProjectileClass;
 
 	UPROPERTY(EditAnywhere)
+		float ReloadTime = 3;
+
+	UPROPERTY(EditAnywhere)
 		float ShotsPerSecond = 1.0f;
 
 	UPROPERTY(EditAnywhere)
@@ -66,9 +69,11 @@ public:
 	UPROPERTY(EditAnywhere)
 		int ClipSize = 10;
 
-	UPROPERTY(EditAnywhere)
-		float ReloadTime = 3;
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
+	bool bIsReloading;
 
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
+	float ReloadProgress = 0.f;
 
 	UFUNCTION(Server, Reliable, WithValidation)
 		void RPC_Fire_OnServer();
@@ -95,6 +100,6 @@ private:
 	bool bTriggerPulled;
 	bool bHasActionedThisTriggerPull;
 	bool bReloadQueued;
-	bool bReloading;
+	FDateTime ReloadStartTime;
 
 };

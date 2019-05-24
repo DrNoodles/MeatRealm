@@ -36,16 +36,18 @@ void AWeapon::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
 
-	if (bReloading)
+	if (bIsReloading)
 	{
-		auto Text = "Reloading";
-		DrawDebugString(GetWorld(), FVector(0, 0, 200), "Reloading", this, FColor::Blue, DeltaTime * .8f);
+		const FTimespan ElapsedTime = FDateTime::Now() - ReloadStartTime;
+		ReloadProgress = ElapsedTime.GetTotalSeconds() / ReloadTime;
+		//auto Text = "Reloading";
+		//DrawDebugString(GetWorld(), FVector(0, 0, 200), "Reloading", this, FColor::Blue, DeltaTime * .8f);
 	}
-	else if (NeedsReload())
+	/*else if (NeedsReload())
 	{
 		auto Text = "Empty!";
 		DrawDebugString(GetWorld(), FVector(0, 0, 200), "Empty!", this, FColor::Red, DeltaTime * .8f);
-	}
+	}*/
 
 	if (!bCanAction) return;
 
@@ -104,8 +106,8 @@ void AWeapon::ClientReloadStart()
 {
 	if (!bUseClip) return;
 	//LogMsgWithRole("ClientReloadStart()");
-
-	bReloading = true;
+	ReloadStartTime = FDateTime::Now();
+	bIsReloading = true;
 	bCanAction = false;
 	bHasActionedThisTriggerPull = true;
 
@@ -115,8 +117,8 @@ void AWeapon::ClientReloadStart()
 void AWeapon::ClientReloadEnd()
 {
 	//LogMsgWithRole("ClientReloadEnd()");
-
-	bReloading = false;
+	ReloadProgress = 0;
+	bIsReloading = false;
 	bCanAction = true;
 	AmmoInClip = ClipSize;
 	bReloadQueued = false;
