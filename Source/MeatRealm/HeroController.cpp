@@ -30,8 +30,8 @@ void AHeroController::OnUnPossess()
 
 AHeroCharacter* AHeroController::GetHeroCharacter() const
 {
-	const auto Character = GetCharacter();
-	return Character == nullptr ? nullptr : (AHeroCharacter*)Character;
+	const auto Char = GetCharacter();
+	return Char == nullptr ? nullptr : (AHeroCharacter*)Char;
 }
 
 void AHeroController::ShowHud(bool bMakeVisible)

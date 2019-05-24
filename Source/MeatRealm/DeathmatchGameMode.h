@@ -5,13 +5,11 @@
 #include "CoreMinimal.h"
 #include "GameFramework/GameModeBase.h"
 #include "HeroController.h"
-#include "HeroCharacter.h"
 
 #include "DeathmatchGameMode.generated.h"
 
-/**
- * 
- */
+class AHeroCharacter;
+
 UCLASS()
 class MEATREALM_API ADeathmatchGameMode : public AGameModeBase
 {
@@ -24,6 +22,7 @@ public:
 	void Logout(AController* Exiting) override;
 	bool ShouldSpawnAtStartSpot(AController* Player) override;
 	void SetPlayerDefaults(APawn* PlayerPawn) override;
+
 
 private:
 	TArray<AHeroController*> ConnectedHeroControllers;
