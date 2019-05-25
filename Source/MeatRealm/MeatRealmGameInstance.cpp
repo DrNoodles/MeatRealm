@@ -14,7 +14,7 @@ void UMeatRealmGameInstance::Host()
 	// Server travel
 	UWorld* world = GetWorld();
 	if (!ensure(world != nullptr)) { return; }
-	world->ServerTravel("/Game/ThirdPersonCPP/Maps/ThirdPersonExampleMap?listen -server");
+	world->ServerTravel("/Game/Maps/TestMap?listen -server");
 }
 
 void UMeatRealmGameInstance::Join(const FString& ipaddress)

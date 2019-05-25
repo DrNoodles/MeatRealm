@@ -1,4 +1,4 @@
-// Copyright 1998-2019 Epic Games, Inc. All Rights Reserved.
+// Fill out your copyright notice in the Description page of Project Settings.
 
 #pragma once
 
@@ -6,54 +6,56 @@
 #include "GameFramework/Character.h"
 #include "Weapon.h"
 
-#include "MeatRealmCharacter.generated.h"
+#include "HeroCharacter.generated.h"
 
-class UArrowComponent;
+class AHeroState;
+class AHeroController;
 
-UCLASS(config=Game)
-class AMeatRealmCharacter : public ACharacter
+UCLASS()
+class MEATREALM_API AHeroCharacter : public ACharacter
 {
 	GENERATED_BODY()
 
 	/** Camera boom positioning the camera behind the character */
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Camera, meta = (AllowPrivateAccess = "true"))
-	class USpringArmComponent* CameraBoom;
+		class USpringArmComponent* CameraBoom;
 
 	/** Follow camera */
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Camera, meta = (AllowPrivateAccess = "true"))
-	class UCameraComponent* FollowCamera;
-
+		class UCameraComponent* FollowCamera;
 
 public:
-	AMeatRealmCharacter();
 
-	//bool Method(AActor* Owner, APawn* Instigator, AController* InstigatorController, AController* Controller);
-	virtual void BeginPlay() override;
+
+	// Sets default values for this character's properties
+	AHeroCharacter();
+	void Restart() override;
+	void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
+
+	DECLARE_EVENT_TwoParams(AHeroCharacter, FHealthDepleted, AHeroCharacter*, AHeroCharacter*)
+	FHealthDepleted& OnHealthDepleted() { return HealthDepletedEvent; }
+
+	AHeroState* GetHeroState() const;
+	AHeroController* GetHeroController() const;
+
 
 	// Projectile class to spawn.
 	UPROPERTY(EditDefaultsOnly, Category = Weapon)
 		TArray<TSubclassOf<class AWeapon>> WeaponClasses;
 
 	/** Base turn rate, in deg/sec. Other scaling may affect final turn rate. */
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category=Camera)
-	float BaseTurnRate;
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Camera)
+		float BaseTurnRate;
 
 	/** Base look up/down rate, in deg/sec. Other scaling may affect final rate. */
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category=Camera)
-	float BaseLookUpRate;
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Camera)
+		float BaseLookUpRate;
 
+	UPROPERTY(BlueprintReadOnly, EditAnywhere)
+		float Health = 100.f;
 
-	UPROPERTY(BlueprintReadOnly) // TODO Move to PlayerController (or PlayerState?)
-	int Deaths;
-
-	UPROPERTY(BlueprintReadOnly, VisibleAnywhere, Category = "MeatRealm Character")
-	bool bIsDead = false;
-
-	UPROPERTY(BlueprintReadOnly, EditAnywhere, Category = "MeatRealm Character")
-	float Health = 100.f;
-
-	UFUNCTION(BlueprintCallable, Category = "MeatRealm Character")
-	void ChangeHealth(float delta);
+	UFUNCTION(BlueprintCallable)
+		void ApplyDamage(AHeroCharacter* DamageInstigator, float Damage);
 
 
 protected:
@@ -76,7 +78,7 @@ public:
 		void ServerRPC_SpawnWeapon(TSubclassOf<AWeapon> weaponClass);
 
 	UPROPERTY(ReplicatedUsing = OnRep_ServerStateChanged)
-	AWeapon* ServerCurrentWeapon;
+		AWeapon* ServerCurrentWeapon;
 
 	UFUNCTION()
 		void OnRep_ServerStateChanged();
@@ -86,16 +88,27 @@ public:
 		AWeapon* CurrentWeapon = nullptr;
 
 private:
+	/// Events
+	FHealthDepleted HealthDepletedEvent;
+
+
 	/// Input
-	
+
 	void Input_FirePressed();
 	void Input_FireReleased();
 	void Input_Reload();
 
 	/// Components
 
-	
-	UPROPERTY(VisibleAnywhere)
-	UArrowComponent* WeaponAnchor = nullptr;
-};
 
+	UPROPERTY(VisibleAnywhere)
+		UArrowComponent* WeaponAnchor = nullptr;
+
+
+
+
+
+	void LogMsgWithRole(FString message);
+	FString GetEnumText(ENetRole role);
+	FString GetRoleText();
+};

@@ -1,0 +1,35 @@
+// Fill out your copyright notice in the Description page of Project Settings.
+
+#pragma once
+
+#include "CoreMinimal.h"
+#include "GameFramework/PlayerController.h"
+#include "Blueprint/UserWidget.h"
+
+#include "HeroController.generated.h"
+
+class AHeroCharacter;
+
+UCLASS()
+class MEATREALM_API AHeroController : public APlayerController
+{
+	GENERATED_BODY()
+
+public:
+	UPROPERTY(EditDefaultsOnly, Category = "Widgets")
+		TSubclassOf<class UUserWidget> HudClass;
+
+	UUserWidget* HudInstance;
+
+	void OnPossess(APawn* InPawn) override;
+	void AcknowledgePossession(APawn* P) override;
+	void OnUnPossess() override;
+
+	AHeroCharacter* GetHeroCharacter() const;
+	void ShowHud(bool bMakeVisible);
+
+	// Debug helpers
+	void LogMsgWithRole(FString message);
+	FString GetEnumText(ENetRole role);
+	FString GetRoleText();
+};

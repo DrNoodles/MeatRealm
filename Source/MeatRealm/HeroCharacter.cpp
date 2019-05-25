@@ -1,6 +1,6 @@
 // Copyright 1998-2019 Epic Games, Inc. All Rights Reserved.
 
-#include "MeatRealmCharacter.h"
+#include "HeroCharacter.h"
 #include "HeadMountedDisplayFunctionLibrary.h"
 #include "Camera/CameraComponent.h"
 #include "Components/CapsuleComponent.h"
@@ -13,13 +13,14 @@
 #include "Engine/Public/DrawDebugHelpers.h"
 #include "Engine/Engine.h"
 #include "UnrealNetwork.h"
-
+#include "HeroState.h"
+#include "HeroController.h"
 
 
 
 /// Lifecycle
 
-AMeatRealmCharacter::AMeatRealmCharacter()
+AHeroCharacter::AHeroCharacter()
 {
 	// Set size for collision capsule
 	GetCapsuleComponent()->InitCapsuleSize(42.f, 96.0f);
@@ -33,18 +34,23 @@ AMeatRealmCharacter::AMeatRealmCharacter()
 	bUseControllerRotationPitch = false;
 	bUseControllerRotationRoll = false;
 
+	// Replication
+	bAlwaysRelevant = true;
+
+	JumpMaxCount = 0;
+
 	// Configure character movement
+	GetCharacterMovement()->MaxWalkSpeed = 450;
 	GetCharacterMovement()->bOrientRotationToMovement = false; // Character move independently of facing
 	GetCharacterMovement()->RotationRate = FRotator(0.0f, 540.0f, 0.0f); // ...at this rotation rate
-	GetCharacterMovement()->JumpZVelocity = 600.f;
 	GetCharacterMovement()->AirControl = 0.2f;
 
 	// Create a camera boom (pulls in towards the player if there is a collision)
 	CameraBoom = CreateDefaultSubobject<USpringArmComponent>(TEXT("CameraBoom"));
 	CameraBoom->SetupAttachment(RootComponent);
 	CameraBoom->bAbsoluteRotation = true; // Don't rotate with the character
-	CameraBoom->RelativeRotation = FRotator(-70.f, 0.f, 0.f);
-	CameraBoom->TargetArmLength = 800.f;
+	CameraBoom->RelativeRotation = FRotator(-56.f, 0.f, 0.f);
+	CameraBoom->TargetArmLength = 1500;
 	CameraBoom->bDoCollisionTest = false; // Don't want to pull camera in when it collides with level
 	CameraBoom->bEnableCameraLag = true;
 
@@ -53,6 +59,7 @@ AMeatRealmCharacter::AMeatRealmCharacter()
 	FollowCamera->SetupAttachment(CameraBoom, USpringArmComponent::SocketName); // Attach the camera to the end of the boom and let the boom adjust to match the controller orientation
 	FollowCamera->bAbsoluteRotation = false;
 	FollowCamera->bUsePawnControlRotation = false; // Camera does not rotate relative to arm
+	FollowCamera->SetFieldOfView(67);
 
 	// Note: The skeletal mesh and anim blueprint references on the Mesh component (inherited from Character) 
 	// are set in the derived blueprint asset named MyCharacter (to avoid direct content references in C++)
@@ -61,37 +68,33 @@ AMeatRealmCharacter::AMeatRealmCharacter()
 	WeaponAnchor->SetupAttachment(RootComponent);
 }
 
-
-void AMeatRealmCharacter::GetLifetimeReplicatedProps(TArray< FLifetimeProperty >& OutLifetimeProps) const
+void AHeroCharacter::EndPlay(const EEndPlayReason::Type EndPlayReason)
 {
-	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
-	DOREPLIFETIME(AMeatRealmCharacter, ServerCurrentWeapon);
+	if (ROLE_Authority == Role && ServerCurrentWeapon != nullptr)
+	{
+		ServerCurrentWeapon->Destroy();
+		ServerCurrentWeapon = nullptr;
+	}
 }
 
-
-//
-//bool AMeatRealmCharacter::Method(AActor* Owner, APawn* Instigator, AController* InstigatorController, AController* Controller)
-//{
-//	FString a = Owner ? "Actor" : "";
-//	FString b = Instigator ? "Instigator" : "";
-//	FString c = InstigatorController ? " InstigatorController" : "";
-//	FString d = Controller ? " Controller" : "";
-//	UE_LOG(LogTemp, Warning, TEXT("%s %s %s %s"), *a, *b, *c, *d);
-//
-//	return Owner || Instigator || InstigatorController || Controller;
-//}
-
-void AMeatRealmCharacter::BeginPlay()
+void AHeroCharacter::Restart()
 {
-	Super::BeginPlay();
+	Super::Restart();
+	LogMsgWithRole("AHeroCharacter::Restart()");
+
+	bool bIsOwningClient = Role == ROLE_AutonomousProxy;// || GetRemoteRole() == ROLE_SimulatedProxy;
+	if (bIsOwningClient)
+	{
+		auto cont = GetController();
+		if (cont != nullptr)
+		{
+			auto heroCont = (AHeroController*)cont;
+			heroCont->ShowHud(true);
+		}
+	}
 
 
-
-	/*auto owner = GetOwner();
-	auto instigator = Instigator;
-	auto instigatorController = GetInstigatorController();
-	auto controller = GetController();
-	auto b = Method(owner, instigator, instigatorController, controller);*/
+	Health = 100;
 
 	// Randomly select a weapon
 	if (WeaponClasses.Num() > 0)
@@ -104,7 +107,26 @@ void AMeatRealmCharacter::BeginPlay()
 	}
 }
 
-void AMeatRealmCharacter::SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent)
+void AHeroCharacter::GetLifetimeReplicatedProps(TArray< FLifetimeProperty >& OutLifetimeProps) const
+{
+	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
+	DOREPLIFETIME(AHeroCharacter, ServerCurrentWeapon);
+}
+
+
+AHeroState* AHeroCharacter::GetHeroState() const
+{
+	return GetPlayerState<AHeroState>();
+}
+
+
+AHeroController* AHeroCharacter::GetHeroController() const
+{
+	return GetController<AHeroController>();
+}
+
+
+void AHeroCharacter::SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent)
 {
 	// Set up gameplay key bindings
 	check(PlayerInputComponent);
@@ -114,14 +136,14 @@ void AMeatRealmCharacter::SetupPlayerInputComponent(class UInputComponent* Playe
 	PlayerInputComponent->BindAxis("FaceUp");
 	PlayerInputComponent->BindAxis("FaceRight");
 	PlayerInputComponent->BindAction(
-		"FireWeapon", IE_Pressed, this, &AMeatRealmCharacter::Input_FirePressed);
+		"FireWeapon", IE_Pressed, this, &AHeroCharacter::Input_FirePressed);
 	PlayerInputComponent->BindAction(
-		"FireWeapon", IE_Released, this, &AMeatRealmCharacter::Input_FireReleased);
+		"FireWeapon", IE_Released, this, &AHeroCharacter::Input_FireReleased);
 	PlayerInputComponent->BindAction(
-		"Reload", IE_Released, this, &AMeatRealmCharacter::Input_Reload);
+		"Reload", IE_Released, this, &AHeroCharacter::Input_Reload);
 }
 
-void AMeatRealmCharacter::ServerRPC_SpawnWeapon_Implementation(TSubclassOf<AWeapon> weaponClass)
+void AHeroCharacter::ServerRPC_SpawnWeapon_Implementation(TSubclassOf<AWeapon> weaponClass)
 {
 	FActorSpawnParameters params;
 	params.Instigator = this;
@@ -137,40 +159,38 @@ void AMeatRealmCharacter::ServerRPC_SpawnWeapon_Implementation(TSubclassOf<AWeap
 	ServerCurrentWeapon = weapon;
 }
 
-bool AMeatRealmCharacter::ServerRPC_SpawnWeapon_Validate(TSubclassOf<AWeapon> weaponClass)
+bool AHeroCharacter::ServerRPC_SpawnWeapon_Validate(TSubclassOf<AWeapon> weaponClass)
 {
 	return true;
 }
 
-void AMeatRealmCharacter::OnRep_ServerStateChanged()
+void AHeroCharacter::OnRep_ServerStateChanged()
 {
 	// TODO Destroy other current weapons?
-
 	// TODO Branch for ROLE_Auto, ROLE_Sim
-
 	CurrentWeapon = ServerCurrentWeapon;
 }
 
-void AMeatRealmCharacter::Input_FirePressed()
+void AHeroCharacter::Input_FirePressed()
 {
 	if (CurrentWeapon == nullptr) return;
 	CurrentWeapon->Input_PullTrigger();
 }
 
-void AMeatRealmCharacter::Input_FireReleased()
+void AHeroCharacter::Input_FireReleased()
 {
 	if (CurrentWeapon == nullptr) return;
 	CurrentWeapon->Input_ReleaseTrigger();
 }
 
-void AMeatRealmCharacter::Input_Reload()
+void AHeroCharacter::Input_Reload()
 {
 	if (CurrentWeapon == nullptr) return;
 	CurrentWeapon->Input_Reload();
 }
 /// Methods
 
-void AMeatRealmCharacter::Tick(float DeltaSeconds)
+void AHeroCharacter::Tick(float DeltaSeconds)
 {
 	// Handle Input
 	if (Controller == nullptr) return;
@@ -197,30 +217,66 @@ void AMeatRealmCharacter::Tick(float DeltaSeconds)
 	}
 }
 
-void AMeatRealmCharacter::ChangeHealth(float delta)
+void AHeroCharacter::ApplyDamage(AHeroCharacter* DamageInstigator, float Damage)
 {
 	// TODO Only on authority, then rep player state to all clients.
-	Health += delta;
-	bIsDead = Health <= 0;
+	Health -= Damage;
 
-	if (bIsDead)
+	if (Role == ROLE_Authority)
 	{
-		Deaths++;
-		Health = 100;
-		bIsDead = false;
+		UE_LOG(LogTemp, Warning, TEXT("%fhp"), Health);
+
+		if (Health <= 0)
+		{
+			HealthDepletedEvent.Broadcast(this, DamageInstigator);
+		}
 	}
-
-	//// Report health to the screen
-	//if (true||HasAuthority())
-	//{
-	//	APlayerState* PlayerState = GetPlayerState();
-	//	FString PlayerName = PlayerState->GetPlayerName();
-
-	//	if (GEngine)
-	//	{
-	//		GEngine->AddOnScreenDebugMessage(-1, 1.f, FColor::Red, 
-	//			FString::Printf(TEXT("%s: %fhp"), *PlayerName, Health));
-	//	}
-	//}
 }
 
+
+
+
+
+
+
+void AHeroCharacter::LogMsgWithRole(FString message)
+{
+	FString m = GetRoleText() + ": " + message;
+	UE_LOG(LogTemp, Warning, TEXT("%s"), *m);
+}
+FString AHeroCharacter::GetEnumText(ENetRole role)
+{
+	switch (role) {
+	case ROLE_None:
+		return "None";
+	case ROLE_SimulatedProxy:
+		return "SimulatedProxy";
+	case ROLE_AutonomousProxy:
+		return "AutonomouseProxy";
+	case ROLE_Authority:
+		return "Authority";
+	case ROLE_MAX:
+	default:
+		return "ERROR";
+	}
+}
+FString AHeroCharacter::GetRoleText()
+{
+	auto Local = Role;
+	auto Remote = GetRemoteRole();
+
+
+	if (Remote == ROLE_SimulatedProxy) //&& Local == ROLE_Authority
+		return "ListenServer";
+
+	if (Local == ROLE_Authority)
+		return "Server";
+
+	if (Local == ROLE_AutonomousProxy) // && Remote == ROLE_Authority
+		return "OwningClient";
+
+	if (Local == ROLE_SimulatedProxy) // && Remote == ROLE_Authority
+		return "SimClient";
+
+	return "Unknown: " + GetEnumText(Role) + " " + GetEnumText(GetRemoteRole());
+}
