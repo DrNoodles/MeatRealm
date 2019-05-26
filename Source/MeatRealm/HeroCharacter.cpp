@@ -15,8 +15,7 @@
 #include "UnrealNetwork.h"
 #include "HeroState.h"
 #include "HeroController.h"
-
-
+#include "GameFramework/HUD.h"
 
 /// Lifecycle
 
@@ -194,6 +193,33 @@ void AHeroCharacter::Tick(float DeltaSeconds)
 {
 	// Handle Input
 	if (Controller == nullptr) return;
+
+
+
+
+
+
+	// Draw a rectangle around the player!
+
+	//auto HUD = GetHeroController()->GetHUD();
+	const auto LP = GetHeroController()->GetLocalPlayer();
+	if (LP/* && HUD*/)
+	{
+		FVector Origin, BoxExtent;
+		GetActorBounds(true, OUT Origin, OUT BoxExtent);
+
+		const FBox ActorBox{ Origin - BoxExtent, Origin + BoxExtent };
+
+		FVector2D LowerLeft, UpperRight;
+		if (LP->GetPixelBoundingBox(ActorBox, OUT LowerLeft, OUT UpperRight))
+		{
+			auto Size = UpperRight - LowerLeft;
+			//HUD->DrawRect(FLinearColor::Blue, LowerLeft.X, LowerLeft.Y, Size.X, Size.Y);
+			//UE_LOG(LogTemp, Warning, TEXT("%s : %s"), *LowerLeft.ToString(), *Size.ToString());
+		}
+	}
+
+
 
 	const auto deadzoneSquared = 0.25f * 0.25f;
 
