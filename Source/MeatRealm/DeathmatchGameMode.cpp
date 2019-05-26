@@ -87,7 +87,9 @@ bool ADeathmatchGameMode::EndGameIfFragLimitReached() const
 {
 	auto DMGameState = GetGameState<ADeathmatchGameState>();
 	auto Scores = DMGameState->GetScoreboard();
-	if (Scores.Num() > 0 && Scores[0]->Kills >= DMGameState->FragLimit)
+	
+	const auto bFragLimitReached = Scores.Num() > 0 && Scores[0]->Kills >= DMGameState->FragLimit;
+	if (bFragLimitReached)
 	{
 		UE_LOG(LogTemp, Warning, TEXT("Hit Frag Limit!"));
 
@@ -95,6 +97,8 @@ bool ADeathmatchGameMode::EndGameIfFragLimitReached() const
 		if (World) World->ServerTravel("/Game/MeatRealm/Maps/TestMap");
 		return true;
 	}
+
+	return false;
 }
 
 
