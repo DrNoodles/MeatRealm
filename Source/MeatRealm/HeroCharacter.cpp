@@ -93,7 +93,7 @@ void AHeroCharacter::Restart()
 	}
 
 
-	Health = 100;
+	Health = MaxHealth;
 
 	// Randomly select a weapon
 	if (WeaponClasses.Num() > 0)
@@ -110,6 +110,7 @@ void AHeroCharacter::GetLifetimeReplicatedProps(TArray< FLifetimeProperty >& Out
 {
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
 	DOREPLIFETIME(AHeroCharacter, ServerCurrentWeapon);
+	DOREPLIFETIME(AHeroCharacter, Health);
 }
 
 
@@ -245,23 +246,30 @@ void AHeroCharacter::Tick(float DeltaSeconds)
 
 void AHeroCharacter::ApplyDamage(AHeroCharacter* DamageInstigator, float Damage)
 {
+	//This must only run on a dedicated server or listen server
+
+	if (!HasAuthority()) return;
 	// TODO Only on authority, then rep player state to all clients.
+
 	Health -= Damage;
+	
+	FString S = FString::Printf(TEXT("%fhp"), Health);
+	LogMsgWithRole(S);
 
-	if (Role == ROLE_Authority)
+	if (Health <= 0)
 	{
-		UE_LOG(LogTemp, Warning, TEXT("%fhp"), Health);
-
-		if (Health <= 0)
-		{
-			HealthDepletedEvent.Broadcast(this, DamageInstigator);
-		}
+		HealthDepletedEvent.Broadcast(this, DamageInstigator);
 	}
 }
 
-void AHeroCharacter::GiveHealth(float Hp)
+bool AHeroCharacter::TryGiveHealth(float Hp)
 {
-	Health += Hp;
+	LogMsgWithRole("TryGiveHealth");
+	//if (!HasAuthority()) return;
+	if (Health == MaxHealth) return false;
+	
+	Health = FMath::Min(Health + Hp, MaxHealth);
+	return true;
 }
 
 

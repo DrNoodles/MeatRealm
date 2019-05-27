@@ -27,9 +27,9 @@ public: // NOTE This interface breaks the I in SOLID. But it'll do for now.
 	UFUNCTION()
 		virtual void ApplyDamage(AHeroCharacter* DamageInstigator, float Delta) = 0;
 	UFUNCTION()
-		virtual void GiveHealth(float Hp) = 0;
+		virtual bool TryGiveHealth(float Hp) = 0;
 	//UFUNCTION()
-		//virtual void GiveAmmo(int Delta) = 0;
+	//	virtual bool TryGiveAmmo(int Ammo) = 0;
 	//UFUNCTION()
 		//virtual void GiveWeapon(AWeapon* Delta) = 0;
 };

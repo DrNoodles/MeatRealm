@@ -52,13 +52,18 @@ public:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Camera)
 		float BaseLookUpRate;
 
-	UPROPERTY(BlueprintReadOnly, EditAnywhere)
+	UPROPERTY(BlueprintReadOnly, VisibleAnywhere, Replicated)
 		float Health = 100.f;
+
+	UPROPERTY(BlueprintReadWrite, EditAnywhere)
+		float MaxHealth = 100.f;
 
 	UFUNCTION()
 	virtual void ApplyDamage(AHeroCharacter* DamageInstigator, float Damage) override;
 	UFUNCTION()
-	virtual void GiveHealth(float Hp) override;
+	virtual bool TryGiveHealth(float Hp) override;
+	//UFUNCTION()
+	//virtual bool TryGiveAmmo(float Hp) override;
 
 protected:
 	// AActor interface

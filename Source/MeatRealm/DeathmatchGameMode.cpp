@@ -59,7 +59,7 @@ void ADeathmatchGameMode::SetPlayerDefaults(APawn* PlayerPawn)
 	UE_LOG(LogTemp, Warning, TEXT("SetPlayerDefaults"));
 	
 	auto heroChar = (AHeroCharacter*)PlayerPawn;
-	heroChar->Health = 100;
+	heroChar->Health = heroChar->MaxHealth;
 	heroChar->OnHealthDepleted().AddUObject(this, &ADeathmatchGameMode::OnPlayerDie);
 }
 

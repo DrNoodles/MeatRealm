@@ -218,8 +218,7 @@ void AWeapon::RPC_Fire_RepToClients_Implementation()
 		return;
 	}
 
-
-	LogMsgWithRole("RPC_Fire_RepToClients_Impl");
+	//LogMsgWithRole("RPC_Fire_RepToClients_Impl");
 
 	Shoot();
 }
