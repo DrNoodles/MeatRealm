@@ -25,7 +25,11 @@ class MEATREALM_API IAffectableInterface
 
 public: // NOTE This interface breaks the I in SOLID. But it'll do for now.
 	UFUNCTION()
-	virtual void ChangeHealth(AHeroCharacter* DamageInstigator, float Delta) = 0;
-	//virtual void GiveAmmo(int Delta) = 0;
-	//virtual void GiveWeapon(AWeapon* Delta) = 0;
+		virtual void ApplyDamage(AHeroCharacter* DamageInstigator, float Delta) = 0;
+	UFUNCTION()
+		virtual void GiveHealth(float Hp) = 0;
+	//UFUNCTION()
+		//virtual void GiveAmmo(int Delta) = 0;
+	//UFUNCTION()
+		//virtual void GiveWeapon(AWeapon* Delta) = 0;
 };

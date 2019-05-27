@@ -243,10 +243,10 @@ void AHeroCharacter::Tick(float DeltaSeconds)
 	}
 }
 
-void AHeroCharacter::ChangeHealth(AHeroCharacter* DamageInstigator, float Delta)
+void AHeroCharacter::ApplyDamage(AHeroCharacter* DamageInstigator, float Damage)
 {
 	// TODO Only on authority, then rep player state to all clients.
-	Health += Delta;
+	Health -= Damage;
 
 	if (Role == ROLE_Authority)
 	{
@@ -259,10 +259,10 @@ void AHeroCharacter::ChangeHealth(AHeroCharacter* DamageInstigator, float Delta)
 	}
 }
 
-
-
-
-
+void AHeroCharacter::GiveHealth(float Hp)
+{
+	Health += Hp;
+}
 
 
 void AHeroCharacter::LogMsgWithRole(FString message)

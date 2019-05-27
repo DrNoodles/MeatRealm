@@ -56,8 +56,9 @@ public:
 		float Health = 100.f;
 
 	UFUNCTION()
-	virtual void ChangeHealth(AHeroCharacter* DamageInstigator, float Delta) override;
-
+	virtual void ApplyDamage(AHeroCharacter* DamageInstigator, float Damage) override;
+	UFUNCTION()
+	virtual void GiveHealth(float Hp) override;
 
 protected:
 	// AActor interface

@@ -47,7 +47,6 @@ AProjectile::AProjectile()
 void AProjectile::BeginPlay()
 {
 	Super::BeginPlay();
-
 }
 
 // Called every frame
@@ -89,7 +88,7 @@ void AProjectile::OnCompBeginOverlap(UPrimitiveComponent* OverlappedComp, AActor
 		}
 
 		// Apply damage from enemy
-		Cast<IAffectableInterface>(OtherActor)->ChangeHealth(Enemy, -ShotDamage);
+		Cast<IAffectableInterface>(OtherActor)->ApplyDamage(Enemy, ShotDamage);
 	}
 
 	Destroy();
