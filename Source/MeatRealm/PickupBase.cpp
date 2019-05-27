@@ -33,7 +33,9 @@ void APickupBase::BeginPlay()
 void APickupBase::OnCompBeginOverlap(UPrimitiveComponent* OverlappedComp, AActor* OtherActor,
 	UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult)
 {
-	if (!HasAuthority()) return;
+	if (Role == ROLE_Authority) return;
+
+	UE_LOG(LogTemp, Warning, TEXT("Overlapping"));
 
 	const auto IsNotWorthChecking = OtherActor == nullptr || OtherActor == this || OtherComp == nullptr;
 	if (IsNotWorthChecking) return;
@@ -41,7 +43,7 @@ void APickupBase::OnCompBeginOverlap(UPrimitiveComponent* OverlappedComp, AActor
 	auto Affectable = Cast<IAffectableInterface>(OtherActor);
 	if (Affectable)
 	{
-		Affectable->GiveHealth(1);
+		Affectable->GiveHealth(10);
 	}
 }
 
