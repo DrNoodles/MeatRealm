@@ -30,6 +30,7 @@ void AWeapon::BeginPlay()
 	Super::BeginPlay();
 	bCanAction = true;
 	AmmoInClip = ClipSize;
+	AmmoInPool = AmmoPoolSize;
 }
 
 void AWeapon::Tick(float DeltaTime)
@@ -54,7 +55,7 @@ void AWeapon::Tick(float DeltaTime)
 
 
 	// Reload!
-	if (bReloadQueued)
+	if (bReloadQueued && CanReload())
 	{
 		ClientReloadStart();
 		return;
@@ -67,11 +68,11 @@ void AWeapon::Tick(float DeltaTime)
 	const auto bWeaponCanCycle = bFullAuto || !bHasActionedThisTriggerPull;
 	if (bTriggerPulled && bWeaponCanCycle)
 	{
-		if (NeedsReload())
+		if (NeedsReload() && CanReload())
 		{
 			ClientReloadStart();
 		}
-		else
+		else if (AmmoInClip > 0)
 		{
 			ClientFireStart();
 		}
@@ -120,7 +121,13 @@ void AWeapon::ClientReloadEnd()
 	ReloadProgress = 0;
 	bIsReloading = false;
 	bCanAction = true;
-	AmmoInClip = ClipSize;
+
+	// Take ammo from pool
+	const int AmmoNeeded = ClipSize - AmmoInClip;
+	const int AmmoReceived = (AmmoNeeded > AmmoInPool) ? AmmoInPool : AmmoNeeded;
+	AmmoInPool -= AmmoReceived;
+	AmmoInClip += AmmoReceived;
+	
 	bReloadQueued = false;
 
 	if (CanActionTimerHandle.IsValid())
@@ -131,7 +138,9 @@ void AWeapon::ClientReloadEnd()
 
 bool AWeapon::CanReload() const
 {
-	return bUseClip && AmmoInClip < ClipSize;
+	return bUseClip && 
+		AmmoInClip < ClipSize && 
+		AmmoInPool > 0;
 }
 
 bool AWeapon::NeedsReload() const
