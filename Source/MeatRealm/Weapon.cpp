@@ -153,7 +153,7 @@ void AWeapon::Shoot()
 	FActorSpawnParameters SpawnParams;
 	SpawnParams.Owner = GetOwner();
 	SpawnParams.Instigator = Instigator;
-
+	
 	// Spawn the projectile at the muzzle.
 	AProjectile * Projectile = GetWorld()->SpawnActorAbsolute<AProjectile>(
 		ProjectileClass,
@@ -210,7 +210,17 @@ bool AWeapon::RPC_Fire_OnServer_Validate()
 
 void AWeapon::RPC_Fire_RepToClients_Implementation()
 {
-	//LogMsgWithRole("RPC_Fire_RepToClients_Impl");
+	// This method runs on ALL clients
+
+	// For now(?) lets ONLY shoot this on the server
+	if (GetOwner()->Role != ROLE_Authority) 
+	{
+		return;
+	}
+
+
+	LogMsgWithRole("RPC_Fire_RepToClients_Impl");
+
 	Shoot();
 }
 
