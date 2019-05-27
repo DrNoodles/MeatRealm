@@ -5,6 +5,7 @@
 #include "CoreMinimal.h"
 #include "GameFramework/Character.h"
 #include "Weapon.h"
+#include "Interfaces/AffectableInterface.h"
 
 #include "HeroCharacter.generated.h"
 
@@ -12,7 +13,7 @@ class AHeroState;
 class AHeroController;
 
 UCLASS()
-class MEATREALM_API AHeroCharacter : public ACharacter
+class MEATREALM_API AHeroCharacter : public ACharacter, public IAffectableInterface
 {
 	GENERATED_BODY()
 
@@ -54,8 +55,8 @@ public:
 	UPROPERTY(BlueprintReadOnly, EditAnywhere)
 		float Health = 100.f;
 
-	UFUNCTION(BlueprintCallable)
-		void ApplyDamage(AHeroCharacter* DamageInstigator, float Damage);
+	UFUNCTION()
+	virtual void ChangeHealth(AHeroCharacter* DamageInstigator, float Delta) override;
 
 
 protected:
