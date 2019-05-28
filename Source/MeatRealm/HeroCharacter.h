@@ -83,10 +83,15 @@ protected:
 	// End of APawn interface
 
 public:
-	/** Returns CameraBoom subobject **/
-	FORCEINLINE class USpringArmComponent* GetCameraBoom() const { return CameraBoom; }
-	/** Returns FollowCamera subobject **/
-	FORCEINLINE class UCameraComponent* GetFollowCamera() const { return FollowCamera; }
+	///** Returns CameraBoom subobject **/
+	//FORCEINLINE class USpringArmComponent* GetCameraBoom() const { return CameraBoom; }
+	///** Returns FollowCamera subobject **/
+	//FORCEINLINE class UCameraComponent* GetFollowCamera() const { return FollowCamera; }
+
+	/// Components
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
+		UArrowComponent* WeaponAnchor = nullptr;
+
 
 
 	UFUNCTION(Server, Reliable, WithValidation)
@@ -112,13 +117,6 @@ private:
 	void Input_FirePressed();
 	void Input_FireReleased();
 	void Input_Reload();
-
-	/// Components
-
-
-	UPROPERTY(VisibleAnywhere)
-		UArrowComponent* WeaponAnchor = nullptr;
-
 
 
 

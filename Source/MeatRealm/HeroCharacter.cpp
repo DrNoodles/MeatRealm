@@ -134,8 +134,8 @@ void AHeroCharacter::SetupPlayerInputComponent(class UInputComponent* PlayerInpu
 
 	PlayerInputComponent->BindAxis("MoveUp");
 	PlayerInputComponent->BindAxis("MoveRight");
-	PlayerInputComponent->BindAxis("FaceUp");
-	PlayerInputComponent->BindAxis("FaceRight");
+	//PlayerInputComponent->BindAxis("FaceUp");
+	//PlayerInputComponent->BindAxis("FaceRight");
 	PlayerInputComponent->BindAction(
 		"FireWeapon", IE_Pressed, this, &AHeroCharacter::Input_FirePressed);
 	PlayerInputComponent->BindAction(
@@ -222,7 +222,7 @@ void AHeroCharacter::Tick(float DeltaSeconds)
 	}
 
 
-
+	return;
 	const auto deadzoneSquared = 0.25f * 0.25f;
 
 	// Move character
