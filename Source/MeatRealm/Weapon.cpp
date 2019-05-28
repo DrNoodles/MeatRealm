@@ -171,10 +171,18 @@ void AWeapon::Shoot()
 	// Set the projectile velocity
 	if (Projectile == nullptr) return;
 
-	const auto AdditionalVelocity = GetOwner()->GetVelocity(); // inherits player's velocity
+
+	// Perterb the shot direction by the hipfire spread.
 	const auto ShootDirection = MuzzleLocationComp->GetForwardVector();
 
-	Projectile->FireInDirection(ShootDirection, FVector::ZeroVector);
+	const float SpreadInRadians = FMath::DegreesToRadians(HipfireSpread);
+	const float OffsetAngle = FMath::RandRange(-SpreadInRadians / 2, SpreadInRadians / 2);
+	const float OffsetHeadingAngle = ShootDirection.HeadingAngle() + OffsetAngle;
+	const FVector ShootDirectionWithSpread = FVector{ FMath::Cos(OffsetHeadingAngle), FMath::Sin(OffsetHeadingAngle), 0 };
+
+	// Take the shot!
+	Projectile->FireInDirection(ShootDirectionWithSpread);
+
 	//UE_LOG(LogTemp, Warning, TEXT("Fired!"));
 }
 

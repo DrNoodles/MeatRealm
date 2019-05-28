@@ -56,10 +56,9 @@ void AProjectile::Tick(float DeltaTime)
 
 }
 
-void AProjectile::FireInDirection(const FVector& ShootDirection, const FVector& AdditionalVelocity)
+void AProjectile::FireInDirection(const FVector& ShootDirection)
 {
-	ProjectileMovementComp->Velocity
-		= (ShootDirection + AdditionalVelocity) * ProjectileMovementComp->InitialSpeed;
+	ProjectileMovementComp->Velocity	= ShootDirection * ProjectileMovementComp->InitialSpeed;
 }
 
 

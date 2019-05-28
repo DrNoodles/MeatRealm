@@ -86,7 +86,10 @@ public:
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
 	float ReloadProgress = 0.f;
-	
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly)
+	float HipfireSpread = 20;
+
 
 	UFUNCTION(Server, Reliable, WithValidation)
 		void RPC_Fire_OnServer();
