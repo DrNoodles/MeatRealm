@@ -134,8 +134,8 @@ void AHeroCharacter::SetupPlayerInputComponent(class UInputComponent* PlayerInpu
 
 	PlayerInputComponent->BindAxis("MoveUp");
 	PlayerInputComponent->BindAxis("MoveRight");
-	//PlayerInputComponent->BindAxis("FaceUp");
-	//PlayerInputComponent->BindAxis("FaceRight");
+	PlayerInputComponent->BindAxis("FaceUp");
+	PlayerInputComponent->BindAxis("FaceRight");
 	PlayerInputComponent->BindAction(
 		"FireWeapon", IE_Pressed, this, &AHeroCharacter::Input_FirePressed);
 	PlayerInputComponent->BindAction(
@@ -198,31 +198,26 @@ void AHeroCharacter::Tick(float DeltaSeconds)
 
 
 
+	//// Draw a rectangle around the player!
 
+	////auto HUD = GetHeroController()->GetHUD();
+	//const auto LP = GetHeroController()->GetLocalPlayer();
+	//if (LP/* && HUD*/)
+	//{
+	//	FVector Origin, BoxExtent;
+	//	GetActorBounds(true, OUT Origin, OUT BoxExtent);
 
+	//	const FBox ActorBox{ Origin - BoxExtent, Origin + BoxExtent };
 
-	// Draw a rectangle around the player!
+	//	FVector2D LowerLeft, UpperRight;
+	//	if (LP->GetPixelBoundingBox(ActorBox, OUT LowerLeft, OUT UpperRight))
+	//	{
+	//		auto Size = UpperRight - LowerLeft;
+	//		//HUD->DrawRect(FLinearColor::Blue, LowerLeft.X, LowerLeft.Y, Size.X, Size.Y);
+	//		//UE_LOG(LogTemp, Warning, TEXT("%s : %s"), *LowerLeft.ToString(), *Size.ToString());
+	//	}
+	//}
 
-	//auto HUD = GetHeroController()->GetHUD();
-	const auto LP = GetHeroController()->GetLocalPlayer();
-	if (LP/* && HUD*/)
-	{
-		FVector Origin, BoxExtent;
-		GetActorBounds(true, OUT Origin, OUT BoxExtent);
-
-		const FBox ActorBox{ Origin - BoxExtent, Origin + BoxExtent };
-
-		FVector2D LowerLeft, UpperRight;
-		if (LP->GetPixelBoundingBox(ActorBox, OUT LowerLeft, OUT UpperRight))
-		{
-			auto Size = UpperRight - LowerLeft;
-			//HUD->DrawRect(FLinearColor::Blue, LowerLeft.X, LowerLeft.Y, Size.X, Size.Y);
-			//UE_LOG(LogTemp, Warning, TEXT("%s : %s"), *LowerLeft.ToString(), *Size.ToString());
-		}
-	}
-
-
-	return;
 	const auto deadzoneSquared = 0.25f * 0.25f;
 
 	// Move character
@@ -233,8 +228,38 @@ void AHeroCharacter::Tick(float DeltaSeconds)
 		AddMovementInput(FVector{ 0.f, 1.f, 0.f }, moveVec.Y);
 	}
 
+	FVector lookVec;
+	bool bUseMouseAim = true;
+	if (bUseMouseAim)
+	{
+		if (HasAuthority()) return;
+
+		const FVector Anchor = WeaponAnchor->GetComponentLocation();
+
+		const auto Hero = GetHeroController();
+		if (Hero)
+		{
+			FVector WorldLocation;
+			FVector WorldDirection;
+			const auto Success = Hero->DeprojectMousePositionToWorld(OUT WorldLocation, OUT WorldDirection);
+			if (Success)
+			{
+				const FVector Hit = FMath::LinePlaneIntersection(
+					WorldLocation, 
+					WorldLocation + (WorldDirection * 5000), 
+					Anchor,
+					FVector(0,0,1));
+
+				lookVec = Hit - Anchor;
+			}
+		}
+	}
+	else // Use gamepad
+	{
+		lookVec = FVector{ GetInputAxisValue("FaceUp"), GetInputAxisValue("FaceRight"), 0 };
+	}
+
 	// Aim character with look, if look is below deadzone then try use move vec
-	const auto lookVec = FVector{ GetInputAxisValue("FaceUp"), GetInputAxisValue("FaceRight"), 0 };
 	if (lookVec.SizeSquared() >= deadzoneSquared)
 	{
 		Controller->SetControlRotation(lookVec.Rotation());
@@ -243,6 +268,7 @@ void AHeroCharacter::Tick(float DeltaSeconds)
 	{
 		Controller->SetControlRotation(moveVec.Rotation());
 	}
+	
 }
 
 void AHeroCharacter::ApplyDamage(AHeroCharacter* DamageInstigator, float Damage)
