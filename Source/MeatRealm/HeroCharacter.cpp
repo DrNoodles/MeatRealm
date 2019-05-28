@@ -94,7 +94,7 @@ void AHeroCharacter::Restart()
 
 
 	Health = MaxHealth;
-	Armour = MaxArmour;
+	Armour = 0.f;
 
 	// Randomly select a weapon
 	if (WeaponClasses.Num() > 0)
@@ -284,11 +284,21 @@ bool AHeroCharacter::TryGiveHealth(float Hp)
 
 bool AHeroCharacter::TryGiveAmmo(int Ammo)
 {
-	LogMsgWithRole("TryGiveHealth");
+	LogMsgWithRole("TryGiveAmmo");
 	//if (!HasAuthority()) return;
 	if (CurrentWeapon == nullptr || CurrentWeapon->AmmoInPool == CurrentWeapon->AmmoPoolSize) return false;
 
 	CurrentWeapon->AmmoInPool = FMath::Min(CurrentWeapon->AmmoInPool + Ammo, CurrentWeapon->AmmoPoolSize);
+	return true;
+}
+
+bool AHeroCharacter::TryGiveArmour(float Delta)
+{
+	LogMsgWithRole("TryGiveArmour");
+	//if (!HasAuthority()) return;
+	if (Armour == MaxArmour) return false;
+
+	Armour = FMath::Min(Armour + Delta, MaxArmour);
 	return true;
 }
 

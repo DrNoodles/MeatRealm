@@ -56,7 +56,7 @@ public:
 		float Health = 100.f;
 
 	UPROPERTY(BlueprintReadOnly, VisibleAnywhere, Replicated)
-		float Armour = 100.f;
+		float Armour = 0.f;
 
 	UPROPERTY(BlueprintReadWrite, EditAnywhere)
 		float MaxHealth = 100.f;
@@ -70,7 +70,8 @@ public:
 	virtual bool TryGiveHealth(float Hp) override;
 	UFUNCTION()
 	virtual bool TryGiveAmmo(int Ammo) override;
-	
+	UFUNCTION()
+	virtual bool TryGiveArmour(float Delta) override;
 
 protected:
 	// AActor interface
