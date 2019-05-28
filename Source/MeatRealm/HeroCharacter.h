@@ -55,8 +55,14 @@ public:
 	UPROPERTY(BlueprintReadOnly, VisibleAnywhere, Replicated)
 		float Health = 100.f;
 
+	UPROPERTY(BlueprintReadOnly, VisibleAnywhere, Replicated)
+		float Armour = 100.f;
+
 	UPROPERTY(BlueprintReadWrite, EditAnywhere)
 		float MaxHealth = 100.f;
+
+	UPROPERTY(BlueprintReadWrite, EditAnywhere)
+		float MaxArmour = 100.f;
 
 	UFUNCTION()
 	virtual void ApplyDamage(AHeroCharacter* DamageInstigator, float Damage) override;

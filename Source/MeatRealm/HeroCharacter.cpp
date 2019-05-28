@@ -94,6 +94,7 @@ void AHeroCharacter::Restart()
 
 
 	Health = MaxHealth;
+	Armour = MaxArmour;
 
 	// Randomly select a weapon
 	if (WeaponClasses.Num() > 0)
@@ -111,6 +112,7 @@ void AHeroCharacter::GetLifetimeReplicatedProps(TArray< FLifetimeProperty >& Out
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
 	DOREPLIFETIME(AHeroCharacter, ServerCurrentWeapon);
 	DOREPLIFETIME(AHeroCharacter, Health);
+	DOREPLIFETIME(AHeroCharacter, Armour);
 }
 
 
@@ -118,7 +120,6 @@ AHeroState* AHeroCharacter::GetHeroState() const
 {
 	return GetPlayerState<AHeroState>();
 }
-
 
 AHeroController* AHeroCharacter::GetHeroController() const
 {
@@ -251,7 +252,16 @@ void AHeroCharacter::ApplyDamage(AHeroCharacter* DamageInstigator, float Damage)
 	if (!HasAuthority()) return;
 	// TODO Only on authority, then rep player state to all clients.
 
-	Health -= Damage;
+	if (Damage > Armour)
+	{
+		const float DamageToHealth = Damage - Armour;
+		Armour = 0;
+		Health -= DamageToHealth;
+	}
+	else
+	{
+		Armour -= Damage;
+	}
 	
 	FString S = FString::Printf(TEXT("%fhp"), Health);
 	LogMsgWithRole(S);
