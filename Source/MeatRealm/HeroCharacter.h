@@ -62,8 +62,9 @@ public:
 	virtual void ApplyDamage(AHeroCharacter* DamageInstigator, float Damage) override;
 	UFUNCTION()
 	virtual bool TryGiveHealth(float Hp) override;
-	//UFUNCTION()
-	//virtual bool TryGiveAmmo(float Hp) override;
+	UFUNCTION()
+	virtual bool TryGiveAmmo(int Ammo) override;
+	
 
 protected:
 	// AActor interface

@@ -272,6 +272,16 @@ bool AHeroCharacter::TryGiveHealth(float Hp)
 	return true;
 }
 
+bool AHeroCharacter::TryGiveAmmo(int Ammo)
+{
+	LogMsgWithRole("TryGiveHealth");
+	//if (!HasAuthority()) return;
+	if (CurrentWeapon == nullptr || CurrentWeapon->AmmoInPool == CurrentWeapon->AmmoPoolSize) return false;
+
+	CurrentWeapon->AmmoInPool = FMath::Min(CurrentWeapon->AmmoInPool + Ammo, CurrentWeapon->AmmoPoolSize);
+	return true;
+}
+
 
 void AHeroCharacter::LogMsgWithRole(FString message)
 {
