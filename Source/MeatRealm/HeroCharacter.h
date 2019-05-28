@@ -25,6 +25,7 @@ class MEATREALM_API AHeroCharacter : public ACharacter, public IAffectableInterf
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Camera, meta = (AllowPrivateAccess = "true"))
 		class UCameraComponent* FollowCamera;
 
+
 public:
 
 
@@ -108,15 +109,19 @@ public:
 		AWeapon* CurrentWeapon = nullptr;
 
 private:
+
+	bool bUseMouseAim = true;;
+	
 	/// Events
 	FHealthDepleted HealthDepletedEvent;
 
-
+	
 	/// Input
 
 	void Input_FirePressed();
 	void Input_FireReleased();
 	void Input_Reload();
+	void Input_ToggleInputScheme();
 
 
 

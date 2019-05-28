@@ -142,6 +142,8 @@ void AHeroCharacter::SetupPlayerInputComponent(class UInputComponent* PlayerInpu
 		"FireWeapon", IE_Released, this, &AHeroCharacter::Input_FireReleased);
 	PlayerInputComponent->BindAction(
 		"Reload", IE_Released, this, &AHeroCharacter::Input_Reload);
+	PlayerInputComponent->BindAction(
+		"ToggleInputScheme", IE_Pressed, this, &AHeroCharacter::Input_ToggleInputScheme);
 }
 
 void AHeroCharacter::ServerRPC_SpawnWeapon_Implementation(TSubclassOf<AWeapon> weaponClass)
@@ -172,6 +174,7 @@ void AHeroCharacter::OnRep_ServerStateChanged()
 	CurrentWeapon = ServerCurrentWeapon;
 }
 
+
 void AHeroCharacter::Input_FirePressed()
 {
 	if (CurrentWeapon == nullptr) return;
@@ -189,6 +192,15 @@ void AHeroCharacter::Input_Reload()
 	if (CurrentWeapon == nullptr) return;
 	CurrentWeapon->Input_Reload();
 }
+
+void AHeroCharacter::Input_ToggleInputScheme()
+{
+	bUseMouseAim = !bUseMouseAim;
+
+	auto HC = GetHeroController();
+	if (HC) HC->bShowMouseCursor = bUseMouseAim;
+}
+
 /// Methods
 
 void AHeroCharacter::Tick(float DeltaSeconds)
@@ -220,6 +232,7 @@ void AHeroCharacter::Tick(float DeltaSeconds)
 
 	const auto deadzoneSquared = 0.25f * 0.25f;
 
+
 	// Move character
 	const auto moveVec = FVector{ GetInputAxisValue("MoveUp"), GetInputAxisValue("MoveRight"), 0 };
 	if (moveVec.SizeSquared() >= deadzoneSquared)
@@ -228,8 +241,9 @@ void AHeroCharacter::Tick(float DeltaSeconds)
 		AddMovementInput(FVector{ 0.f, 1.f, 0.f }, moveVec.Y);
 	}
 
+
+	// Calculate Look Vector
 	FVector lookVec;
-	bool bUseMouseAim = true;
 	if (bUseMouseAim)
 	{
 		if (HasAuthority()) return;
@@ -239,8 +253,7 @@ void AHeroCharacter::Tick(float DeltaSeconds)
 		const auto Hero = GetHeroController();
 		if (Hero)
 		{
-			FVector WorldLocation;
-			FVector WorldDirection;
+			FVector WorldLocation, WorldDirection;
 			const auto Success = Hero->DeprojectMousePositionToWorld(OUT WorldLocation, OUT WorldDirection);
 			if (Success)
 			{
@@ -259,7 +272,8 @@ void AHeroCharacter::Tick(float DeltaSeconds)
 		lookVec = FVector{ GetInputAxisValue("FaceUp"), GetInputAxisValue("FaceRight"), 0 };
 	}
 
-	// Aim character with look, if look is below deadzone then try use move vec
+
+	// Apply Look Vector - Aim character with look, if look is below deadzone then try use move vec
 	if (lookVec.SizeSquared() >= deadzoneSquared)
 	{
 		Controller->SetControlRotation(lookVec.Rotation());
