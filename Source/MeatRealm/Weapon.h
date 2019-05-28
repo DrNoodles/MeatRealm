@@ -30,6 +30,7 @@ public:
 	void Input_PullTrigger();
 	void Input_ReleaseTrigger();
 	void Input_Reload();
+	bool TryGiveAmmo();
 
 public:
 	FTimerHandle CanActionTimerHandle;
@@ -60,7 +61,8 @@ public:
 	UPROPERTY(EditAnywhere)
 		int AmmoPoolSize = 50;
 
-
+	UPROPERTY(EditAnywhere)
+		int AmmoGivenPerPickup = 10;
 
 
 	// Projectile class to spawn.
@@ -84,6 +86,7 @@ public:
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
 	float ReloadProgress = 0.f;
+	
 
 	UFUNCTION(Server, Reliable, WithValidation)
 		void RPC_Fire_OnServer();

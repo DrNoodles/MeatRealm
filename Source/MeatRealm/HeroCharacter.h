@@ -69,7 +69,7 @@ public:
 	UFUNCTION()
 	virtual bool TryGiveHealth(float Hp) override;
 	UFUNCTION()
-	virtual bool TryGiveAmmo(int Ammo) override;
+	virtual bool TryGiveAmmo() override;
 	UFUNCTION()
 	virtual bool TryGiveArmour(float Delta) override;
 

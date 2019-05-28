@@ -5,5 +5,5 @@
 
 bool AAmmoPickup::TryApplyAffect(IAffectableInterface* const Affectable)
 {
-	return Affectable->TryGiveAmmo(AmmoRestored);
+	return Affectable->TryGiveAmmo();
 }
