@@ -31,7 +31,7 @@ public: // NOTE This interface breaks the I in SOLID. But it'll do for now.
 	UFUNCTION()
 		virtual bool TryGiveArmour(float Delta) = 0;
 	UFUNCTION()
-		virtual bool TryGiveAmmo(int Ammo) = 0;
+		virtual bool TryGiveAmmo() = 0;
 	//UFUNCTION()
 		//virtual void GiveWeapon(AWeapon* Delta) = 0;
 };

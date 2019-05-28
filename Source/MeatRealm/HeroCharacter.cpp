@@ -282,14 +282,15 @@ bool AHeroCharacter::TryGiveHealth(float Hp)
 	return true;
 }
 
-bool AHeroCharacter::TryGiveAmmo(int Ammo)
+bool AHeroCharacter::TryGiveAmmo()
 {
-	LogMsgWithRole("TryGiveAmmo");
+	LogMsgWithRole("AHeroCharacter::TryGiveAmmo");
 	//if (!HasAuthority()) return;
-	if (CurrentWeapon == nullptr || CurrentWeapon->AmmoInPool == CurrentWeapon->AmmoPoolSize) return false;
 
-	CurrentWeapon->AmmoInPool = FMath::Min(CurrentWeapon->AmmoInPool + Ammo, CurrentWeapon->AmmoPoolSize);
-	return true;
+	if (CurrentWeapon != nullptr)
+		return CurrentWeapon->TryGiveAmmo();
+
+	return false;
 }
 
 bool AHeroCharacter::TryGiveArmour(float Delta)

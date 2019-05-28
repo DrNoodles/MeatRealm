@@ -203,6 +203,17 @@ void AWeapon::Input_Reload()
 	bReloadQueued = true;
 }
 
+bool AWeapon::TryGiveAmmo()
+{
+	LogMsgWithRole("AWeapon::TryGiveAmmo()");
+
+	if (AmmoInPool == AmmoPoolSize) return false;
+
+	AmmoInPool = FMath::Min(AmmoInPool + AmmoGivenPerPickup, AmmoPoolSize);
+	
+	return true;
+}
+
 
 /// RPC
 

@@ -15,8 +15,8 @@ class MEATREALM_API AAmmoPickup : public APickupBase
 	GENERATED_BODY()
 
 public:
-	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-		int AmmoRestored = 10;
+	//UPROPERTY(EditAnywhere, BlueprintReadWrite)
+		//int AmmoRestored = 10;
 
 protected:
 	bool TryApplyAffect(IAffectableInterface* const Affectable) override;
