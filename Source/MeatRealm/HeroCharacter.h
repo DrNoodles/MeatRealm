@@ -5,6 +5,7 @@
 #include "CoreMinimal.h"
 #include "GameFramework/Character.h"
 #include "Weapon.h"
+#include "Interfaces/AffectableInterface.h"
 
 #include "HeroCharacter.generated.h"
 
@@ -12,7 +13,7 @@ class AHeroState;
 class AHeroController;
 
 UCLASS()
-class MEATREALM_API AHeroCharacter : public ACharacter
+class MEATREALM_API AHeroCharacter : public ACharacter, public IAffectableInterface
 {
 	GENERATED_BODY()
 
@@ -51,12 +52,26 @@ public:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Camera)
 		float BaseLookUpRate;
 
-	UPROPERTY(BlueprintReadOnly, EditAnywhere)
+	UPROPERTY(BlueprintReadOnly, VisibleAnywhere, Replicated)
 		float Health = 100.f;
 
-	UFUNCTION(BlueprintCallable)
-		void ApplyDamage(AHeroCharacter* DamageInstigator, float Damage);
+	UPROPERTY(BlueprintReadOnly, VisibleAnywhere, Replicated)
+		float Armour = 0.f;
 
+	UPROPERTY(BlueprintReadWrite, EditAnywhere)
+		float MaxHealth = 100.f;
+
+	UPROPERTY(BlueprintReadWrite, EditAnywhere)
+		float MaxArmour = 100.f;
+
+	UFUNCTION()
+	virtual void ApplyDamage(AHeroCharacter* DamageInstigator, float Damage) override;
+	UFUNCTION()
+	virtual bool TryGiveHealth(float Hp) override;
+	UFUNCTION()
+	virtual bool TryGiveAmmo(int Ammo) override;
+	UFUNCTION()
+	virtual bool TryGiveArmour(float Delta) override;
 
 protected:
 	// AActor interface

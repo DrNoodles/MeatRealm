@@ -28,5 +28,7 @@ private:
 	TArray<AHeroController*> ConnectedHeroControllers;
 
 	void OnPlayerDie(AHeroCharacter* dead, AHeroCharacter* killer);
-	void EndGameIfFragLimitReached() const;
+	bool EndGameIfFragLimitReached() const;
+
+
 };

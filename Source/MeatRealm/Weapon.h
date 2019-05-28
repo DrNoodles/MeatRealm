@@ -48,7 +48,20 @@ public:
 
 
 	UPROPERTY(BlueprintReadOnly, Category = Weapon)
-	int AmmoInClip;
+		int AmmoInClip;
+
+	UPROPERTY(BlueprintReadOnly, Category = Weapon)
+		int AmmoInPool;
+
+
+	UPROPERTY(EditAnywhere)
+		int ClipSize = 10;
+
+	UPROPERTY(EditAnywhere)
+		int AmmoPoolSize = 50;
+
+
+
 
 	// Projectile class to spawn.
 	UPROPERTY(EditDefaultsOnly, Category = Weapon)
@@ -65,9 +78,6 @@ public:
 
 	UPROPERTY(EditAnywhere)
 		bool bUseClip = true;
-
-	UPROPERTY(EditAnywhere)
-		int ClipSize = 10;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
 	bool bIsReloading;

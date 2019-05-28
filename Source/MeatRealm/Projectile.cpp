@@ -47,7 +47,6 @@ AProjectile::AProjectile()
 void AProjectile::BeginPlay()
 {
 	Super::BeginPlay();
-
 }
 
 // Called every frame
@@ -77,15 +76,19 @@ void AProjectile::OnCompBeginOverlap(UPrimitiveComponent* OverlappedComp, AActor
 	// Ignore other projectiles
 	if (OtherActor->IsA(AProjectile::StaticClass())) return;
 
-	if (OtherActor->IsA(AHeroCharacter::StaticClass())) // TODO Decouple from HeroCharacter. Introduce IDamageable interface
+	if (OtherActor->GetClass()->ImplementsInterface(UAffectableInterface::StaticClass()))
 	{
 		// Dont shoot myself
 		if (OtherActor == Instigator) return;
 
-		const auto Enemy = static_cast<AHeroCharacter*>(Instigator); // TODO is this dangerous? 
+		AHeroCharacter* Enemy = Cast<AHeroCharacter>(Instigator);
+		if (Enemy == nullptr)
+		{
+			UE_LOG(LogTemp, Error, TEXT("Instigator of damage is null!"));
+		}
 
-		// Damage enemy
-		static_cast<AHeroCharacter*>(OtherActor)->ApplyDamage(Enemy, ShotDamage);
+		// Apply damage from enemy
+		Cast<IAffectableInterface>(OtherActor)->ApplyDamage(Enemy, ShotDamage);
 	}
 
 	Destroy();

@@ -59,7 +59,7 @@ void ADeathmatchGameMode::SetPlayerDefaults(APawn* PlayerPawn)
 	UE_LOG(LogTemp, Warning, TEXT("SetPlayerDefaults"));
 	
 	auto heroChar = (AHeroCharacter*)PlayerPawn;
-	heroChar->Health = 100;
+	heroChar->Health = heroChar->MaxHealth;
 	heroChar->OnHealthDepleted().AddUObject(this, &ADeathmatchGameMode::OnPlayerDie);
 }
 
@@ -76,23 +76,29 @@ void ADeathmatchGameMode::OnPlayerDie(AHeroCharacter* dead, AHeroCharacter* kill
 	AHeroController* Controller = dead->GetHeroController();
 	dead->Destroy();
 
+	if (EndGameIfFragLimitReached()) return;
 
 	RestartPlayer(Controller);
-
-	EndGameIfFragLimitReached();
 }
 
-void ADeathmatchGameMode::EndGameIfFragLimitReached() const
+
+
+bool ADeathmatchGameMode::EndGameIfFragLimitReached() const
 {
 	auto DMGameState = GetGameState<ADeathmatchGameState>();
 	auto Scores = DMGameState->GetScoreboard();
-	if (Scores.Num() > 0 && Scores[0]->Kills >= DMGameState->FragLimit)
+	
+	const auto bFragLimitReached = Scores.Num() > 0 && Scores[0]->Kills >= DMGameState->FragLimit;
+	if (bFragLimitReached)
 	{
 		UE_LOG(LogTemp, Warning, TEXT("Hit Frag Limit!"));
 
 		const auto World = GetWorld();
 		if (World) World->ServerTravel("/Game/MeatRealm/Maps/TestMap");
+		return true;
 	}
+
+	return false;
 }
 
 

@@ -15,8 +15,7 @@
 #include "UnrealNetwork.h"
 #include "HeroState.h"
 #include "HeroController.h"
-
-
+#include "GameFramework/HUD.h"
 
 /// Lifecycle
 
@@ -59,7 +58,7 @@ AHeroCharacter::AHeroCharacter()
 	FollowCamera->SetupAttachment(CameraBoom, USpringArmComponent::SocketName); // Attach the camera to the end of the boom and let the boom adjust to match the controller orientation
 	FollowCamera->bAbsoluteRotation = false;
 	FollowCamera->bUsePawnControlRotation = false; // Camera does not rotate relative to arm
-	FollowCamera->SetFieldOfView(67);
+	FollowCamera->SetFieldOfView(38);
 
 	// Note: The skeletal mesh and anim blueprint references on the Mesh component (inherited from Character) 
 	// are set in the derived blueprint asset named MyCharacter (to avoid direct content references in C++)
@@ -94,7 +93,8 @@ void AHeroCharacter::Restart()
 	}
 
 
-	Health = 100;
+	Health = MaxHealth;
+	Armour = 0.f;
 
 	// Randomly select a weapon
 	if (WeaponClasses.Num() > 0)
@@ -111,6 +111,8 @@ void AHeroCharacter::GetLifetimeReplicatedProps(TArray< FLifetimeProperty >& Out
 {
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
 	DOREPLIFETIME(AHeroCharacter, ServerCurrentWeapon);
+	DOREPLIFETIME(AHeroCharacter, Health);
+	DOREPLIFETIME(AHeroCharacter, Armour);
 }
 
 
@@ -118,7 +120,6 @@ AHeroState* AHeroCharacter::GetHeroState() const
 {
 	return GetPlayerState<AHeroState>();
 }
-
 
 AHeroController* AHeroCharacter::GetHeroController() const
 {
@@ -195,6 +196,33 @@ void AHeroCharacter::Tick(float DeltaSeconds)
 	// Handle Input
 	if (Controller == nullptr) return;
 
+
+
+
+
+
+	// Draw a rectangle around the player!
+
+	//auto HUD = GetHeroController()->GetHUD();
+	const auto LP = GetHeroController()->GetLocalPlayer();
+	if (LP/* && HUD*/)
+	{
+		FVector Origin, BoxExtent;
+		GetActorBounds(true, OUT Origin, OUT BoxExtent);
+
+		const FBox ActorBox{ Origin - BoxExtent, Origin + BoxExtent };
+
+		FVector2D LowerLeft, UpperRight;
+		if (LP->GetPixelBoundingBox(ActorBox, OUT LowerLeft, OUT UpperRight))
+		{
+			auto Size = UpperRight - LowerLeft;
+			//HUD->DrawRect(FLinearColor::Blue, LowerLeft.X, LowerLeft.Y, Size.X, Size.Y);
+			//UE_LOG(LogTemp, Warning, TEXT("%s : %s"), *LowerLeft.ToString(), *Size.ToString());
+		}
+	}
+
+
+
 	const auto deadzoneSquared = 0.25f * 0.25f;
 
 	// Move character
@@ -219,24 +247,60 @@ void AHeroCharacter::Tick(float DeltaSeconds)
 
 void AHeroCharacter::ApplyDamage(AHeroCharacter* DamageInstigator, float Damage)
 {
+	//This must only run on a dedicated server or listen server
+
+	if (!HasAuthority()) return;
 	// TODO Only on authority, then rep player state to all clients.
-	Health -= Damage;
 
-	if (Role == ROLE_Authority)
+	if (Damage > Armour)
 	{
-		UE_LOG(LogTemp, Warning, TEXT("%fhp"), Health);
+		const float DamageToHealth = Damage - Armour;
+		Armour = 0;
+		Health -= DamageToHealth;
+	}
+	else
+	{
+		Armour -= Damage;
+	}
+	
+	FString S = FString::Printf(TEXT("%fhp"), Health);
+	LogMsgWithRole(S);
 
-		if (Health <= 0)
-		{
-			HealthDepletedEvent.Broadcast(this, DamageInstigator);
-		}
+	if (Health <= 0)
+	{
+		HealthDepletedEvent.Broadcast(this, DamageInstigator);
 	}
 }
 
+bool AHeroCharacter::TryGiveHealth(float Hp)
+{
+	LogMsgWithRole("TryGiveHealth");
+	//if (!HasAuthority()) return;
+	if (Health == MaxHealth) return false;
+	
+	Health = FMath::Min(Health + Hp, MaxHealth);
+	return true;
+}
 
+bool AHeroCharacter::TryGiveAmmo(int Ammo)
+{
+	LogMsgWithRole("TryGiveAmmo");
+	//if (!HasAuthority()) return;
+	if (CurrentWeapon == nullptr || CurrentWeapon->AmmoInPool == CurrentWeapon->AmmoPoolSize) return false;
 
+	CurrentWeapon->AmmoInPool = FMath::Min(CurrentWeapon->AmmoInPool + Ammo, CurrentWeapon->AmmoPoolSize);
+	return true;
+}
 
+bool AHeroCharacter::TryGiveArmour(float Delta)
+{
+	LogMsgWithRole("TryGiveArmour");
+	//if (!HasAuthority()) return;
+	if (Armour == MaxArmour) return false;
 
+	Armour = FMath::Min(Armour + Delta, MaxArmour);
+	return true;
+}
 
 
 void AHeroCharacter::LogMsgWithRole(FString message)

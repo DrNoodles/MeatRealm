@@ -36,6 +36,10 @@ AHeroCharacter* AHeroController::GetHeroCharacter() const
 
 void AHeroController::ShowHud(bool bMakeVisible)
 {
+	// Enforce vertical aspect ratio
+	const auto LP = GetLocalPlayer();
+	LP->AspectRatioAxisConstraint = EAspectRatioAxisConstraint::AspectRatio_MaintainYFOV;
+
 	const bool bOwningClient = GetLocalRole() == ROLE_AutonomousProxy;
 	const bool bListenServer = GetRemoteRole() == ROLE_SimulatedProxy;
 	if (!bOwningClient && !bListenServer) 
