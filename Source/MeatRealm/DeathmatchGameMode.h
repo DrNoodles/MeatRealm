@@ -26,9 +26,8 @@ public:
 
 private:
 	TArray<AHeroController*> ConnectedHeroControllers;
+	TMap<uint32, FDelegateHandle> OnPlayerDieHandles;
 
-	void OnPlayerDie(AHeroCharacter* dead, AHeroCharacter* killer);
+	void OnPlayerDie(AHeroController* DeadController, AHeroController* KillerController);
 	bool EndGameIfFragLimitReached() const;
-
-
 };

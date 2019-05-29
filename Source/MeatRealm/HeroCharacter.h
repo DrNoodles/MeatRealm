@@ -35,9 +35,6 @@ public:
 	void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
 
 
-	DECLARE_EVENT_TwoParams(AHeroCharacter, FHealthDepleted, AHeroCharacter*, AHeroCharacter*)
-	FHealthDepleted& OnHealthDepleted() { return HealthDepletedEvent; }
-
 	AHeroState* GetHeroState() const;
 	AHeroController* GetHeroController() const;
 
@@ -67,7 +64,7 @@ public:
 		float MaxArmour = 100.f;
 
 	UFUNCTION()
-	virtual void ApplyDamage(AHeroCharacter* DamageInstigator, float Damage) override;
+	virtual void ApplyDamage(AHeroController* DamageInstigator, float Damage) override;
 	UFUNCTION()
 	virtual bool TryGiveHealth(float Hp) override;
 	UFUNCTION()
@@ -115,19 +112,12 @@ public:
 
 
 private:
-
-	
-	/// Events
-	FHealthDepleted HealthDepletedEvent;
-
 	bool bUseMouseAim = true;
 	float AxisMoveUp;
 	float AxisMoveRight;
 	float AxisFaceUp;
 	float AxisFaceRight;
-
-
-
+	  
 	void LogMsgWithRole(FString message);
 	FString GetEnumText(ENetRole role);
 	FString GetRoleText();

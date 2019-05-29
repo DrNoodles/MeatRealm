@@ -6,7 +6,6 @@
 #include "Components/StaticMeshComponent.h"
 #include "Components/SceneComponent.h"
 #include "Engine/Public/TimerManager.h"
-#include "Interfaces/AffectableInterface.h"
 
 // Sets default values
 APickupBase::APickupBase()
@@ -79,10 +78,7 @@ void APickupBase::Respawn()
 	LogMsgWithRole("Respawn()");
 
 	// Dispose pickup respawn timer
-	if (RespawnTimerHandle.IsValid())
-	{
-		GetWorld()->GetTimerManager().ClearTimer(RespawnTimerHandle);
-	}
+	if (RespawnTimerHandle.IsValid()) { GetWorld()->GetTimerManager().ClearTimer(RespawnTimerHandle); }
 
 	// Show visual
 	MeshComp->SetVisibility(true, true);

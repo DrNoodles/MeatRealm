@@ -35,11 +35,18 @@ public:
 	void LogMsgWithRole(FString message);
 	FString GetEnumText(ENetRole role);
 	FString GetRoleText();
+	void HealthDepleted(AHeroController* DamageInstigator);
+
+	DECLARE_EVENT_TwoParams(AHeroController, FHealthDepleted, AHeroController*, AHeroController*)
+	FHealthDepleted& OnHealthDepleted() { return HealthDepletedEvent; }
 
 protected:
 	virtual void SetupInputComponent() override;
 
 private:
+
+	
+	FHealthDepleted HealthDepletedEvent;
 
 	/// Input
 	void Input_MoveUp(float Value);

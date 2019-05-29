@@ -235,7 +235,7 @@ void AHeroCharacter::Tick(float DeltaSeconds)
 	
 }
 
-void AHeroCharacter::ApplyDamage(AHeroCharacter* DamageInstigator, float Damage)
+void AHeroCharacter::ApplyDamage(AHeroController* DamageInstigator, float Damage)
 {
 	//This must only run on a dedicated server or listen server
 
@@ -258,7 +258,10 @@ void AHeroCharacter::ApplyDamage(AHeroCharacter* DamageInstigator, float Damage)
 
 	if (Health <= 0)
 	{
-		HealthDepletedEvent.Broadcast(this, DamageInstigator);
+		// Let HeroController know we're not feeling great
+		auto HC = GetHeroController();
+		if (HC) HC->HealthDepleted(DamageInstigator);
+
 	}
 }
 

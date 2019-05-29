@@ -123,6 +123,11 @@ FString AHeroController::GetRoleText()
 	return "Unknown: " + GetEnumText(Role) + " " + GetEnumText(GetRemoteRole());
 }
 
+void AHeroController::HealthDepleted(AHeroController* DamageInstigator)
+{
+	HealthDepletedEvent.Broadcast(this, DamageInstigator);
+}
+
 void AHeroController::SetupInputComponent()
 {
 	Super::SetupInputComponent();

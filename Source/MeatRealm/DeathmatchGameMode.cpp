@@ -30,20 +30,30 @@ void ADeathmatchGameMode::PostLogin(APlayerController* NewPlayer)
 	Super::PostLogin(NewPlayer);
 
 	const auto Hero = static_cast<AHeroController*>(NewPlayer);
-	ConnectedHeroControllers.AddUnique(Hero);
 
+	ConnectedHeroControllers.AddUnique(Hero);
 	UE_LOG(LogTemp, Warning, TEXT("ConnectedHeroControllers: %d"), ConnectedHeroControllers.Num());
+
+	// Monitor for player death events
+	const FDelegateHandle Handle = Hero->OnHealthDepleted().AddUObject(this, &ADeathmatchGameMode::OnPlayerDie);
+	const uint32 UID = Hero->GetUniqueID();
+	OnPlayerDieHandles.Add(UID, Handle);
 }
 
 
 void ADeathmatchGameMode::Logout(AController* Exiting)
 {
-	Super::Logout(Exiting);
-
 	const auto Hero = static_cast<AHeroController*>(Exiting);
-	ConnectedHeroControllers.Remove(Hero);
 
+	ConnectedHeroControllers.Remove(Hero);
 	UE_LOG(LogTemp, Warning, TEXT("ConnectedHeroControllers: %d"), ConnectedHeroControllers.Num());
+
+	// Unbind event when player leaves!
+	const uint32 UID = Hero->GetUniqueID();
+	const auto Handle = OnPlayerDieHandles[UID];
+	Hero->OnHealthDepleted().Remove(Handle);
+
+	Super::Logout(Exiting);
 }
 
 
@@ -57,28 +67,37 @@ bool ADeathmatchGameMode::ShouldSpawnAtStartSpot(AController* Player)
 void ADeathmatchGameMode::SetPlayerDefaults(APawn* PlayerPawn)
 {
 	UE_LOG(LogTemp, Warning, TEXT("SetPlayerDefaults"));
-	
-	auto heroChar = (AHeroCharacter*)PlayerPawn;
-	heroChar->Health = heroChar->MaxHealth;
-	heroChar->OnHealthDepleted().AddUObject(this, &ADeathmatchGameMode::OnPlayerDie);
 }
 
-void ADeathmatchGameMode::OnPlayerDie(AHeroCharacter* dead, AHeroCharacter* killer)
+void ADeathmatchGameMode::OnPlayerDie(AHeroController* DeadController, AHeroController* KillerController)
 {
-	auto DeadState = dead->GetHeroState();
-	auto KillerState = killer->GetHeroState();
+	if (!DeadController)
+	{
+		UE_LOG(LogTemp, Error, TEXT("ADeathmatchGameMode::OnPlayerDie dead is null!"));
+		return;
+	}
+	if (!KillerController)
+	{
+		UE_LOG(LogTemp, Error, TEXT("ADeathmatchGameMode::OnPlayerDie killer is null!"));
+		return;
+	}
+
+	if (!DeadController || !KillerController) return;
+
+	AHeroState* const DeadState = DeadController->GetPlayerState<AHeroState>();
+	AHeroState* const KillerState = KillerController->GetPlayerState<AHeroState>();
 
 	DeadState->Deaths++;
 	KillerState->Kills++;
 	UE_LOG(LogTemp, Warning, TEXT("Deadguy: %dk:%dd"), DeadState->Kills, DeadState->Deaths);
 	UE_LOG(LogTemp, Warning, TEXT("Killer: %dk:%dd"), KillerState->Kills, KillerState->Deaths);
 
-	AHeroController* Controller = dead->GetHeroController();
-	dead->Destroy();
+	AHeroCharacter* DeadChar = DeadController->GetHeroCharacter();
+	if (DeadChar) DeadChar->Destroy();
 
 	if (EndGameIfFragLimitReached()) return;
 
-	RestartPlayer(Controller);
+	RestartPlayer(DeadController);
 }
 
 

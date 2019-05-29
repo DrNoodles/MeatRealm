@@ -7,8 +7,7 @@
 #include "GameFramework/ProjectileMovementComponent.h"
 #include "HeroCharacter.h"
 #include "GameFramework/Controller.h"
-
-
+#include "PickupBase.h"
 
 
 // Sets default values
@@ -69,25 +68,35 @@ void AProjectile::OnCompBeginOverlap(UPrimitiveComponent* OverlappedComp, AActor
 
 	if (!HasAuthority()) return;
 
-	const auto IsNotWorthChecking = OtherActor == nullptr || OtherActor == this || OtherComp == nullptr;
+	auto TheReceiver = OtherActor;
+
+	const auto IsNotWorthChecking = TheReceiver == nullptr || TheReceiver == this || OtherComp == nullptr;
 	if (IsNotWorthChecking) return;
 
 	// Ignore other projectiles
-	if (OtherActor->IsA(AProjectile::StaticClass())) return;
+	if (TheReceiver->IsA(AProjectile::StaticClass())) return;
 
-	if (OtherActor->GetClass()->ImplementsInterface(UAffectableInterface::StaticClass()))
+	if (TheReceiver->GetClass()->ImplementsInterface(UAffectableInterface::StaticClass()))
 	{
 		// Dont shoot myself
-		if (OtherActor == Instigator) return;
+		if (TheReceiver == Instigator) return;
 
-		AHeroCharacter* Enemy = Cast<AHeroCharacter>(Instigator);
-		if (Enemy == nullptr)
+		// Get TheGiver Controller
+		AHeroController* TheGiver = nullptr;
+		const auto InstigatorChar = Cast<AHeroCharacter>(Instigator);
+		if (InstigatorChar) TheGiver = InstigatorChar->GetHeroController();
+		if (TheGiver == nullptr)
 		{
 			UE_LOG(LogTemp, Error, TEXT("Instigator of damage is null!"));
 		}
 
-		// Apply damage from enemy
-		Cast<IAffectableInterface>(OtherActor)->ApplyDamage(Enemy, ShotDamage);
+		// Apply damage
+		auto AffectableReceiver = Cast<IAffectableInterface>(TheReceiver);
+		if (AffectableReceiver == nullptr)
+		{
+			UE_LOG(LogTemp, Error, TEXT("AffectableReceiver of damage is null!"));
+		}
+		AffectableReceiver->ApplyDamage(TheGiver, ShotDamage);
 	}
 
 	Destroy();
