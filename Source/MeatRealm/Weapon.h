@@ -32,7 +32,7 @@ public:
 	void Input_Reload();
 	bool TryGiveAmmo();
 	uint32 HeroControllerId;
-	void SetHeroControllerId(uint32 HeroControllerId) { this->HeroControllerId = HeroControllerId; }
+	void SetHeroControllerId(uint32 HeroControllerUid) { this->HeroControllerId = HeroControllerUid; }
 
 public:
 	FTimerHandle CanActionTimerHandle;
@@ -50,10 +50,10 @@ public:
 		UArrowComponent* MuzzleLocationComp = nullptr;
 
 
-	UPROPERTY(BlueprintReadOnly, Category = Weapon)
+	UPROPERTY(BlueprintReadOnly, Category = Weapon, Replicated)
 		int AmmoInClip;
 
-	UPROPERTY(BlueprintReadOnly, Category = Weapon)
+	UPROPERTY(BlueprintReadOnly, Category = Weapon, Replicated)
 		int AmmoInPool;
 
 
@@ -83,7 +83,7 @@ public:
 	UPROPERTY(EditAnywhere)
 		bool bUseClip = true;
 
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Replicated)
 	bool bIsReloading;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
@@ -93,11 +93,19 @@ public:
 	float HipfireSpread = 20;
 
 
+
+	UFUNCTION(Server, Reliable, WithValidation)
+		void ServerRPC_Reload();
+
+	UFUNCTION(Server, Reliable, WithValidation)
+		void ServerRPC_PullTrigger();
+
+	UFUNCTION(Server, Reliable, WithValidation)
+		void ServerRPC_ReleaseTrigger();
+
 	UFUNCTION(Server, Reliable, WithValidation)
 		void RPC_Fire_OnServer();
 
-	UFUNCTION(NetMulticast, Reliable)
-		void RPC_Fire_RepToClients();
 
 private:
 	UFUNCTION()
@@ -118,6 +126,7 @@ private:
 	bool bTriggerPulled;
 	bool bHasActionedThisTriggerPull;
 	bool bReloadQueued;
-	FDateTime ReloadStartTime;
 
+	UPROPERTY(Replicated)
+	FDateTime ReloadStartTime;
 };

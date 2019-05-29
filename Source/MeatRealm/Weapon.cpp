@@ -7,6 +7,7 @@
 #include "Components/StaticMeshComponent.h"
 #include "DrawDebugHelpers.h"
 #include "DeathmatchGameMode.h"
+#include "UnrealNetwork.h"
 
 AWeapon::AWeapon()
 {
@@ -25,6 +26,16 @@ AWeapon::AWeapon()
 	MuzzleLocationComp = CreateDefaultSubobject<UArrowComponent>(TEXT("MuzzleLocationComp"));
 	MuzzleLocationComp->SetupAttachment(RootComponent);
 }
+
+void AWeapon::GetLifetimeReplicatedProps(TArray< FLifetimeProperty >& OutLifetimeProps) const
+{
+	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
+	DOREPLIFETIME(AWeapon, AmmoInClip);
+	DOREPLIFETIME(AWeapon, AmmoInPool);
+	DOREPLIFETIME(AWeapon, bIsReloading);
+	DOREPLIFETIME(AWeapon, ReloadStartTime);
+}
+
 
 void AWeapon::BeginPlay()
 {
@@ -75,7 +86,7 @@ void AWeapon::Tick(float DeltaTime)
 
 void AWeapon::ClientFireStart()
 {
-	//LogMsgWithRole("ClientFireStart()");
+	LogMsgWithRole("ClientFireStart()");
 
 	bHasActionedThisTriggerPull = true;
 	bCanAction = false;
@@ -142,6 +153,39 @@ bool AWeapon::NeedsReload() const
 	return bUseClip && AmmoInClip < 1;
 }
 
+void AWeapon::ServerRPC_PullTrigger_Implementation()
+{
+	bTriggerPulled = true;
+	bHasActionedThisTriggerPull = false;
+}
+
+bool AWeapon::ServerRPC_PullTrigger_Validate()
+{
+	return true;
+}
+
+void AWeapon::ServerRPC_ReleaseTrigger_Implementation()
+{
+	bTriggerPulled = false;
+	bHasActionedThisTriggerPull = false;
+}
+
+bool AWeapon::ServerRPC_ReleaseTrigger_Validate()
+{
+	return true;
+}
+
+void AWeapon::ServerRPC_Reload_Implementation()
+{
+	if (bTriggerPulled || !CanReload()) return;
+	bReloadQueued = true;
+}
+
+bool AWeapon::ServerRPC_Reload_Validate()
+{
+	return true;
+}
+
 void AWeapon::Shoot()
 {
 	//LogMsgWithRole("Shoot");
@@ -193,28 +237,33 @@ void AWeapon::Shoot()
 
 void AWeapon::Input_PullTrigger()
 {
+	ServerRPC_PullTrigger();
 	//LogMsgWithRole("PullTrigger");
-	bTriggerPulled = true;
-	bHasActionedThisTriggerPull = false;
+	/*bTriggerPulled = true;
+	bHasActionedThisTriggerPull = false;*/
 }
 
 void AWeapon::Input_ReleaseTrigger()
 {
+	ServerRPC_ReleaseTrigger();
 	//UE_LOG(LogTemp, Warning, TEXT("ReleaseTrigger!"));
-	bTriggerPulled = false;
-	bHasActionedThisTriggerPull = false;
+	/*bTriggerPulled = false;
+	bHasActionedThisTriggerPull = false;*/
 }
 
 void AWeapon::Input_Reload()
 {
-	if (bTriggerPulled || !CanReload()) return;
-	//UE_LOG(LogTemp, Warning, TEXT("Input_Reload!"));
-	bReloadQueued = true;
+	ServerRPC_Reload();
+	//if (bTriggerPulled || !CanReload()) return;
+	////UE_LOG(LogTemp, Warning, TEXT("Input_Reload!"));
+	//bReloadQueued = true;
 }
 
 bool AWeapon::TryGiveAmmo()
 {
 	LogMsgWithRole("AWeapon::TryGiveAmmo()");
+
+
 
 	if (AmmoInPool == AmmoPoolSize) return false;
 
@@ -229,8 +278,9 @@ bool AWeapon::TryGiveAmmo()
 void AWeapon::RPC_Fire_OnServer_Implementation()
 {
 	//LogMsgWithRole("RPC_Fire_OnServer_Impl");
+	Shoot();
 
-	RPC_Fire_RepToClients();
+	//RPC_Fire_RepToClients();
 }
 
 bool AWeapon::RPC_Fire_OnServer_Validate()
@@ -238,20 +288,19 @@ bool AWeapon::RPC_Fire_OnServer_Validate()
 	return true;
 }
 
-void AWeapon::RPC_Fire_RepToClients_Implementation()
-{
+//void AWeapon::RPC_Fire_RepToClients_Implementation()
+//{
 	// This method runs on ALL clients
 
 	// For now(?) lets ONLY shoot this on the server
-	if (GetOwner()->Role != ROLE_Authority) 
+	/*if (GetOwner()->Role != ROLE_Authority) 
 	{
 		return;
 	}
-
+*/
 	//LogMsgWithRole("RPC_Fire_RepToClients_Impl");
 
-	Shoot();
-}
+//}
 
 
 
