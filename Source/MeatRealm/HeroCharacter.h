@@ -34,6 +34,7 @@ public:
 	void Restart() override;
 	void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
 
+
 	DECLARE_EVENT_TwoParams(AHeroCharacter, FHealthDepleted, AHeroCharacter*, AHeroCharacter*)
 	FHealthDepleted& OnHealthDepleted() { return HealthDepletedEvent; }
 
@@ -75,19 +76,10 @@ public:
 	virtual bool TryGiveArmour(float Delta) override;
 
 protected:
-	// AActor interface
 	virtual void Tick(float DeltaSeconds) override;
-	// End of AActor interface
 
-	// APawn interface
-	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
-	// End of APawn interface
 
 public:
-	///** Returns CameraBoom subobject **/
-	//FORCEINLINE class USpringArmComponent* GetCameraBoom() const { return CameraBoom; }
-	///** Returns FollowCamera subobject **/
-	//FORCEINLINE class UCameraComponent* GetFollowCamera() const { return FollowCamera; }
 
 	/// Components
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
@@ -108,21 +100,31 @@ public:
 	UPROPERTY(BlueprintReadOnly)
 		AWeapon* CurrentWeapon = nullptr;
 
-private:
 
-	bool bUseMouseAim = true;;
-	
-	/// Events
-	FHealthDepleted HealthDepletedEvent;
-
-	
 	/// Input
 
 	void Input_FirePressed();
 	void Input_FireReleased();
 	void Input_Reload();
-	void Input_ToggleInputScheme();
+	void Input_MoveUp(float Value) {	AxisMoveUp = Value; }
+	void Input_MoveRight(float Value) { AxisMoveRight = Value; }
+	void Input_FaceUp(float Value) { AxisFaceUp = Value; }
+	void Input_FaceRight(float Value) { AxisFaceRight = Value; }
 
+	void SetUseMouseAim(bool bUseMouse) { bUseMouseAim = bUseMouse; }
+
+
+private:
+
+	
+	/// Events
+	FHealthDepleted HealthDepletedEvent;
+
+	bool bUseMouseAim = true;
+	float AxisMoveUp;
+	float AxisMoveRight;
+	float AxisFaceUp;
+	float AxisFaceRight;
 
 
 

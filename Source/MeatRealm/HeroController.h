@@ -16,10 +16,13 @@ class MEATREALM_API AHeroController : public APlayerController
 	GENERATED_BODY()
 
 public:
+	
+
 	UPROPERTY(EditDefaultsOnly, Category = "Widgets")
 		TSubclassOf<class UUserWidget> HudClass;
 
 	UUserWidget* HudInstance;
+	
 
 	void OnPossess(APawn* InPawn) override;
 	void AcknowledgePossession(APawn* P) override;
@@ -32,4 +35,21 @@ public:
 	void LogMsgWithRole(FString message);
 	FString GetEnumText(ENetRole role);
 	FString GetRoleText();
+
+protected:
+	virtual void SetupInputComponent() override;
+
+private:
+
+	/// Input
+	void Input_MoveUp(float Value);
+	void Input_MoveRight(float Value);
+	void Input_FaceUp(float Value);
+	void Input_FaceRight(float Value);
+	void Input_FirePressed();
+	void Input_FireReleased();
+	void Input_Reload();
+	void Input_ToggleUseMouse();
+	bool bUseMouseAim = true;
+
 };
