@@ -6,6 +6,7 @@
 #include "Components/ArrowComponent.h"
 #include "Components/StaticMeshComponent.h"
 #include "DrawDebugHelpers.h"
+#include "DeathmatchGameMode.h"
 
 AWeapon::AWeapon()
 {
@@ -39,16 +40,9 @@ void AWeapon::Tick(float DeltaTime)
 
 	if (bIsReloading)
 	{
-		const FTimespan ElapsedTime = FDateTime::Now() - ReloadStartTime;
-		ReloadProgress = ElapsedTime.GetTotalSeconds() / ReloadTime;
-		//auto Text = "Reloading";
-		//DrawDebugString(GetWorld(), FVector(0, 0, 200), "Reloading", this, FColor::Blue, DeltaTime * .8f);
+		const auto ElapsedReloadTime = (FDateTime::Now() - ReloadStartTime).GetTotalSeconds();
+		ReloadProgress = ElapsedReloadTime / ReloadTime;
 	}
-	/*else if (NeedsReload())
-	{
-		auto Text = "Empty!";
-		DrawDebugString(GetWorld(), FVector(0, 0, 200), "Empty!", this, FColor::Red, DeltaTime * .8f);
-	}*/
 
 	if (!bCanAction) return;
 
@@ -152,18 +146,22 @@ void AWeapon::Shoot()
 {
 	//LogMsgWithRole("Shoot");
 
-	if (ProjectileClass == nullptr) return;
-	// TODO Set an error message in log suggesting the designer set a projectile class
+	if (ProjectileClass == nullptr)
+	{
+		UE_LOG(LogTemp, Error, TEXT("Set a Projectile Class in your Weapon Blueprint to shoot"));
+		return;
+	};
 
 	UWorld * World = GetWorld();
 	if (World == nullptr) return;
 
 
+	// Spawn the projectile at the muzzle.
+
 	FActorSpawnParameters SpawnParams;
 	SpawnParams.Owner = GetOwner();
 	SpawnParams.Instigator = Instigator;
 	
-	// Spawn the projectile at the muzzle.
 	AProjectile * Projectile = GetWorld()->SpawnActorAbsolute<AProjectile>(
 		ProjectileClass,
 		MuzzleLocationComp->GetComponentTransform(), SpawnParams);
@@ -171,6 +169,9 @@ void AWeapon::Shoot()
 	// Set the projectile velocity
 	if (Projectile == nullptr) return;
 
+	Projectile->SetHeroControllerId(HeroControllerId);
+
+	
 
 	// Perterb the shot direction by the hipfire spread.
 	const auto ShootDirection = MuzzleLocationComp->GetForwardVector();
@@ -228,6 +229,7 @@ bool AWeapon::TryGiveAmmo()
 void AWeapon::RPC_Fire_OnServer_Implementation()
 {
 	//LogMsgWithRole("RPC_Fire_OnServer_Impl");
+
 	RPC_Fire_RepToClients();
 }
 

@@ -6,7 +6,7 @@
 #include "UObject/Interface.h"
 #include "AffectableInterface.generated.h"
 
-class AHeroCharacter;
+class AHeroController;
 class AWeapon;
 
 // This class does not need to be modified.
@@ -25,7 +25,7 @@ class MEATREALM_API IAffectableInterface
 
 public: // NOTE This interface breaks the I in SOLID. But it'll do for now.
 	UFUNCTION()
-		virtual void ApplyDamage(AHeroCharacter* DamageInstigator, float Delta) = 0;
+		virtual void ApplyDamage(uint32 InstigatorHeroControllerId, float Delta) = 0;
 	UFUNCTION()
 		virtual bool TryGiveHealth(float Hp) = 0;
 	UFUNCTION()

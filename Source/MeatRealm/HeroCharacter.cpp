@@ -126,26 +126,6 @@ AHeroController* AHeroCharacter::GetHeroController() const
 	return GetController<AHeroController>();
 }
 
-
-void AHeroCharacter::SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent)
-{
-	// Set up gameplay key bindings
-	check(PlayerInputComponent);
-
-	PlayerInputComponent->BindAxis("MoveUp");
-	PlayerInputComponent->BindAxis("MoveRight");
-	PlayerInputComponent->BindAxis("FaceUp");
-	PlayerInputComponent->BindAxis("FaceRight");
-	PlayerInputComponent->BindAction(
-		"FireWeapon", IE_Pressed, this, &AHeroCharacter::Input_FirePressed);
-	PlayerInputComponent->BindAction(
-		"FireWeapon", IE_Released, this, &AHeroCharacter::Input_FireReleased);
-	PlayerInputComponent->BindAction(
-		"Reload", IE_Released, this, &AHeroCharacter::Input_Reload);
-	PlayerInputComponent->BindAction(
-		"ToggleInputScheme", IE_Pressed, this, &AHeroCharacter::Input_ToggleInputScheme);
-}
-
 void AHeroCharacter::ServerRPC_SpawnWeapon_Implementation(TSubclassOf<AWeapon> weaponClass)
 {
 	FActorSpawnParameters params;
@@ -158,6 +138,7 @@ void AHeroCharacter::ServerRPC_SpawnWeapon_Implementation(TSubclassOf<AWeapon> w
 
 	weapon->AttachToComponent(
 		WeaponAnchor, FAttachmentTransformRules{ EAttachmentRule::KeepWorld, true });
+	weapon->SetHeroControllerId(GetHeroController()->GetUniqueID());
 
 	ServerCurrentWeapon = weapon;
 }
@@ -175,31 +156,6 @@ void AHeroCharacter::OnRep_ServerStateChanged()
 }
 
 
-void AHeroCharacter::Input_FirePressed()
-{
-	if (CurrentWeapon == nullptr) return;
-	CurrentWeapon->Input_PullTrigger();
-}
-
-void AHeroCharacter::Input_FireReleased()
-{
-	if (CurrentWeapon == nullptr) return;
-	CurrentWeapon->Input_ReleaseTrigger();
-}
-
-void AHeroCharacter::Input_Reload()
-{
-	if (CurrentWeapon == nullptr) return;
-	CurrentWeapon->Input_Reload();
-}
-
-void AHeroCharacter::Input_ToggleInputScheme()
-{
-	bUseMouseAim = !bUseMouseAim;
-
-	auto HC = GetHeroController();
-	if (HC) HC->bShowMouseCursor = bUseMouseAim;
-}
 
 /// Methods
 
@@ -208,33 +164,10 @@ void AHeroCharacter::Tick(float DeltaSeconds)
 	// Handle Input
 	if (Controller == nullptr) return;
 
-
-
-	//// Draw a rectangle around the player!
-
-	////auto HUD = GetHeroController()->GetHUD();
-	//const auto LP = GetHeroController()->GetLocalPlayer();
-	//if (LP/* && HUD*/)
-	//{
-	//	FVector Origin, BoxExtent;
-	//	GetActorBounds(true, OUT Origin, OUT BoxExtent);
-
-	//	const FBox ActorBox{ Origin - BoxExtent, Origin + BoxExtent };
-
-	//	FVector2D LowerLeft, UpperRight;
-	//	if (LP->GetPixelBoundingBox(ActorBox, OUT LowerLeft, OUT UpperRight))
-	//	{
-	//		auto Size = UpperRight - LowerLeft;
-	//		//HUD->DrawRect(FLinearColor::Blue, LowerLeft.X, LowerLeft.Y, Size.X, Size.Y);
-	//		//UE_LOG(LogTemp, Warning, TEXT("%s : %s"), *LowerLeft.ToString(), *Size.ToString());
-	//	}
-	//}
-
 	const auto deadzoneSquared = 0.25f * 0.25f;
 
-
 	// Move character
-	const auto moveVec = FVector{ GetInputAxisValue("MoveUp"), GetInputAxisValue("MoveRight"), 0 };
+	const auto moveVec = FVector{ AxisMoveUp, AxisMoveRight, 0 };
 	if (moveVec.SizeSquared() >= deadzoneSquared)
 	{
 		AddMovementInput(FVector{ 1.f, 0.f, 0.f }, moveVec.X);
@@ -269,7 +202,7 @@ void AHeroCharacter::Tick(float DeltaSeconds)
 	}
 	else // Use gamepad
 	{
-		lookVec = FVector{ GetInputAxisValue("FaceUp"), GetInputAxisValue("FaceRight"), 0 };
+		lookVec = FVector{ AxisFaceUp, AxisFaceRight, 0 };
 	}
 
 
@@ -285,7 +218,7 @@ void AHeroCharacter::Tick(float DeltaSeconds)
 	
 }
 
-void AHeroCharacter::ApplyDamage(AHeroCharacter* DamageInstigator, float Damage)
+void AHeroCharacter::ApplyDamage(uint32 InstigatorHeroControllerId, float Damage)
 {
 	//This must only run on a dedicated server or listen server
 
@@ -308,7 +241,9 @@ void AHeroCharacter::ApplyDamage(AHeroCharacter* DamageInstigator, float Damage)
 
 	if (Health <= 0)
 	{
-		HealthDepletedEvent.Broadcast(this, DamageInstigator);
+		// Let HeroController know we're not feeling great
+		auto HC = GetHeroController();
+		if (HC) HC->HealthDepleted(InstigatorHeroControllerId);
 	}
 }
 
