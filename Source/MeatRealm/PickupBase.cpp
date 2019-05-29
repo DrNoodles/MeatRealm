@@ -6,6 +6,7 @@
 #include "Components/StaticMeshComponent.h"
 #include "Components/SceneComponent.h"
 #include "Engine/Public/TimerManager.h"
+#include "UnrealNetwork.h"
 
 // Sets default values
 APickupBase::APickupBase()
@@ -28,15 +29,18 @@ APickupBase::APickupBase()
 	MeshComp->CanCharacterStepUpOn = ECB_No;
 }
 
-void APickupBase::BeginPlay()
+void APickupBase::GetLifetimeReplicatedProps(TArray< FLifetimeProperty >& OutLifetimeProps) const
 {
-	Super::BeginPlay();
+	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
+	DOREPLIFETIME(APickupBase, IsAvailable);
 }
 
 
 void APickupBase::OnCompBeginOverlap(UPrimitiveComponent* OverlappedComp, AActor* OtherActor,
 	UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult)
 {
+	if (!HasAuthority()) return;
+
 	LogMsgWithRole("Overlapping()");
 	
 	const auto IsNotWorthChecking = OtherActor == nullptr || OtherActor == this || OtherComp == nullptr;
@@ -47,31 +51,58 @@ void APickupBase::OnCompBeginOverlap(UPrimitiveComponent* OverlappedComp, AActor
 	
 	if (!TryApplyAffect(Affectable)) return;
 
-	PickupItem();
+	ServerRPC_PickupItem();
 }
 
 
-void APickupBase::PickupItem()
+void APickupBase::ServerRPC_PickupItem_Implementation()
 {
 	LogMsgWithRole("PickupItem()");
 
-	// Disable Overlap
-	CollisionComp->SetGenerateOverlapEvents(false);
-
-	// Hide visual
-	MeshComp->SetVisibility(false, true);
-
-	// If not respawnable, cleanup and destroy
-	if (!bRespawns)
-	{
-		Destroy();
-	}
+	MakePickupAvailable(false); // simulate on server
+	IsAvailable = false; // replicates to clients
 
 	// Start respawn timer
 	GetWorld()->GetTimerManager().SetTimer(
 		RespawnTimerHandle, this, &APickupBase::Respawn, RespawnDelay, false, -1);
 }
 
+bool APickupBase::ServerRPC_PickupItem_Validate()
+{
+	return true;
+}
+
+void APickupBase::OnRep_IsAvailableChanged()
+{
+	LogMsgWithRole("APickupBase::OnRep_IsAvailableChanged()");
+	MakePickupAvailable(IsAvailable);
+}
+
+void APickupBase::MakePickupAvailable(bool bIsAvailable)
+{
+	if (bIsAvailable)
+	{
+		// Show visual
+		MeshComp->SetVisibility(true, true);
+
+		// Enable Overlap
+		CollisionComp->SetGenerateOverlapEvents(true);
+	}
+	else
+	{
+		// Disable Overlap
+		CollisionComp->SetGenerateOverlapEvents(false);
+
+		// Hide visual
+		MeshComp->SetVisibility(false, true);
+
+		// If not respawnable, cleanup and destroy
+		if (!bRespawns)
+		{
+			Destroy();
+		}
+	}
+}
 
 void APickupBase::Respawn()
 {
@@ -80,11 +111,8 @@ void APickupBase::Respawn()
 	// Dispose pickup respawn timer
 	if (RespawnTimerHandle.IsValid()) { GetWorld()->GetTimerManager().ClearTimer(RespawnTimerHandle); }
 
-	// Show visual
-	MeshComp->SetVisibility(true, true);
-
-	// Enable Overlap
-	CollisionComp->SetGenerateOverlapEvents(true);
+	MakePickupAvailable(true);
+	IsAvailable = true;
 }
 
 
