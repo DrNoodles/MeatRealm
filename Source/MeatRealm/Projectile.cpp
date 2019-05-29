@@ -5,10 +5,8 @@
 #include "Components/StaticMeshComponent.h"
 #include "Components/SphereComponent.h"
 #include "GameFramework/ProjectileMovementComponent.h"
-#include "HeroCharacter.h"
 #include "GameFramework/Controller.h"
-
-
+#include "PickupBase.h"
 
 
 // Sets default values
@@ -39,27 +37,12 @@ AProjectile::AProjectile()
 	ProjectileMovementComp->bShouldBounce = false;
 
 	// TODO Show a billboard if by default on the placeholder
-
-
 }
 
-// Called when the game starts or when spawned
-void AProjectile::BeginPlay()
-{
-	Super::BeginPlay();
-}
 
-// Called every frame
-void AProjectile::Tick(float DeltaTime)
+void AProjectile::FireInDirection(const FVector& ShootDirection)
 {
-	Super::Tick(DeltaTime);
-
-}
-
-void AProjectile::FireInDirection(const FVector& ShootDirection, const FVector& AdditionalVelocity)
-{
-	ProjectileMovementComp->Velocity
-		= (ShootDirection + AdditionalVelocity) * ProjectileMovementComp->InitialSpeed;
+	ProjectileMovementComp->Velocity	= ShootDirection * ProjectileMovementComp->InitialSpeed;
 }
 
 
@@ -70,25 +53,26 @@ void AProjectile::OnCompBeginOverlap(UPrimitiveComponent* OverlappedComp, AActor
 
 	if (!HasAuthority()) return;
 
-	const auto IsNotWorthChecking = OtherActor == nullptr || OtherActor == this || OtherComp == nullptr;
+	const auto TheReceiver = OtherActor;
+
+	const auto IsNotWorthChecking = TheReceiver == nullptr || TheReceiver == this || OtherComp == nullptr;
 	if (IsNotWorthChecking) return;
 
 	// Ignore other projectiles
-	if (OtherActor->IsA(AProjectile::StaticClass())) return;
+	if (TheReceiver->IsA(AProjectile::StaticClass())) return;
 
-	if (OtherActor->GetClass()->ImplementsInterface(UAffectableInterface::StaticClass()))
+	if (TheReceiver->GetClass()->ImplementsInterface(UAffectableInterface::StaticClass()))
 	{
 		// Dont shoot myself
-		if (OtherActor == Instigator) return;
+		if (TheReceiver == Instigator) return;
 
-		AHeroCharacter* Enemy = Cast<AHeroCharacter>(Instigator);
-		if (Enemy == nullptr)
+		// Apply damage
+		auto AffectableReceiver = Cast<IAffectableInterface>(TheReceiver);
+		if (AffectableReceiver == nullptr)
 		{
-			UE_LOG(LogTemp, Error, TEXT("Instigator of damage is null!"));
+			UE_LOG(LogTemp, Error, TEXT("AffectableReceiver of damage is null!"));
 		}
-
-		// Apply damage from enemy
-		Cast<IAffectableInterface>(OtherActor)->ApplyDamage(Enemy, ShotDamage);
+		AffectableReceiver->ApplyDamage(HeroControllerId, ShotDamage);
 	}
 
 	Destroy();

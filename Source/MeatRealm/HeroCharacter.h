@@ -25,6 +25,7 @@ class MEATREALM_API AHeroCharacter : public ACharacter, public IAffectableInterf
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Camera, meta = (AllowPrivateAccess = "true"))
 		class UCameraComponent* FollowCamera;
 
+
 public:
 
 
@@ -33,8 +34,6 @@ public:
 	void Restart() override;
 	void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
 
-	DECLARE_EVENT_TwoParams(AHeroCharacter, FHealthDepleted, AHeroCharacter*, AHeroCharacter*)
-	FHealthDepleted& OnHealthDepleted() { return HealthDepletedEvent; }
 
 	AHeroState* GetHeroState() const;
 	AHeroController* GetHeroController() const;
@@ -65,7 +64,7 @@ public:
 		float MaxArmour = 100.f;
 
 	UFUNCTION()
-	virtual void ApplyDamage(AHeroCharacter* DamageInstigator, float Damage) override;
+	virtual void ApplyDamage(uint32 InstigatorHeroControllerId, float Damage) override;
 	UFUNCTION()
 	virtual bool TryGiveHealth(float Hp) override;
 	UFUNCTION()
@@ -74,19 +73,15 @@ public:
 	virtual bool TryGiveArmour(float Delta) override;
 
 protected:
-	// AActor interface
 	virtual void Tick(float DeltaSeconds) override;
-	// End of AActor interface
 
-	// APawn interface
-	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
-	// End of APawn interface
 
 public:
-	/** Returns CameraBoom subobject **/
-	FORCEINLINE class USpringArmComponent* GetCameraBoom() const { return CameraBoom; }
-	/** Returns FollowCamera subobject **/
-	FORCEINLINE class UCameraComponent* GetFollowCamera() const { return FollowCamera; }
+
+	/// Components
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
+		UArrowComponent* WeaponAnchor = nullptr;
+
 
 
 	UFUNCTION(Server, Reliable, WithValidation)
@@ -102,27 +97,27 @@ public:
 	UPROPERTY(BlueprintReadOnly)
 		AWeapon* CurrentWeapon = nullptr;
 
-private:
-	/// Events
-	FHealthDepleted HealthDepletedEvent;
-
 
 	/// Input
 
-	void Input_FirePressed();
-	void Input_FireReleased();
-	void Input_Reload();
+	void Input_FirePressed() const { if (CurrentWeapon) CurrentWeapon->Input_PullTrigger(); }
+	void Input_FireReleased() const { if (CurrentWeapon) CurrentWeapon->Input_ReleaseTrigger(); }
+	void Input_Reload() const { if (CurrentWeapon) CurrentWeapon->Input_Reload(); }
+	void Input_MoveUp(float Value) {	AxisMoveUp = Value; }
+	void Input_MoveRight(float Value) { AxisMoveRight = Value; }
+	void Input_FaceUp(float Value) { AxisFaceUp = Value; }
+	void Input_FaceRight(float Value) { AxisFaceRight = Value; }
 
-	/// Components
-
-
-	UPROPERTY(VisibleAnywhere)
-		UArrowComponent* WeaponAnchor = nullptr;
-
-
+	void SetUseMouseAim(bool bUseMouse) { bUseMouseAim = bUseMouse; }
 
 
-
+private:
+	bool bUseMouseAim = true;
+	float AxisMoveUp;
+	float AxisMoveRight;
+	float AxisFaceUp;
+	float AxisFaceRight;
+	  
 	void LogMsgWithRole(FString message);
 	FString GetEnumText(ENetRole role);
 	FString GetRoleText();

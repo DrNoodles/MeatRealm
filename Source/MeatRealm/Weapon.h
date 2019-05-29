@@ -31,6 +31,8 @@ public:
 	void Input_ReleaseTrigger();
 	void Input_Reload();
 	bool TryGiveAmmo();
+	uint32 HeroControllerId;
+	void SetHeroControllerId(uint32 HeroControllerId) { this->HeroControllerId = HeroControllerId; }
 
 public:
 	FTimerHandle CanActionTimerHandle;
@@ -86,7 +88,10 @@ public:
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
 	float ReloadProgress = 0.f;
-	
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly)
+	float HipfireSpread = 20;
+
 
 	UFUNCTION(Server, Reliable, WithValidation)
 		void RPC_Fire_OnServer();

@@ -126,24 +126,6 @@ AHeroController* AHeroCharacter::GetHeroController() const
 	return GetController<AHeroController>();
 }
 
-
-void AHeroCharacter::SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent)
-{
-	// Set up gameplay key bindings
-	check(PlayerInputComponent);
-
-	PlayerInputComponent->BindAxis("MoveUp");
-	PlayerInputComponent->BindAxis("MoveRight");
-	PlayerInputComponent->BindAxis("FaceUp");
-	PlayerInputComponent->BindAxis("FaceRight");
-	PlayerInputComponent->BindAction(
-		"FireWeapon", IE_Pressed, this, &AHeroCharacter::Input_FirePressed);
-	PlayerInputComponent->BindAction(
-		"FireWeapon", IE_Released, this, &AHeroCharacter::Input_FireReleased);
-	PlayerInputComponent->BindAction(
-		"Reload", IE_Released, this, &AHeroCharacter::Input_Reload);
-}
-
 void AHeroCharacter::ServerRPC_SpawnWeapon_Implementation(TSubclassOf<AWeapon> weaponClass)
 {
 	FActorSpawnParameters params;
@@ -156,6 +138,7 @@ void AHeroCharacter::ServerRPC_SpawnWeapon_Implementation(TSubclassOf<AWeapon> w
 
 	weapon->AttachToComponent(
 		WeaponAnchor, FAttachmentTransformRules{ EAttachmentRule::KeepWorld, true });
+	weapon->SetHeroControllerId(GetHeroController()->GetUniqueID());
 
 	ServerCurrentWeapon = weapon;
 }
@@ -172,23 +155,8 @@ void AHeroCharacter::OnRep_ServerStateChanged()
 	CurrentWeapon = ServerCurrentWeapon;
 }
 
-void AHeroCharacter::Input_FirePressed()
-{
-	if (CurrentWeapon == nullptr) return;
-	CurrentWeapon->Input_PullTrigger();
-}
 
-void AHeroCharacter::Input_FireReleased()
-{
-	if (CurrentWeapon == nullptr) return;
-	CurrentWeapon->Input_ReleaseTrigger();
-}
 
-void AHeroCharacter::Input_Reload()
-{
-	if (CurrentWeapon == nullptr) return;
-	CurrentWeapon->Input_Reload();
-}
 /// Methods
 
 void AHeroCharacter::Tick(float DeltaSeconds)
@@ -196,45 +164,49 @@ void AHeroCharacter::Tick(float DeltaSeconds)
 	// Handle Input
 	if (Controller == nullptr) return;
 
-
-
-
-
-
-	// Draw a rectangle around the player!
-
-	//auto HUD = GetHeroController()->GetHUD();
-	const auto LP = GetHeroController()->GetLocalPlayer();
-	if (LP/* && HUD*/)
-	{
-		FVector Origin, BoxExtent;
-		GetActorBounds(true, OUT Origin, OUT BoxExtent);
-
-		const FBox ActorBox{ Origin - BoxExtent, Origin + BoxExtent };
-
-		FVector2D LowerLeft, UpperRight;
-		if (LP->GetPixelBoundingBox(ActorBox, OUT LowerLeft, OUT UpperRight))
-		{
-			auto Size = UpperRight - LowerLeft;
-			//HUD->DrawRect(FLinearColor::Blue, LowerLeft.X, LowerLeft.Y, Size.X, Size.Y);
-			//UE_LOG(LogTemp, Warning, TEXT("%s : %s"), *LowerLeft.ToString(), *Size.ToString());
-		}
-	}
-
-
-
 	const auto deadzoneSquared = 0.25f * 0.25f;
 
 	// Move character
-	const auto moveVec = FVector{ GetInputAxisValue("MoveUp"), GetInputAxisValue("MoveRight"), 0 };
+	const auto moveVec = FVector{ AxisMoveUp, AxisMoveRight, 0 };
 	if (moveVec.SizeSquared() >= deadzoneSquared)
 	{
 		AddMovementInput(FVector{ 1.f, 0.f, 0.f }, moveVec.X);
 		AddMovementInput(FVector{ 0.f, 1.f, 0.f }, moveVec.Y);
 	}
 
-	// Aim character with look, if look is below deadzone then try use move vec
-	const auto lookVec = FVector{ GetInputAxisValue("FaceUp"), GetInputAxisValue("FaceRight"), 0 };
+
+	// Calculate Look Vector
+	FVector lookVec;
+	if (bUseMouseAim)
+	{
+		if (HasAuthority()) return;
+
+		const FVector Anchor = WeaponAnchor->GetComponentLocation();
+
+		const auto Hero = GetHeroController();
+		if (Hero)
+		{
+			FVector WorldLocation, WorldDirection;
+			const auto Success = Hero->DeprojectMousePositionToWorld(OUT WorldLocation, OUT WorldDirection);
+			if (Success)
+			{
+				const FVector Hit = FMath::LinePlaneIntersection(
+					WorldLocation, 
+					WorldLocation + (WorldDirection * 5000), 
+					Anchor,
+					FVector(0,0,1));
+
+				lookVec = Hit - Anchor;
+			}
+		}
+	}
+	else // Use gamepad
+	{
+		lookVec = FVector{ AxisFaceUp, AxisFaceRight, 0 };
+	}
+
+
+	// Apply Look Vector - Aim character with look, if look is below deadzone then try use move vec
 	if (lookVec.SizeSquared() >= deadzoneSquared)
 	{
 		Controller->SetControlRotation(lookVec.Rotation());
@@ -243,9 +215,10 @@ void AHeroCharacter::Tick(float DeltaSeconds)
 	{
 		Controller->SetControlRotation(moveVec.Rotation());
 	}
+	
 }
 
-void AHeroCharacter::ApplyDamage(AHeroCharacter* DamageInstigator, float Damage)
+void AHeroCharacter::ApplyDamage(uint32 InstigatorHeroControllerId, float Damage)
 {
 	//This must only run on a dedicated server or listen server
 
@@ -268,7 +241,9 @@ void AHeroCharacter::ApplyDamage(AHeroCharacter* DamageInstigator, float Damage)
 
 	if (Health <= 0)
 	{
-		HealthDepletedEvent.Broadcast(this, DamageInstigator);
+		// Let HeroController know we're not feeling great
+		auto HC = GetHeroController();
+		if (HC) HC->HealthDepleted(InstigatorHeroControllerId);
 	}
 }
 
