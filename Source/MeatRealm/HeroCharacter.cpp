@@ -5,7 +5,6 @@
 #include "Camera/CameraComponent.h"
 #include "Components/CapsuleComponent.h"
 #include "Components/ArrowComponent.h"
-#include "Components/InputComponent.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "GameFramework/Controller.h"
 #include "GameFramework/PlayerState.h"
@@ -15,7 +14,6 @@
 #include "UnrealNetwork.h"
 #include "HeroState.h"
 #include "HeroController.h"
-#include "GameFramework/HUD.h"
 
 /// Lifecycle
 
@@ -69,10 +67,10 @@ AHeroCharacter::AHeroCharacter()
 
 void AHeroCharacter::EndPlay(const EEndPlayReason::Type EndPlayReason)
 {
-	if (ROLE_Authority == Role && ServerCurrentWeapon != nullptr)
+	if (ROLE_Authority == Role && CurrentWeapon != nullptr)
 	{
-		ServerCurrentWeapon->Destroy();
-		ServerCurrentWeapon = nullptr;
+		CurrentWeapon->Destroy();
+		CurrentWeapon = nullptr;
 	}
 }
 
@@ -110,7 +108,7 @@ void AHeroCharacter::Restart()
 void AHeroCharacter::GetLifetimeReplicatedProps(TArray< FLifetimeProperty >& OutLifetimeProps) const
 {
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
-	DOREPLIFETIME(AHeroCharacter, ServerCurrentWeapon);
+	DOREPLIFETIME(AHeroCharacter, CurrentWeapon);
 	DOREPLIFETIME(AHeroCharacter, Health);
 	DOREPLIFETIME(AHeroCharacter, Armour);
 }
@@ -128,6 +126,8 @@ AHeroController* AHeroCharacter::GetHeroController() const
 
 void AHeroCharacter::ServerRPC_SpawnWeapon_Implementation(TSubclassOf<AWeapon> weaponClass)
 {
+	LogMsgWithRole("AHeroCharacter::ServerRPC_SpawnWeapon");
+
 	FActorSpawnParameters params;
 	params.Instigator = this;
 	params.Owner = this;
@@ -136,25 +136,27 @@ void AHeroCharacter::ServerRPC_SpawnWeapon_Implementation(TSubclassOf<AWeapon> w
 		weaponClass,
 		WeaponAnchor->GetComponentTransform(), params);
 
-	weapon->AttachToComponent(
-		WeaponAnchor, FAttachmentTransformRules{ EAttachmentRule::KeepWorld, true });
+	weapon->AttachToComponent(WeaponAnchor, FAttachmentTransformRules{ EAttachmentRule::KeepWorld, true });
 	weapon->SetHeroControllerId(GetHeroController()->GetUniqueID());
 
-	ServerCurrentWeapon = weapon;
+
+	// Cleanup previous weapon
+	if (CurrentWeapon != nullptr)
+	{
+		CurrentWeapon->Destroy();
+		CurrentWeapon = nullptr;
+	}
+
+	// TODO Will this fuckup in flight projectiles
+
+	// Make sure server has a copy
+	CurrentWeapon = weapon;
 }
 
 bool AHeroCharacter::ServerRPC_SpawnWeapon_Validate(TSubclassOf<AWeapon> weaponClass)
 {
 	return true;
 }
-
-void AHeroCharacter::OnRep_ServerStateChanged()
-{
-	// TODO Destroy other current weapons?
-	// TODO Branch for ROLE_Auto, ROLE_Sim
-	CurrentWeapon = ServerCurrentWeapon;
-}
-
 
 
 /// Methods
@@ -263,7 +265,9 @@ bool AHeroCharacter::TryGiveAmmo()
 	//if (!HasAuthority()) return;
 
 	if (CurrentWeapon != nullptr)
+	{
 		return CurrentWeapon->TryGiveAmmo();
+	}
 
 	return false;
 }
@@ -275,6 +279,33 @@ bool AHeroCharacter::TryGiveArmour(float Delta)
 	if (Armour == MaxArmour) return false;
 
 	Armour = FMath::Min(Armour + Delta, MaxArmour);
+	return true;
+}
+
+bool AHeroCharacter::TryGiveWeapon(const TSubclassOf<AWeapon>& Class)
+{
+	LogMsgWithRole("AHeroCharacter::TryGiveWeapon");
+
+	if (Class == nullptr) return false;
+	if (!HasAuthority()) return false;
+
+	
+	if (CurrentWeapon)
+	{
+		// If we already have the gun, treat it as an ammo pickup!
+		if (CurrentWeapon->IsA(Class))
+		{
+			return TryGiveAmmo();
+		}
+
+		// Otherwise, destroy our current weapon to make space for the new one!
+		CurrentWeapon->Destroy();
+		CurrentWeapon = nullptr;
+	}
+
+
+	ServerRPC_SpawnWeapon(Class);
+
 	return true;
 }
 

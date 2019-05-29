@@ -21,7 +21,6 @@ public:
 	APickupBase();
 
 protected:
-	virtual void BeginPlay() override;
 
 	// TODO Override this to do whatever.
 	virtual bool TryApplyAffect(IAffectableInterface* const Affectable)
@@ -51,7 +50,18 @@ protected:	/// Components
 	UPROPERTY(VisibleAnywhere)
 		UCapsuleComponent* CollisionComp = nullptr;
 
-	void PickupItem();
+	UFUNCTION(Server, Reliable, WithValidation)
+	void ServerRPC_PickupItem();
+
+	UPROPERTY(ReplicatedUsing = OnRep_IsAvailableChanged)
+		bool IsAvailable = true;;
+
+	
+	UFUNCTION()
+		void OnRep_IsAvailableChanged();
+
+	void MakePickupAvailable(bool bIsAvailable);
+
 	void Respawn();
 	void LogMsgWithRole(FString message);
 	FString GetEnumText(ENetRole role);

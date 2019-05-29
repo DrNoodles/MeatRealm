@@ -4,10 +4,10 @@
 
 #include "CoreMinimal.h"
 #include "UObject/Interface.h"
+#include "Weapon.h"
 #include "AffectableInterface.generated.h"
 
 class AHeroController;
-class AWeapon;
 
 // This class does not need to be modified.
 UINTERFACE(MinimalAPI)
@@ -32,6 +32,6 @@ public: // NOTE This interface breaks the I in SOLID. But it'll do for now.
 		virtual bool TryGiveArmour(float Delta) = 0;
 	UFUNCTION()
 		virtual bool TryGiveAmmo() = 0;
-	//UFUNCTION()
-		//virtual void GiveWeapon(AWeapon* Delta) = 0;
+	UFUNCTION()
+		virtual bool TryGiveWeapon(const TSubclassOf<AWeapon>& Class) = 0;
 };

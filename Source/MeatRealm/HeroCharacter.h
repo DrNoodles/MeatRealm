@@ -71,6 +71,8 @@ public:
 	virtual bool TryGiveAmmo() override;
 	UFUNCTION()
 	virtual bool TryGiveArmour(float Delta) override;
+	UFUNCTION()
+	virtual bool TryGiveWeapon(const TSubclassOf<AWeapon>& Class) override;
 
 protected:
 	virtual void Tick(float DeltaSeconds) override;
@@ -87,14 +89,7 @@ public:
 	UFUNCTION(Server, Reliable, WithValidation)
 		void ServerRPC_SpawnWeapon(TSubclassOf<AWeapon> weaponClass);
 
-	UPROPERTY(ReplicatedUsing = OnRep_ServerStateChanged)
-		AWeapon* ServerCurrentWeapon;
-
-	UFUNCTION()
-		void OnRep_ServerStateChanged();
-
-
-	UPROPERTY(BlueprintReadOnly)
+	UPROPERTY(BlueprintReadOnly, Replicated)
 		AWeapon* CurrentWeapon = nullptr;
 
 
