@@ -6,7 +6,6 @@
 #include "Components/ArrowComponent.h"
 #include "Components/StaticMeshComponent.h"
 #include "DrawDebugHelpers.h"
-#include "DeathmatchGameMode.h"
 #include "UnrealNetwork.h"
 
 AWeapon::AWeapon()
