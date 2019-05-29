@@ -7,6 +7,8 @@
 #include "HeroCharacter.h"
 #include "HeroState.h"
 #include "ScoreboardEntryData.h"
+#include "HeroController.h"
+#include "Projectile.h"
 
 ADeathmatchGameMode::ADeathmatchGameMode()
 {
@@ -29,14 +31,15 @@ void ADeathmatchGameMode::PostLogin(APlayerController* NewPlayer)
 {
 	Super::PostLogin(NewPlayer);
 
-	const auto Hero = static_cast<AHeroController*>(NewPlayer);
 
-	ConnectedHeroControllers.AddUnique(Hero);
+	const auto Hero = static_cast<AHeroController*>(NewPlayer);
+	const uint32 UID = Hero->GetUniqueID();
+
+	ConnectedHeroControllers.Add(UID, Hero);
 	UE_LOG(LogTemp, Warning, TEXT("ConnectedHeroControllers: %d"), ConnectedHeroControllers.Num());
 
 	// Monitor for player death events
 	const FDelegateHandle Handle = Hero->OnHealthDepleted().AddUObject(this, &ADeathmatchGameMode::OnPlayerDie);
-	const uint32 UID = Hero->GetUniqueID();
 	OnPlayerDieHandles.Add(UID, Handle);
 }
 
@@ -45,7 +48,7 @@ void ADeathmatchGameMode::Logout(AController* Exiting)
 {
 	const auto Hero = static_cast<AHeroController*>(Exiting);
 
-	ConnectedHeroControllers.Remove(Hero);
+	ConnectedHeroControllers.Remove(Hero->GetUniqueID());
 	UE_LOG(LogTemp, Warning, TEXT("ConnectedHeroControllers: %d"), ConnectedHeroControllers.Num());
 
 	// Unbind event when player leaves!
@@ -59,45 +62,42 @@ void ADeathmatchGameMode::Logout(AController* Exiting)
 
 bool ADeathmatchGameMode::ShouldSpawnAtStartSpot(AController* Player)
 {
-	// Always pick a random spawn
-	return false;
+	return false; // Always pick a random spawn
 }
 
-
-void ADeathmatchGameMode::SetPlayerDefaults(APawn* PlayerPawn)
+void ADeathmatchGameMode::OnPlayerDie(uint32 DeadControllerId, uint32 KillerControllerId)
 {
-	UE_LOG(LogTemp, Warning, TEXT("SetPlayerDefaults"));
-}
-
-void ADeathmatchGameMode::OnPlayerDie(AHeroController* DeadController, AHeroController* KillerController)
-{
-	if (!DeadController)
+	if (!ConnectedHeroControllers.Contains(DeadControllerId))
 	{
-		UE_LOG(LogTemp, Error, TEXT("ADeathmatchGameMode::OnPlayerDie dead is null!"));
+		UE_LOG(LogTemp, Error, TEXT("ADeathmatchGameMode::OnPlayerDie cant find dead controller!"));
 		return;
 	}
-	if (!KillerController)
+	if (!ConnectedHeroControllers.Contains(KillerControllerId))
 	{
-		UE_LOG(LogTemp, Error, TEXT("ADeathmatchGameMode::OnPlayerDie killer is null!"));
+		UE_LOG(LogTemp, Error, TEXT("ADeathmatchGameMode::OnPlayerDie cant find killer controller!"));
 		return;
 	}
 
-	if (!DeadController || !KillerController) return;
 
-	AHeroState* const DeadState = DeadController->GetPlayerState<AHeroState>();
-	AHeroState* const KillerState = KillerController->GetPlayerState<AHeroState>();
+	// Award the killer a point
+	const auto KillerController = ConnectedHeroControllers[KillerControllerId];
+	if (KillerController) KillerController->GetPlayerState<AHeroState>()->Kills++;
 
-	DeadState->Deaths++;
-	KillerState->Kills++;
-	UE_LOG(LogTemp, Warning, TEXT("Deadguy: %dk:%dd"), DeadState->Kills, DeadState->Deaths);
-	UE_LOG(LogTemp, Warning, TEXT("Killer: %dk:%dd"), KillerState->Kills, KillerState->Deaths);
 
-	AHeroCharacter* DeadChar = DeadController->GetHeroCharacter();
-	if (DeadChar) DeadChar->Destroy();
+	// Award death point, kill then respawn character
+	const auto DeadController = ConnectedHeroControllers[DeadControllerId];
+	if (DeadController)
+	{
+		DeadController->GetPlayerState<AHeroState>()->Deaths++;
 
+		AHeroCharacter* DeadChar = DeadController->GetHeroCharacter();
+		if (DeadChar) DeadChar->Destroy();
+
+		RestartPlayer(DeadController);
+	}
+
+	
 	if (EndGameIfFragLimitReached()) return;
-
-	RestartPlayer(DeadController);
 }
 
 

@@ -31,6 +31,8 @@ public:
 	void Input_ReleaseTrigger();
 	void Input_Reload();
 	bool TryGiveAmmo();
+	uint32 HeroControllerId;
+	void SetHeroControllerId(uint32 HeroControllerId) { this->HeroControllerId = HeroControllerId; }
 
 public:
 	FTimerHandle CanActionTimerHandle;

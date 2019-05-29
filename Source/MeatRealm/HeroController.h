@@ -35,9 +35,9 @@ public:
 	void LogMsgWithRole(FString message);
 	FString GetEnumText(ENetRole role);
 	FString GetRoleText();
-	void HealthDepleted(AHeroController* DamageInstigator);
+	void HealthDepleted(uint32 InstigatorHeroControllerId) const;
 
-	DECLARE_EVENT_TwoParams(AHeroController, FHealthDepleted, AHeroController*, AHeroController*)
+	DECLARE_EVENT_TwoParams(AHeroController, FHealthDepleted, uint32, uint32)
 	FHealthDepleted& OnHealthDepleted() { return HealthDepletedEvent; }
 
 protected:

@@ -79,53 +79,9 @@ void AHeroController::ShowHud(bool bMakeVisible)
 }
 
 
-
-
-void AHeroController::LogMsgWithRole(FString message)
+void AHeroController::HealthDepleted(uint32 InstigatorHeroControllerId) const
 {
-	FString m = GetRoleText() + ": " + message;
-	UE_LOG(LogTemp, Warning, TEXT("%s"), *m);
-}
-FString AHeroController::GetEnumText(ENetRole role)
-{
-	switch (role) {
-	case ROLE_None:
-		return "None";
-	case ROLE_SimulatedProxy:
-		return "SimulatedProxy";
-	case ROLE_AutonomousProxy:
-		return "AutonomouseProxy";
-	case ROLE_Authority:
-		return "Authority";
-	case ROLE_MAX:
-	default:
-		return "ERROR";
-	}
-}
-FString AHeroController::GetRoleText()
-{
-	auto Local = Role;
-	auto Remote = GetRemoteRole();
-
-
-	if (Remote == ROLE_SimulatedProxy) //&& Local == ROLE_Authority
-		return "ListenServer";
-
-	if (Local == ROLE_Authority)
-		return "Server";
-
-	if (Local == ROLE_AutonomousProxy) // && Remote == ROLE_Authority
-		return "OwningClient";
-
-	if (Local == ROLE_SimulatedProxy) // && Remote == ROLE_Authority
-		return "SimClient";
-
-	return "Unknown: " + GetEnumText(Role) + " " + GetEnumText(GetRemoteRole());
-}
-
-void AHeroController::HealthDepleted(AHeroController* DamageInstigator)
-{
-	HealthDepletedEvent.Broadcast(this, DamageInstigator);
+	HealthDepletedEvent.Broadcast(GetUniqueID(), InstigatorHeroControllerId);
 }
 
 void AHeroController::SetupInputComponent()
@@ -195,3 +151,50 @@ void AHeroController::Input_ToggleUseMouse()
 	if (Char) Char->SetUseMouseAim(bShowMouseCursor);
 }
 
+
+
+
+
+// Helpers
+
+void AHeroController::LogMsgWithRole(FString message)
+{
+	FString m = GetRoleText() + ": " + message;
+	UE_LOG(LogTemp, Warning, TEXT("%s"), *m);
+}
+FString AHeroController::GetEnumText(ENetRole role)
+{
+	switch (role) {
+	case ROLE_None:
+		return "None";
+	case ROLE_SimulatedProxy:
+		return "SimulatedProxy";
+	case ROLE_AutonomousProxy:
+		return "AutonomouseProxy";
+	case ROLE_Authority:
+		return "Authority";
+	case ROLE_MAX:
+	default:
+		return "ERROR";
+	}
+}
+FString AHeroController::GetRoleText()
+{
+	auto Local = Role;
+	auto Remote = GetRemoteRole();
+
+
+	if (Remote == ROLE_SimulatedProxy) //&& Local == ROLE_Authority
+		return "ListenServer";
+
+	if (Local == ROLE_Authority)
+		return "Server";
+
+	if (Local == ROLE_AutonomousProxy) // && Remote == ROLE_Authority
+		return "OwningClient";
+
+	if (Local == ROLE_SimulatedProxy) // && Remote == ROLE_Authority
+		return "SimClient";
+
+	return "Unknown: " + GetEnumText(Role) + " " + GetEnumText(GetRemoteRole());
+}

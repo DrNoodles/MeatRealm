@@ -64,7 +64,7 @@ public:
 		float MaxArmour = 100.f;
 
 	UFUNCTION()
-	virtual void ApplyDamage(AHeroController* DamageInstigator, float Damage) override;
+	virtual void ApplyDamage(uint32 InstigatorHeroControllerId, float Damage) override;
 	UFUNCTION()
 	virtual bool TryGiveHealth(float Hp) override;
 	UFUNCTION()
@@ -100,9 +100,9 @@ public:
 
 	/// Input
 
-	void Input_FirePressed();
-	void Input_FireReleased();
-	void Input_Reload();
+	void Input_FirePressed() const { if (CurrentWeapon) CurrentWeapon->Input_PullTrigger(); }
+	void Input_FireReleased() const { if (CurrentWeapon) CurrentWeapon->Input_ReleaseTrigger(); }
+	void Input_Reload() const { if (CurrentWeapon) CurrentWeapon->Input_Reload(); }
 	void Input_MoveUp(float Value) {	AxisMoveUp = Value; }
 	void Input_MoveRight(float Value) { AxisMoveRight = Value; }
 	void Input_FaceUp(float Value) { AxisFaceUp = Value; }

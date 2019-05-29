@@ -5,7 +5,6 @@
 #include "Components/StaticMeshComponent.h"
 #include "Components/SphereComponent.h"
 #include "GameFramework/ProjectileMovementComponent.h"
-#include "HeroCharacter.h"
 #include "GameFramework/Controller.h"
 #include "PickupBase.h"
 
@@ -38,22 +37,8 @@ AProjectile::AProjectile()
 	ProjectileMovementComp->bShouldBounce = false;
 
 	// TODO Show a billboard if by default on the placeholder
-
-
 }
 
-// Called when the game starts or when spawned
-void AProjectile::BeginPlay()
-{
-	Super::BeginPlay();
-}
-
-// Called every frame
-void AProjectile::Tick(float DeltaTime)
-{
-	Super::Tick(DeltaTime);
-
-}
 
 void AProjectile::FireInDirection(const FVector& ShootDirection)
 {
@@ -68,7 +53,7 @@ void AProjectile::OnCompBeginOverlap(UPrimitiveComponent* OverlappedComp, AActor
 
 	if (!HasAuthority()) return;
 
-	auto TheReceiver = OtherActor;
+	const auto TheReceiver = OtherActor;
 
 	const auto IsNotWorthChecking = TheReceiver == nullptr || TheReceiver == this || OtherComp == nullptr;
 	if (IsNotWorthChecking) return;
@@ -81,22 +66,13 @@ void AProjectile::OnCompBeginOverlap(UPrimitiveComponent* OverlappedComp, AActor
 		// Dont shoot myself
 		if (TheReceiver == Instigator) return;
 
-		// Get TheGiver Controller
-		AHeroController* TheGiver = nullptr;
-		const auto InstigatorChar = Cast<AHeroCharacter>(Instigator);
-		if (InstigatorChar) TheGiver = InstigatorChar->GetHeroController();
-		if (TheGiver == nullptr)
-		{
-			UE_LOG(LogTemp, Error, TEXT("Instigator of damage is null!"));
-		}
-
 		// Apply damage
 		auto AffectableReceiver = Cast<IAffectableInterface>(TheReceiver);
 		if (AffectableReceiver == nullptr)
 		{
 			UE_LOG(LogTemp, Error, TEXT("AffectableReceiver of damage is null!"));
 		}
-		AffectableReceiver->ApplyDamage(TheGiver, ShotDamage);
+		AffectableReceiver->ApplyDamage(HeroControllerId, ShotDamage);
 	}
 
 	Destroy();

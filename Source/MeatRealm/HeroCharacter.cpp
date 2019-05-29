@@ -138,6 +138,7 @@ void AHeroCharacter::ServerRPC_SpawnWeapon_Implementation(TSubclassOf<AWeapon> w
 
 	weapon->AttachToComponent(
 		WeaponAnchor, FAttachmentTransformRules{ EAttachmentRule::KeepWorld, true });
+	weapon->SetHeroControllerId(GetHeroController()->GetUniqueID());
 
 	ServerCurrentWeapon = weapon;
 }
@@ -154,24 +155,6 @@ void AHeroCharacter::OnRep_ServerStateChanged()
 	CurrentWeapon = ServerCurrentWeapon;
 }
 
-
-void AHeroCharacter::Input_FirePressed()
-{
-	if (CurrentWeapon == nullptr) return;
-	CurrentWeapon->Input_PullTrigger();
-}
-
-void AHeroCharacter::Input_FireReleased()
-{
-	if (CurrentWeapon == nullptr) return;
-	CurrentWeapon->Input_ReleaseTrigger();
-}
-
-void AHeroCharacter::Input_Reload()
-{
-	if (CurrentWeapon == nullptr) return;
-	CurrentWeapon->Input_Reload();
-}
 
 
 /// Methods
@@ -235,7 +218,7 @@ void AHeroCharacter::Tick(float DeltaSeconds)
 	
 }
 
-void AHeroCharacter::ApplyDamage(AHeroController* DamageInstigator, float Damage)
+void AHeroCharacter::ApplyDamage(uint32 InstigatorHeroControllerId, float Damage)
 {
 	//This must only run on a dedicated server or listen server
 
@@ -260,8 +243,7 @@ void AHeroCharacter::ApplyDamage(AHeroController* DamageInstigator, float Damage
 	{
 		// Let HeroController know we're not feeling great
 		auto HC = GetHeroController();
-		if (HC) HC->HealthDepleted(DamageInstigator);
-
+		if (HC) HC->HealthDepleted(InstigatorHeroControllerId);
 	}
 }
 
