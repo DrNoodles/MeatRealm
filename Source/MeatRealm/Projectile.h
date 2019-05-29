@@ -20,7 +20,7 @@ public:
 	AProjectile();
 
 	uint32 HeroControllerId;
-	void SetHeroControllerId(uint32 HeroControllerId) { this->HeroControllerId = HeroControllerId; }
+	void SetHeroControllerId(uint32 HeroContId) { HeroControllerId = HeroContId; }
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly)
 		float ShotDamage = 1.0f;
