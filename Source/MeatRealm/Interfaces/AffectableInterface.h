@@ -4,10 +4,10 @@
 
 #include "CoreMinimal.h"
 #include "UObject/Interface.h"
+#include "Weapon.h"
 #include "AffectableInterface.generated.h"
 
 class AHeroController;
-class AWeapon;
 
 // This class does not need to be modified.
 UINTERFACE(MinimalAPI)

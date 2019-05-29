@@ -126,6 +126,8 @@ AHeroController* AHeroCharacter::GetHeroController() const
 
 void AHeroCharacter::ServerRPC_SpawnWeapon_Implementation(TSubclassOf<AWeapon> weaponClass)
 {
+	LogMsgWithRole("AHeroCharacter::ServerRPC_SpawnWeapon");
+
 	FActorSpawnParameters params;
 	params.Instigator = this;
 	params.Owner = this;
@@ -136,6 +138,16 @@ void AHeroCharacter::ServerRPC_SpawnWeapon_Implementation(TSubclassOf<AWeapon> w
 
 	weapon->AttachToComponent(WeaponAnchor, FAttachmentTransformRules{ EAttachmentRule::KeepWorld, true });
 	weapon->SetHeroControllerId(GetHeroController()->GetUniqueID());
+
+
+	// Cleanup previous weapon
+	if (CurrentWeapon != nullptr)
+	{
+		CurrentWeapon->Destroy();
+		CurrentWeapon = nullptr;
+	}
+
+	// TODO Will this fuckup in flight projectiles
 
 	// Make sure server has a copy
 	CurrentWeapon = weapon;
@@ -253,7 +265,9 @@ bool AHeroCharacter::TryGiveAmmo()
 	//if (!HasAuthority()) return;
 
 	if (CurrentWeapon != nullptr)
+	{
 		return CurrentWeapon->TryGiveAmmo();
+	}
 
 	return false;
 }
@@ -265,6 +279,33 @@ bool AHeroCharacter::TryGiveArmour(float Delta)
 	if (Armour == MaxArmour) return false;
 
 	Armour = FMath::Min(Armour + Delta, MaxArmour);
+	return true;
+}
+
+bool AHeroCharacter::TryGiveWeapon(const TSubclassOf<AWeapon>& Class)
+{
+	LogMsgWithRole("AHeroCharacter::TryGiveWeapon");
+
+	if (Class == nullptr) return false;
+	if (!HasAuthority()) return false;
+
+	
+	if (CurrentWeapon)
+	{
+		// If we already have the gun, treat it as an ammo pickup!
+		if (CurrentWeapon->IsA(Class))
+		{
+			return TryGiveAmmo();
+		}
+
+		// Otherwise, destroy our current weapon to make space for the new one!
+		CurrentWeapon->Destroy();
+		CurrentWeapon = nullptr;
+	}
+
+
+	ServerRPC_SpawnWeapon(Class);
+
 	return true;
 }
 

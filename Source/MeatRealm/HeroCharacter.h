@@ -71,6 +71,8 @@ public:
 	virtual bool TryGiveAmmo() override;
 	UFUNCTION()
 	virtual bool TryGiveArmour(float Delta) override;
+	UFUNCTION()
+	virtual bool TryGiveWeapon(const TSubclassOf<AWeapon>& Class) override;
 
 protected:
 	virtual void Tick(float DeltaSeconds) override;

@@ -18,7 +18,7 @@ APickupBase::APickupBase()
 	// TODO Introduce USceneComponent so Collision as root can be moved around
 
 	CollisionComp = CreateDefaultSubobject<UCapsuleComponent>(TEXT("CollisionComp"));
-	CollisionComp->InitCapsuleSize(15, 20);
+	CollisionComp->InitCapsuleSize(50, 100);
 	CollisionComp->OnComponentBeginOverlap.AddDynamic(this, &APickupBase::OnCompBeginOverlap);
 	RootComponent = CollisionComp;
 
