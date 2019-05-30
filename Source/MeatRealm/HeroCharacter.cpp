@@ -363,7 +363,7 @@ FHitResult AHeroCharacter::GetFirstPhysicsBodyInReach() const
 	FVector traceStart, traceEnd;
 	GetReachLine(OUT traceStart, OUT traceEnd);
 
-	DrawDebugLine(GetWorld(), traceStart, traceEnd, FColor{ 255,0,0 }, false, -1., 0, 5.f);
+	//DrawDebugLine(GetWorld(), traceStart, traceEnd, FColor{ 255,0,0 }, false, -1., 0, 5.f);
 
 	// Raycast along line to find intersecting physics object
 	FHitResult hitResult;
@@ -380,6 +380,8 @@ FHitResult AHeroCharacter::GetFirstPhysicsBodyInReach() const
 void AHeroCharacter::GetReachLine(OUT FVector& outStart, OUT FVector& outEnd) const
 {
 	outStart = GetActorLocation();
+	
+	outStart.Z -= 60; // check about ankle height
 	outEnd = outStart + GetActorRotation().Vector() * InteractableSearchDistance;
 }
 

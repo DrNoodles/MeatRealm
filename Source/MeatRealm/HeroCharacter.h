@@ -29,7 +29,7 @@ class MEATREALM_API AHeroCharacter : public ACharacter, public IAffectableInterf
 public:
 
 	UPROPERTY(EditAnywhere)
-	float InteractableSearchDistance = 200.f; //cm
+	float InteractableSearchDistance = 150.f; //cm
 
 	// Sets default values for this character's properties
 	AHeroCharacter();
