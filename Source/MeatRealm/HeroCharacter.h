@@ -117,10 +117,7 @@ private:
 	T* ScanForInteractable();
 
 	UFUNCTION(Server, Reliable, WithValidation)
-	void ServerRPC_TryInteract();
-
-	UFUNCTION(Server, Reliable, WithValidation)
-		void ServerRPC_TryInteract2();
+		void ServerRPC_TryInteract();
 
 	FHitResult GetFirstPhysicsBodyInReach() const;
 	void GetReachLine(FVector& outStart, FVector& outEnd) const;

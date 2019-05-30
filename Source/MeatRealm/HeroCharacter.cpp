@@ -162,59 +162,17 @@ bool AHeroCharacter::ServerRPC_SpawnWeapon_Validate(TSubclassOf<AWeapon> weaponC
 
 /// Methods
 
-
-void AHeroCharacter::ServerRPC_TryInteract2_Implementation()
-{
-	LogMsgWithRole("AHeroCharacter::ServerRPC_TryInteract2_Implementation()");
-
-	auto* const Pickup = ScanForInteractable<AWeaponPickupBase>();
-	if (Pickup && Pickup->CanInteract())
-	{
-		LogMsgWithRole("AHeroCharacter::ServerRPC_TryInteract2_Implementation() : Found");
-		Pickup->TryInteract(this);
-	}
-}
-
-bool AHeroCharacter::ServerRPC_TryInteract2_Validate()
-{
-	return true;
-}
-
-void AHeroCharacter::Input_Interact()
-{
-	LogMsgWithRole("AHeroCharacter::Input_Interact()");
-
-	auto* const Pickup = ScanForInteractable<AWeaponPickupBase>();
-	if (Pickup && Pickup->CanInteract())
-	{
-		LogMsgWithRole("AHeroCharacter::Input_Interact() : Found");
-		ServerRPC_TryInteract2();
-	}
-}
-
 void AHeroCharacter::Tick(float DeltaSeconds)
 {
-	// TODO Try this scan on the server! Temp fix to help isolate issues
-	//LogMsgWithRole("AHeroCharacter::Tick");
-	auto* const Pickup = ScanForInteractable<AWeaponPickupBase>();
-	if (Pickup && Pickup->CanInteract())
+	// Look for interactable objects
+	if (true/*HasAuthority()*/) // only has to run on authority, but then we dont see the debug trace line
 	{
-	//LogMsgWithRole("Interactable found! ");
-
-		//if (Pickup->TryInteract(this))
-		//{
-			//LogMsgWithRole("Interactable found! (interacted)");
-		//}
-		//else
-		//{
-			//LogMsgWithRole("Interactable found! (NO interacted)");
-		//}
-		
-
-		//bInteractableInRange = true;
-		//	UE_LOG(LogTemp, Warning, TEXT("Interactable found!"));
+		auto* const Pickup = ScanForInteractable<AWeaponPickupBase>();
+		if (Pickup && Pickup->CanInteract())
+		{
+			LogMsgWithRole("Can Interact! ");
+		}
 	}
-
 
 
 
@@ -365,29 +323,23 @@ bool AHeroCharacter::TryGiveWeapon(const TSubclassOf<AWeapon>& Class)
 }
 
 
-template <class T>
-T* AHeroCharacter::ScanForInteractable()
+
+
+void AHeroCharacter::Input_Interact()
 {
-	FHitResult Hit = GetFirstPhysicsBodyInReach();
-	return Cast<T>(Hit.GetActor());
+	LogMsgWithRole("AHeroCharacter::Input_Interact()");
+	ServerRPC_TryInteract();
 }
 
 void AHeroCharacter::ServerRPC_TryInteract_Implementation()
 {
-	//if (!HasAuthority()) return;
-	auto* Pickup = ScanForInteractable<AWeaponPickupBase>();
 	LogMsgWithRole("AHeroCharacter::ServerRPC_TryInteract_Implementation()");
-	//UE_LOG(LogTemp, Warning, TEXT(""))
-	if (Pickup) 
+
+	auto* const Pickup = ScanForInteractable<AWeaponPickupBase>();
+	if (Pickup && Pickup->CanInteract())
 	{
-		LogMsgWithRole("AHeroCharacter::ServerRPC_TryInteract_Implementation()2");
-
-		if (Pickup->CanInteract())
-		{
-			LogMsgWithRole("AHeroCharacter::ServerRPC_TryInteract_Implementation()3");
-
-			Pickup->TryInteract(this);
-		}
+		LogMsgWithRole("AHeroCharacter::ServerRPC_TryInteract_Implementation() : Found");
+		Pickup->TryInteract(this);
 	}
 }
 
@@ -396,6 +348,13 @@ bool AHeroCharacter::ServerRPC_TryInteract_Validate()
 	return true;
 }
 
+
+template <class T>
+T* AHeroCharacter::ScanForInteractable()
+{
+	FHitResult Hit = GetFirstPhysicsBodyInReach();
+	return Cast<T>(Hit.GetActor());
+}
 
 FHitResult AHeroCharacter::GetFirstPhysicsBodyInReach() const
 {
