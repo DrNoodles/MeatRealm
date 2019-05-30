@@ -56,6 +56,7 @@ private:
 	void Input_FirePressed();
 	void Input_FireReleased();
 	void Input_Reload();
+	void Input_Interact();
 	void Input_ToggleUseMouse();
 	bool bUseMouseAim = true;
 

@@ -15,6 +15,11 @@ class MEATREALM_API AWeaponPickupBase : public APickupBase
 {
 	GENERATED_BODY()
 
+public:
+	AWeaponPickupBase()
+	{
+		bExplicitInteraction = true;
+	}
 
 protected:
 	bool TryApplyAffect(IAffectableInterface* const Affectable) override;

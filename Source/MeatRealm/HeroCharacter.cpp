@@ -14,6 +14,7 @@
 #include "UnrealNetwork.h"
 #include "HeroState.h"
 #include "HeroController.h"
+#include "WeaponPickupBase.h"
 
 /// Lifecycle
 
@@ -163,6 +164,18 @@ bool AHeroCharacter::ServerRPC_SpawnWeapon_Validate(TSubclassOf<AWeapon> weaponC
 
 void AHeroCharacter::Tick(float DeltaSeconds)
 {
+	// Look for interactable objects
+	if (true/*HasAuthority()*/) // only has to run on authority, but then we dont see the debug trace line
+	{
+		auto* const Pickup = ScanForInteractable<AWeaponPickupBase>();
+		if (Pickup && Pickup->CanInteract())
+		{
+			LogMsgWithRole("Can Interact! ");
+		}
+	}
+
+
+
 	// Handle Input
 	if (Controller == nullptr) return;
 
@@ -217,7 +230,7 @@ void AHeroCharacter::Tick(float DeltaSeconds)
 	{
 		Controller->SetControlRotation(moveVec.Rotation());
 	}
-	
+
 }
 
 void AHeroCharacter::ApplyDamage(uint32 InstigatorHeroControllerId, float Damage)
@@ -310,12 +323,74 @@ bool AHeroCharacter::TryGiveWeapon(const TSubclassOf<AWeapon>& Class)
 }
 
 
-void AHeroCharacter::LogMsgWithRole(FString message)
+
+
+void AHeroCharacter::Input_Interact()
+{
+	LogMsgWithRole("AHeroCharacter::Input_Interact()");
+	ServerRPC_TryInteract();
+}
+
+void AHeroCharacter::ServerRPC_TryInteract_Implementation()
+{
+	LogMsgWithRole("AHeroCharacter::ServerRPC_TryInteract_Implementation()");
+
+	auto* const Pickup = ScanForInteractable<AWeaponPickupBase>();
+	if (Pickup && Pickup->CanInteract())
+	{
+		LogMsgWithRole("AHeroCharacter::ServerRPC_TryInteract_Implementation() : Found");
+		Pickup->TryInteract(this);
+	}
+}
+
+bool AHeroCharacter::ServerRPC_TryInteract_Validate()
+{
+	return true;
+}
+
+
+template <class T>
+T* AHeroCharacter::ScanForInteractable()
+{
+	FHitResult Hit = GetFirstPhysicsBodyInReach();
+	return Cast<T>(Hit.GetActor());
+}
+
+FHitResult AHeroCharacter::GetFirstPhysicsBodyInReach() const
+{
+	//LogMsgWithRole("AHeroCharacter::GetFirstPhysicsBodyInReach()");
+
+	FVector traceStart, traceEnd;
+	GetReachLine(OUT traceStart, OUT traceEnd);
+
+	//DrawDebugLine(GetWorld(), traceStart, traceEnd, FColor{ 255,0,0 }, false, -1., 0, 5.f);
+
+	// Raycast along line to find intersecting physics object
+	FHitResult hitResult;
+	bool isHit = GetWorld()->LineTraceSingleByObjectType(
+		OUT hitResult,
+		traceStart,
+		traceEnd,
+		FCollisionObjectQueryParams{ ECollisionChannel::ECC_WorldDynamic },//TODO Make a custom channel for interactables!
+		FCollisionQueryParams{ FName(""), false, GetOwner() }
+	);
+
+	return hitResult;
+}
+void AHeroCharacter::GetReachLine(OUT FVector& outStart, OUT FVector& outEnd) const
+{
+	outStart = GetActorLocation();
+	
+	outStart.Z -= 60; // check about ankle height
+	outEnd = outStart + GetActorRotation().Vector() * InteractableSearchDistance;
+}
+
+void AHeroCharacter::LogMsgWithRole(FString message) const
 {
 	FString m = GetRoleText() + ": " + message;
 	UE_LOG(LogTemp, Warning, TEXT("%s"), *m);
 }
-FString AHeroCharacter::GetEnumText(ENetRole role)
+FString AHeroCharacter::GetEnumText(ENetRole role) const
 {
 	switch (role) {
 	case ROLE_None:
@@ -331,7 +406,7 @@ FString AHeroCharacter::GetEnumText(ENetRole role)
 		return "ERROR";
 	}
 }
-FString AHeroCharacter::GetRoleText()
+FString AHeroCharacter::GetRoleText() const
 {
 	auto Local = Role;
 	auto Remote = GetRemoteRole();
