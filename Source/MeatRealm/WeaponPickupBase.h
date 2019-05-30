@@ -18,7 +18,7 @@ class MEATREALM_API AWeaponPickupBase : public APickupBase
 public:
 	AWeaponPickupBase()
 	{
-		SetExplicitInteraction(true);
+		bExplicitInteraction = true;
 	}
 
 protected:

@@ -32,14 +32,11 @@ APickupBase::APickupBase()
 
 bool APickupBase::TryInteract(IAffectableInterface* const Affectable)
 {
+	if (!bExplicitInteraction) return false;
 	return TryPickup(Affectable);
 }
 
 
-void APickupBase::SetExplicitInteraction(bool bIsExplicit)
-{
-	bExplicitInteraction = bIsExplicit;
-}
 void APickupBase::GetLifetimeReplicatedProps(TArray< FLifetimeProperty >& OutLifetimeProps) const
 {
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
@@ -49,24 +46,31 @@ void APickupBase::GetLifetimeReplicatedProps(TArray< FLifetimeProperty >& OutLif
 
 bool APickupBase::TryPickup(IAffectableInterface* const Affectable)
 {
-	if (!HasAuthority() || Affectable == nullptr || bExplicitInteraction)
+	LogMsgWithRole("APickupBase::TryPickup()");
+
+	if (!IsAvailable || !HasAuthority())
 	{
 		return false;
 	}
 
 	if (!TryApplyAffect(Affectable))
 	{
+		LogMsgWithRole("APickupBase::TryPickup() : Cannot TryApplyAffect()");
 		return false;
 	}
 
 	ServerRPC_PickupItem();
+	LogMsgWithRole("APickupBase::TryPickup() : Success!");
+
 	return true;
 }
 
 void APickupBase::OnCompBeginOverlap(UPrimitiveComponent* OverlappedComp, AActor* OtherActor,
 	UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult)
 {
-	LogMsgWithRole("Overlapping()");
+	LogMsgWithRole("APickupBase::Overlapping()");
+
+	if (bExplicitInteraction) return;
 
 	const auto IsNotWorthChecking = OtherActor == nullptr || OtherActor == this || OtherComp == nullptr;
 	if (IsNotWorthChecking) return;
@@ -79,10 +83,11 @@ void APickupBase::OnCompBeginOverlap(UPrimitiveComponent* OverlappedComp, AActor
 
 void APickupBase::ServerRPC_PickupItem_Implementation()
 {
-	LogMsgWithRole("PickupItem()");
+	LogMsgWithRole("APickupBase::ServerRPC_PickupItem_Implementation()");
 
 	MakePickupAvailable(false); // simulate on server
 	IsAvailable = false; // replicates to clients
+
 
 	// Start respawn timer
 	GetWorld()->GetTimerManager().SetTimer(
@@ -102,11 +107,12 @@ void APickupBase::OnRep_IsAvailableChanged()
 
 void APickupBase::MakePickupAvailable(bool bIsAvailable)
 {
+	LogMsgWithRole("APickupBase::MakePickupAvailable()");
 	if (bIsAvailable)
 	{
 		// Show visual
 		MeshComp->SetVisibility(true, true);
-
+	
 		// Enable Overlap
 		CollisionComp->SetGenerateOverlapEvents(true);
 	}
@@ -117,12 +123,6 @@ void APickupBase::MakePickupAvailable(bool bIsAvailable)
 
 		// Hide visual
 		MeshComp->SetVisibility(false, true);
-
-		// If not respawnable, cleanup and destroy
-		if (!bRespawns)
-		{
-			Destroy();
-		}
 	}
 }
 
@@ -133,7 +133,10 @@ void APickupBase::Respawn()
 	// Dispose pickup respawn timer
 	if (RespawnTimerHandle.IsValid()) { GetWorld()->GetTimerManager().ClearTimer(RespawnTimerHandle); }
 
+	// Simulate on server
 	MakePickupAvailable(true);
+
+	// Notify clients through replicated value
 	IsAvailable = true;
 }
 

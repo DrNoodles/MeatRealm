@@ -20,10 +20,8 @@ class MEATREALM_API APickupBase : public AActor
 public:	
 	APickupBase();
 
+	bool CanInteract() const { return bExplicitInteraction && IsAvailable; }
 	bool TryInteract(IAffectableInterface* const Affectable);
-
-	bool GetExplicitInteraction() const { return bExplicitInteraction; }
-	void SetExplicitInteraction(bool bIsExplicit);
 
 protected:
 
@@ -40,9 +38,6 @@ protected:
 	void OnCompBeginOverlap(UPrimitiveComponent* OverlappedComp, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult);
 
 public:
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-		bool bRespawns = true;
 
 	// In Seconds
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
@@ -62,13 +57,13 @@ protected:	/// Components
 	UPROPERTY(ReplicatedUsing = OnRep_IsAvailableChanged)
 		bool IsAvailable = true;;
 
-	
+	UPROPERTY(EditAnywhere)
+		bool bExplicitInteraction = false;
+
+
 	UFUNCTION()
 		void OnRep_IsAvailableChanged();
 
-	void MakePickupAvailable(bool bIsAvailable);
-
-	void Respawn();
 	void LogMsgWithRole(FString message);
 	FString GetEnumText(ENetRole role);
 	FString GetRoleText();
@@ -77,6 +72,7 @@ protected:	/// Components
 	FTimerHandle RespawnTimerHandle;
 
 private:
-	UPROPERTY(EditAnywhere)
-		bool bExplicitInteraction = false;
+	void MakePickupAvailable(bool bIsAvailable);
+	void Respawn();
+
 };

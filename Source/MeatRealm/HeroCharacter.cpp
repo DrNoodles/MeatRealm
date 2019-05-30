@@ -164,6 +164,29 @@ bool AHeroCharacter::ServerRPC_SpawnWeapon_Validate(TSubclassOf<AWeapon> weaponC
 
 void AHeroCharacter::Tick(float DeltaSeconds)
 {
+	// TODO Try this scan on the server! Temp fix to help isolate issues
+	//LogMsgWithRole("AHeroCharacter::Tick");
+	auto* const Pickup = ScanForInteractable<AWeaponPickupBase>();
+	if (Pickup && Pickup->CanInteract())
+	{
+		LogMsgWithRole("Interactable found! (interacted)");
+		//if (Pickup->TryInteract(this))
+		//{
+			//LogMsgWithRole("Interactable found! (interacted)");
+		//}
+		//else
+		//{
+			//LogMsgWithRole("Interactable found! (NO interacted)");
+		//}
+		
+
+		//bInteractableInRange = true;
+		//	UE_LOG(LogTemp, Warning, TEXT("Interactable found!"));
+	}
+
+
+
+
 	// Handle Input
 	if (Controller == nullptr) return;
 
@@ -219,16 +242,6 @@ void AHeroCharacter::Tick(float DeltaSeconds)
 		Controller->SetControlRotation(moveVec.Rotation());
 	}
 
-
-	auto* const Pickup = ScanForInteractable<AWeaponPickupBase>();
-	if (Pickup && Pickup->GetExplicitInteraction())
-	{
-		//Pickup->TryApplyAffect(this);
-
-		//bInteractableInRange = true;
-		LogMsgWithRole("Interactable found!");
-	//	UE_LOG(LogTemp, Warning, TEXT("Interactable found!"));
-	}
 }
 
 void AHeroCharacter::ApplyDamage(uint32 InstigatorHeroControllerId, float Damage)
@@ -328,14 +341,34 @@ T* AHeroCharacter::ScanForInteractable()
 	return Cast<T>(Hit.GetActor());
 }
 
-bool AHeroCharacter::TryInteract()
+void AHeroCharacter::ServerRPC_TryInteract_Implementation()
 {
+	//if (!HasAuthority()) return;
 	auto* Pickup = ScanForInteractable<AWeaponPickupBase>();
-	return (Pickup && Pickup->GetExplicitInteraction()) ? Pickup->TryInteract(this) : false;
+	LogMsgWithRole("AHeroCharacter::ServerRPC_TryInteract_Implementation()");
+	//UE_LOG(LogTemp, Warning, TEXT(""))
+	if (Pickup) 
+	{
+		LogMsgWithRole("AHeroCharacter::ServerRPC_TryInteract_Implementation()2");
+
+		if (Pickup->CanInteract())
+		{
+			LogMsgWithRole("AHeroCharacter::ServerRPC_TryInteract_Implementation()3");
+
+			Pickup->TryInteract(this);
+		}
+	}
+}
+
+bool AHeroCharacter::ServerRPC_TryInteract_Validate()
+{
+	return true;
 }
 
 FHitResult AHeroCharacter::GetFirstPhysicsBodyInReach() const
 {
+	//LogMsgWithRole("AHeroCharacter::GetFirstPhysicsBodyInReach()");
+
 	FVector traceStart, traceEnd;
 	GetReachLine(OUT traceStart, OUT traceEnd);
 
@@ -353,19 +386,18 @@ FHitResult AHeroCharacter::GetFirstPhysicsBodyInReach() const
 
 	return hitResult;
 }
-
 void AHeroCharacter::GetReachLine(OUT FVector& outStart, OUT FVector& outEnd) const
 {
 	outStart = GetActorLocation();
 	outEnd = outStart + GetActorRotation().Vector() * InteractableSearchDistance;
 }
 
-void AHeroCharacter::LogMsgWithRole(FString message)
+void AHeroCharacter::LogMsgWithRole(FString message) const
 {
 	FString m = GetRoleText() + ": " + message;
 	UE_LOG(LogTemp, Warning, TEXT("%s"), *m);
 }
-FString AHeroCharacter::GetEnumText(ENetRole role)
+FString AHeroCharacter::GetEnumText(ENetRole role) const
 {
 	switch (role) {
 	case ROLE_None:
@@ -381,7 +413,7 @@ FString AHeroCharacter::GetEnumText(ENetRole role)
 		return "ERROR";
 	}
 }
-FString AHeroCharacter::GetRoleText()
+FString AHeroCharacter::GetRoleText() const
 {
 	auto Local = Role;
 	auto Remote = GetRemoteRole();

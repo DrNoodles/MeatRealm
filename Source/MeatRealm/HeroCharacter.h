@@ -97,7 +97,7 @@ public:
 	void Input_MoveRight(float Value) { AxisMoveRight = Value; }
 	void Input_FaceUp(float Value) { AxisFaceUp = Value; }
 	void Input_FaceRight(float Value) { AxisFaceRight = Value; }
-	void Input_Interact() { TryInteract(); }
+	void Input_Interact() { ServerRPC_TryInteract(); }
 
 	void SetUseMouseAim(bool bUseMouse) { bUseMouseAim = bUseMouse; }
 
@@ -116,14 +116,14 @@ private:
 	template<class T>
 	T* ScanForInteractable();
 
-	//UFUNCTION(Server, Reliable, WithValidation)
-	bool TryInteract();
+	UFUNCTION(Server, Reliable, WithValidation)
+	void ServerRPC_TryInteract();
 
 
 	FHitResult GetFirstPhysicsBodyInReach() const;
 	void GetReachLine(FVector& outStart, FVector& outEnd) const;
 
-	void LogMsgWithRole(FString message);
-	FString GetEnumText(ENetRole role);
-	FString GetRoleText();
+	void LogMsgWithRole(FString message) const;
+	FString GetEnumText(ENetRole role) const;
+	FString GetRoleText() const;
 };

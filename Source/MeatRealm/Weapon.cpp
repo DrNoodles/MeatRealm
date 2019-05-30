@@ -85,7 +85,7 @@ void AWeapon::Tick(float DeltaTime)
 
 void AWeapon::ClientFireStart()
 {
-	LogMsgWithRole("ClientFireStart()");
+	//LogMsgWithRole("ClientFireStart()");
 
 	bHasActionedThisTriggerPull = true;
 	bCanAction = false;
@@ -261,8 +261,6 @@ void AWeapon::Input_Reload()
 bool AWeapon::TryGiveAmmo()
 {
 	LogMsgWithRole("AWeapon::TryGiveAmmo()");
-
-
 
 	if (AmmoInPool == AmmoPoolSize) return false;
 
