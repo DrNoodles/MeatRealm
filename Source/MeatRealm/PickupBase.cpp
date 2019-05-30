@@ -27,8 +27,19 @@ APickupBase::APickupBase()
 	MeshComp->SetGenerateOverlapEvents(false);
 	MeshComp->SetCollisionProfileName(TEXT("NoCollision"));
 	MeshComp->CanCharacterStepUpOn = ECB_No;
+
 }
 
+bool APickupBase::TryInteract(IAffectableInterface* const Affectable)
+{
+	return TryPickup(Affectable);
+}
+
+
+void APickupBase::SetExplicitInteraction(bool bIsExplicit)
+{
+	bExplicitInteraction = bIsExplicit;
+}
 void APickupBase::GetLifetimeReplicatedProps(TArray< FLifetimeProperty >& OutLifetimeProps) const
 {
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
@@ -36,22 +47,33 @@ void APickupBase::GetLifetimeReplicatedProps(TArray< FLifetimeProperty >& OutLif
 }
 
 
+bool APickupBase::TryPickup(IAffectableInterface* const Affectable)
+{
+	if (!HasAuthority() || Affectable == nullptr || bExplicitInteraction)
+	{
+		return false;
+	}
+
+	if (!TryApplyAffect(Affectable))
+	{
+		return false;
+	}
+
+	ServerRPC_PickupItem();
+	return true;
+}
+
 void APickupBase::OnCompBeginOverlap(UPrimitiveComponent* OverlappedComp, AActor* OtherActor,
 	UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult)
 {
-	if (!HasAuthority()) return;
-
 	LogMsgWithRole("Overlapping()");
-	
+
 	const auto IsNotWorthChecking = OtherActor == nullptr || OtherActor == this || OtherComp == nullptr;
 	if (IsNotWorthChecking) return;
 
 	const auto Affectable = Cast<IAffectableInterface>(OtherActor);
-	if (!Affectable) return;
-	
-	if (!TryApplyAffect(Affectable)) return;
 
-	ServerRPC_PickupItem();
+	TryPickup(Affectable);
 }
 
 

@@ -24,10 +24,12 @@ class MEATREALM_API AHeroCharacter : public ACharacter, public IAffectableInterf
 	/** Follow camera */
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Camera, meta = (AllowPrivateAccess = "true"))
 		class UCameraComponent* FollowCamera;
-
+	
 
 public:
 
+	UPROPERTY(EditAnywhere)
+	float InteractableSearchDistance = 200.f; //cm
 
 	// Sets default values for this character's properties
 	AHeroCharacter();
@@ -74,17 +76,10 @@ public:
 	UFUNCTION()
 	virtual bool TryGiveWeapon(const TSubclassOf<AWeapon>& Class) override;
 
-protected:
-	virtual void Tick(float DeltaSeconds) override;
-
-
-public:
 
 	/// Components
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
 		UArrowComponent* WeaponAnchor = nullptr;
-
-
 
 	UFUNCTION(Server, Reliable, WithValidation)
 		void ServerRPC_SpawnWeapon(TSubclassOf<AWeapon> weaponClass);
@@ -102,8 +97,13 @@ public:
 	void Input_MoveRight(float Value) { AxisMoveRight = Value; }
 	void Input_FaceUp(float Value) { AxisFaceUp = Value; }
 	void Input_FaceRight(float Value) { AxisFaceRight = Value; }
+	void Input_Interact() { TryInteract(); }
 
 	void SetUseMouseAim(bool bUseMouse) { bUseMouseAim = bUseMouse; }
+
+
+protected:
+	virtual void Tick(float DeltaSeconds) override;
 
 
 private:
@@ -112,7 +112,17 @@ private:
 	float AxisMoveRight;
 	float AxisFaceUp;
 	float AxisFaceRight;
-	  
+
+	template<class T>
+	T* ScanForInteractable();
+
+	//UFUNCTION(Server, Reliable, WithValidation)
+	bool TryInteract();
+
+
+	FHitResult GetFirstPhysicsBodyInReach() const;
+	void GetReachLine(FVector& outStart, FVector& outEnd) const;
+
 	void LogMsgWithRole(FString message);
 	FString GetEnumText(ENetRole role);
 	FString GetRoleText();

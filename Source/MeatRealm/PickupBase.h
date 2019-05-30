@@ -20,14 +20,22 @@ class MEATREALM_API APickupBase : public AActor
 public:	
 	APickupBase();
 
+	bool TryInteract(IAffectableInterface* const Affectable);
+
+	bool GetExplicitInteraction() const { return bExplicitInteraction; }
+	void SetExplicitInteraction(bool bIsExplicit);
+
 protected:
 
-	// TODO Override this to do whatever.
+
+	// Override this to do whatever.
 	virtual bool TryApplyAffect(IAffectableInterface* const Affectable)
 	{
 		unimplemented(); return false;
 	}
 
+
+	bool TryPickup(IAffectableInterface* Affectable);
 	UFUNCTION()
 	void OnCompBeginOverlap(UPrimitiveComponent* OverlappedComp, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult);
 
@@ -40,8 +48,6 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 		float RespawnDelay = 20;
 
-	//UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	//	bool bExplicitInteraction = false;
 
 protected:	/// Components
 	UPROPERTY(VisibleAnywhere)
@@ -69,4 +75,8 @@ protected:	/// Components
 
 
 	FTimerHandle RespawnTimerHandle;
+
+private:
+	UPROPERTY(EditAnywhere)
+		bool bExplicitInteraction = false;
 };

@@ -84,6 +84,8 @@ void AHeroController::HealthDepleted(uint32 InstigatorHeroControllerId) const
 	HealthDepletedEvent.Broadcast(GetUniqueID(), InstigatorHeroControllerId);
 }
 
+/// Input
+
 void AHeroController::SetupInputComponent()
 {
 	Super::SetupInputComponent();
@@ -95,11 +97,9 @@ void AHeroController::SetupInputComponent()
 	I->BindAction("FireWeapon", IE_Pressed, this, &AHeroController::Input_FirePressed);
 	I->BindAction("FireWeapon", IE_Released, this, &AHeroController::Input_FireReleased);
 	I->BindAction("Reload", IE_Released, this, &AHeroController::Input_Reload);
+	I->BindAction("Interact", IE_Pressed, this, &AHeroController::Input_Interact);
 	I->BindAction("ToggleInputScheme", IE_Pressed, this, &AHeroController::Input_ToggleUseMouse);
 }
-
-
-/// Input
 
 void AHeroController::Input_MoveUp(float Value)
 {
@@ -141,6 +141,12 @@ void AHeroController::Input_Reload()
 {
 	auto Char = GetHeroCharacter();
 	if (Char) Char->Input_Reload();
+}
+
+void AHeroController::Input_Interact()
+{
+	auto Char = GetHeroCharacter();
+	if (Char) Char->Input_Interact();
 }
 
 void AHeroController::Input_ToggleUseMouse()

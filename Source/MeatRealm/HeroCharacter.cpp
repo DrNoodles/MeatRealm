@@ -14,6 +14,7 @@
 #include "UnrealNetwork.h"
 #include "HeroState.h"
 #include "HeroController.h"
+#include "WeaponPickupBase.h"
 
 /// Lifecycle
 
@@ -217,7 +218,17 @@ void AHeroCharacter::Tick(float DeltaSeconds)
 	{
 		Controller->SetControlRotation(moveVec.Rotation());
 	}
-	
+
+
+	auto* const Pickup = ScanForInteractable<AWeaponPickupBase>();
+	if (Pickup && Pickup->GetExplicitInteraction())
+	{
+		//Pickup->TryApplyAffect(this);
+
+		//bInteractableInRange = true;
+		LogMsgWithRole("Interactable found!");
+	//	UE_LOG(LogTemp, Warning, TEXT("Interactable found!"));
+	}
 }
 
 void AHeroCharacter::ApplyDamage(uint32 InstigatorHeroControllerId, float Damage)
@@ -309,6 +320,45 @@ bool AHeroCharacter::TryGiveWeapon(const TSubclassOf<AWeapon>& Class)
 	return true;
 }
 
+
+template <class T>
+T* AHeroCharacter::ScanForInteractable()
+{
+	FHitResult Hit = GetFirstPhysicsBodyInReach();
+	return Cast<T>(Hit.GetActor());
+}
+
+bool AHeroCharacter::TryInteract()
+{
+	auto* Pickup = ScanForInteractable<AWeaponPickupBase>();
+	return (Pickup && Pickup->GetExplicitInteraction()) ? Pickup->TryInteract(this) : false;
+}
+
+FHitResult AHeroCharacter::GetFirstPhysicsBodyInReach() const
+{
+	FVector traceStart, traceEnd;
+	GetReachLine(OUT traceStart, OUT traceEnd);
+
+	DrawDebugLine(GetWorld(), traceStart, traceEnd, FColor{ 255,0,0 }, false, -1., 0, 5.f);
+
+	// Raycast along line to find intersecting physics object
+	FHitResult hitResult;
+	bool isHit = GetWorld()->LineTraceSingleByObjectType(
+		OUT hitResult,
+		traceStart,
+		traceEnd,
+		FCollisionObjectQueryParams{ ECollisionChannel::ECC_WorldDynamic },//TODO Make a custom channel for interactables!
+		FCollisionQueryParams{ FName(""), false, GetOwner() }
+	);
+
+	return hitResult;
+}
+
+void AHeroCharacter::GetReachLine(OUT FVector& outStart, OUT FVector& outEnd) const
+{
+	outStart = GetActorLocation();
+	outEnd = outStart + GetActorRotation().Vector() * InteractableSearchDistance;
+}
 
 void AHeroCharacter::LogMsgWithRole(FString message)
 {
