@@ -162,6 +162,36 @@ bool AHeroCharacter::ServerRPC_SpawnWeapon_Validate(TSubclassOf<AWeapon> weaponC
 
 /// Methods
 
+
+void AHeroCharacter::ServerRPC_TryInteract2_Implementation()
+{
+	LogMsgWithRole("AHeroCharacter::ServerRPC_TryInteract2_Implementation()");
+
+	auto* const Pickup = ScanForInteractable<AWeaponPickupBase>();
+	if (Pickup && Pickup->CanInteract())
+	{
+		LogMsgWithRole("AHeroCharacter::ServerRPC_TryInteract2_Implementation() : Found");
+		Pickup->TryInteract(this);
+	}
+}
+
+bool AHeroCharacter::ServerRPC_TryInteract2_Validate()
+{
+	return true;
+}
+
+void AHeroCharacter::Input_Interact()
+{
+	LogMsgWithRole("AHeroCharacter::Input_Interact()");
+
+	auto* const Pickup = ScanForInteractable<AWeaponPickupBase>();
+	if (Pickup && Pickup->CanInteract())
+	{
+		LogMsgWithRole("AHeroCharacter::Input_Interact() : Found");
+		ServerRPC_TryInteract2();
+	}
+}
+
 void AHeroCharacter::Tick(float DeltaSeconds)
 {
 	// TODO Try this scan on the server! Temp fix to help isolate issues
@@ -169,7 +199,8 @@ void AHeroCharacter::Tick(float DeltaSeconds)
 	auto* const Pickup = ScanForInteractable<AWeaponPickupBase>();
 	if (Pickup && Pickup->CanInteract())
 	{
-		LogMsgWithRole("Interactable found! (interacted)");
+	//LogMsgWithRole("Interactable found! ");
+
 		//if (Pickup->TryInteract(this))
 		//{
 			//LogMsgWithRole("Interactable found! (interacted)");
@@ -364,6 +395,7 @@ bool AHeroCharacter::ServerRPC_TryInteract_Validate()
 {
 	return true;
 }
+
 
 FHitResult AHeroCharacter::GetFirstPhysicsBodyInReach() const
 {

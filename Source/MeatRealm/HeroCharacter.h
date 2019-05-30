@@ -97,7 +97,7 @@ public:
 	void Input_MoveRight(float Value) { AxisMoveRight = Value; }
 	void Input_FaceUp(float Value) { AxisFaceUp = Value; }
 	void Input_FaceRight(float Value) { AxisFaceRight = Value; }
-	void Input_Interact() { ServerRPC_TryInteract(); }
+	void Input_Interact();
 
 	void SetUseMouseAim(bool bUseMouse) { bUseMouseAim = bUseMouse; }
 
@@ -119,6 +119,8 @@ private:
 	UFUNCTION(Server, Reliable, WithValidation)
 	void ServerRPC_TryInteract();
 
+	UFUNCTION(Server, Reliable, WithValidation)
+		void ServerRPC_TryInteract2();
 
 	FHitResult GetFirstPhysicsBodyInReach() const;
 	void GetReachLine(FVector& outStart, FVector& outEnd) const;
