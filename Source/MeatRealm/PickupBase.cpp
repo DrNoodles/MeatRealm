@@ -32,7 +32,7 @@ APickupBase::APickupBase()
 
 bool APickupBase::TryInteract(IAffectableInterface* const Affectable)
 {
-	if (!bExplicitInteraction) return false;
+	if (!bExplicitInteraction || Affectable == nullptr) return false;
 	return TryPickup(Affectable);
 }
 
@@ -70,13 +70,14 @@ void APickupBase::OnCompBeginOverlap(UPrimitiveComponent* OverlappedComp, AActor
 {
 	LogMsgWithRole("APickupBase::Overlapping()");
 
-	if (bExplicitInteraction) return;
+	if (bExplicitInteraction) { return; }
 
 	const auto IsNotWorthChecking = OtherActor == nullptr || OtherActor == this || OtherComp == nullptr;
-	if (IsNotWorthChecking) return;
+	if (IsNotWorthChecking) { return; }
 
 	const auto Affectable = Cast<IAffectableInterface>(OtherActor);
-
+	if (Affectable == nullptr) { return; }
+	
 	TryPickup(Affectable);
 }
 
