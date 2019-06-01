@@ -16,7 +16,8 @@ class MEATREALM_API AHeroController : public APlayerController
 	GENERATED_BODY()
 
 public:
-	
+
+	AHeroController();
 
 	UPROPERTY(EditDefaultsOnly, Category = "Widgets")
 		TSubclassOf<class UUserWidget> HudClass;
@@ -41,12 +42,14 @@ public:
 	FHealthDepleted& OnHealthDepleted() { return HealthDepletedEvent; }
 
 protected:
+	virtual void PreInitializeComponents() override;
+	virtual void PostInitializeComponents() override;
+	virtual void BeginPlay() override;
 	virtual void SetupInputComponent() override;
 	virtual bool InputAxis(FKey Key, float Delta, float DeltaTime, int32 NumSamples, bool bGamepad) override;
 	virtual bool InputKey(FKey Key, EInputEvent EventType, float AmountDepressed, bool bGamepad) override;
 
 private:
-
 	
 	FHealthDepleted HealthDepletedEvent;
 

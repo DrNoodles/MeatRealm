@@ -3,7 +3,13 @@
 
 #include "HeroController.h"
 #include "HeroCharacter.h"
+#include "MRLocalPlayer.h"
 
+
+AHeroController::AHeroController()
+{
+
+}
 
 void AHeroController::OnPossess(APawn* InPawn)
 {
@@ -22,6 +28,12 @@ void AHeroController::AcknowledgePossession(APawn* P)
 
 	auto Char = GetHeroCharacter();
 	if (Char) Char->SetUseMouseAim(bShowMouseCursor);
+
+
+	if (IsLocalController())
+	{
+		ShowHud(true);
+	}
 }
 
 void AHeroController::OnUnPossess()
@@ -29,6 +41,12 @@ void AHeroController::OnUnPossess()
 	// Called on server and owning-client upon depossessing a pawn
 
 	LogMsgWithRole("AHeroController::OnUnPossess()");
+
+	if (IsLocalController())
+	{
+		ShowHud(false);
+	}
+
 	Super::OnUnPossess();
 }
 
@@ -40,16 +58,7 @@ AHeroCharacter* AHeroController::GetHeroCharacter() const
 
 void AHeroController::ShowHud(bool bMakeVisible)
 {
-	// Enforce vertical aspect ratio
-	const auto LP = GetLocalPlayer();
-	LP->AspectRatioAxisConstraint = EAspectRatioAxisConstraint::AspectRatio_MaintainYFOV;
-
-	const bool bOwningClient = GetLocalRole() == ROLE_AutonomousProxy;
-	const bool bListenServer = GetRemoteRole() == ROLE_SimulatedProxy;
-	if (!bOwningClient && !bListenServer) 
-	{
-		return;
-	}
+	if (!IsLocalController()) return;
 
 	if (!HudClass)
 	{
@@ -85,6 +94,32 @@ void AHeroController::HealthDepleted(uint32 InstigatorHeroControllerId) const
 }
 
 /// Input
+
+void AHeroController::PreInitializeComponents()
+{
+	Super::PreInitializeComponents();
+}
+
+void AHeroController::PostInitializeComponents()
+{
+	Super::PostInitializeComponents();
+}
+
+void AHeroController::BeginPlay()
+{
+	Super::BeginPlay();
+	// TODO Setup MRLocalPlayer in some kind of init function (BeginPlay?)
+	//UPlayer* MRLocalPlayer = NewObject<UMRLocalPlayer>();
+	//SetPlayer(MRLocalPlayer);
+
+	// Enforce vertical aspect ratio
+	const auto LP = GetLocalPlayer();
+	if (LP && IsLocalController())
+	{
+		LogMsgWithRole("LP Get");
+		LP->AspectRatioAxisConstraint = EAspectRatioAxisConstraint::AspectRatio_MaintainYFOV;
+	}
+}
 
 void AHeroController::SetupInputComponent()
 {

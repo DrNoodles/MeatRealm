@@ -80,18 +80,6 @@ void AHeroCharacter::Restart()
 	Super::Restart();
 	LogMsgWithRole("AHeroCharacter::Restart()");
 
-	bool bIsOwningClient = Role == ROLE_AutonomousProxy;// || GetRemoteRole() == ROLE_SimulatedProxy;
-	if (bIsOwningClient)
-	{
-		auto cont = GetController();
-		if (cont != nullptr)
-		{
-			auto heroCont = (AHeroController*)cont;
-			heroCont->ShowHud(true);
-		}
-	}
-
-
 	Health = MaxHealth;
 	Armour = 0.f;
 
