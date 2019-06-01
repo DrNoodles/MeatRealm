@@ -152,8 +152,8 @@ bool AHeroCharacter::ServerRPC_SpawnWeapon_Validate(TSubclassOf<AWeapon> weaponC
 
 void AHeroCharacter::Tick(float DeltaSeconds)
 {
-	// Look for interactable objects
-	if (true/*HasAuthority()*/) // only has to run on authority, but then we dont see the debug trace line
+	// Look for interactable objects - owning client only as it's just for UI prompt
+	if (ROLE_AutonomousProxy == Role)
 	{
 		auto* const Pickup = ScanForInteractable<AWeaponPickupBase>();
 		if (Pickup && Pickup->CanInteract())
