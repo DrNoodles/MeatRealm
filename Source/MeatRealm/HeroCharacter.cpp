@@ -15,6 +15,7 @@
 #include "HeroState.h"
 #include "HeroController.h"
 #include "WeaponPickupBase.h"
+#include "GameFramework/InputSettings.h"
 
 /// Lifecycle
 
@@ -158,7 +159,29 @@ void AHeroCharacter::Tick(float DeltaSeconds)
 		auto* const Pickup = ScanForInteractable<AWeaponPickupBase>();
 		if (Pickup && Pickup->CanInteract())
 		{
-			LogMsgWithRole("Can Interact! ");
+			auto World = GetWorld();
+
+			UInputSettings* InputSettings = UInputSettings::GetInputSettings();
+
+			TArray<FInputActionKeyMapping> Mappings;
+			InputSettings->GetActionMappingByName("Interact", OUT Mappings);
+			
+			auto ActionText = FText::FromString( "Undefined" );
+			for (FInputActionKeyMapping Mapping : Mappings)
+			{
+				bool canUseKeyboardKey = bUseMouseAim && !Mapping.Key.IsGamepadKey();
+				bool canUseGamepadKey = !bUseMouseAim && Mapping.Key.IsGamepadKey();
+
+				if (canUseKeyboardKey || canUseGamepadKey)
+				{
+					ActionText = Mapping.Key.GetDisplayName();
+					break;
+				}
+			}
+			auto asdf = ActionText.ToString();
+			if (World) DrawDebugString(World, Pickup->GetActorLocation() + FVector{ 0,0,200 }, "Equip (" + asdf + ")", nullptr, FColor::White, DeltaSeconds*0.5);
+			
+			//LogMsgWithRole("Can Interact! ");
 		}
 	}
 
