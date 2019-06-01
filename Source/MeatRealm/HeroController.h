@@ -42,6 +42,8 @@ public:
 
 protected:
 	virtual void SetupInputComponent() override;
+	virtual bool InputAxis(FKey Key, float Delta, float DeltaTime, int32 NumSamples, bool bGamepad) override;
+	virtual bool InputKey(FKey Key, EInputEvent EventType, float AmountDepressed, bool bGamepad) override;
 
 private:
 
@@ -57,7 +59,5 @@ private:
 	void Input_FireReleased();
 	void Input_Reload();
 	void Input_Interact();
-	void Input_ToggleUseMouse();
-	bool bUseMouseAim = true;
-
+	void SetUseMouseaim(bool bUseMouseAim);
 };

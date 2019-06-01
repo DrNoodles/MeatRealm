@@ -98,7 +98,20 @@ void AHeroController::SetupInputComponent()
 	I->BindAction("FireWeapon", IE_Released, this, &AHeroController::Input_FireReleased);
 	I->BindAction("Reload", IE_Released, this, &AHeroController::Input_Reload);
 	I->BindAction("Interact", IE_Pressed, this, &AHeroController::Input_Interact);
-	I->BindAction("ToggleInputScheme", IE_Pressed, this, &AHeroController::Input_ToggleUseMouse);
+}
+
+bool AHeroController::InputAxis(FKey Key, float Delta, float DeltaTime, int32 NumSamples, bool bGamepad)
+{
+	bool ret = Super::InputAxis(Key, Delta, DeltaTime, NumSamples, bGamepad);
+	if (IsLocalController()) { SetUseMouseaim(!bGamepad); }
+	return ret;
+}
+
+bool AHeroController::InputKey(FKey Key, EInputEvent EventType, float AmountDepressed, bool bGamepad)
+{
+	bool ret = Super::InputKey(Key, EventType, AmountDepressed, bGamepad);
+	if (IsLocalController()) {	SetUseMouseaim(!bGamepad); }
+	return ret;
 }
 
 void AHeroController::Input_MoveUp(float Value)
@@ -149,12 +162,21 @@ void AHeroController::Input_Interact()
 	if (Char) Char->Input_Interact();
 }
 
-void AHeroController::Input_ToggleUseMouse()
+void AHeroController::SetUseMouseaim(bool bUseMouseAim)
 {
-	bShowMouseCursor = !bShowMouseCursor;
+	if (bUseMouseAim == bShowMouseCursor) return;
+
+	bShowMouseCursor = bUseMouseAim;
+	
+	if (!bShowMouseCursor)
+	{
+		// HACK: Setting bShowMouseCursor doesn't hide the cursor till there's another input on the mouse.
+		// So lets force that to happen so the cursor disappears nowS
+		SetMouseLocation(0, 0);
+	}
 
 	auto Char = GetHeroCharacter();
-	if (Char) Char->SetUseMouseAim(bShowMouseCursor);
+	if (Char) Char->SetUseMouseAim(bUseMouseAim);
 }
 
 

@@ -99,7 +99,7 @@ public:
 	void Input_FaceRight(float Value) { AxisFaceRight = Value; }
 	void Input_Interact();
 
-	void SetUseMouseAim(bool bUseMouse) { bUseMouseAim = bUseMouse; }
+	void SetUseMouseAim(bool bUseMouseAimIn) { bUseMouseAim = bUseMouseAimIn; }
 
 
 protected:
