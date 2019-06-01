@@ -4,11 +4,13 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/GameModeBase.h"
-#include "HeroController.h"
 
 #include "DeathmatchGameMode.generated.h"
 
+struct FActorSpawnParameters;
 class AHeroCharacter;
+class AHeroController;
+class AProjectile;
 
 UCLASS()
 class MEATREALM_API ADeathmatchGameMode : public AGameModeBase
@@ -21,12 +23,11 @@ public:
 	void PostLogin(APlayerController* NewPlayer) override;
 	void Logout(AController* Exiting) override;
 	bool ShouldSpawnAtStartSpot(AController* Player) override;
-	void SetPlayerDefaults(APawn* PlayerPawn) override;
-
 
 private:
-	TArray<AHeroController*> ConnectedHeroControllers;
+	TMap<uint32, AHeroController*> ConnectedHeroControllers;
+	TMap<uint32, FDelegateHandle> OnPlayerDieHandles;
 
-	void OnPlayerDie(AHeroCharacter* dead, AHeroCharacter* killer);
-	void EndGameIfFragLimitReached() const;
+	void OnPlayerDie(uint32 DeadControllerId, uint32 KillerControllerId);
+	bool EndGameIfFragLimitReached() const;
 };

@@ -5,7 +5,6 @@
 #include "Camera/CameraComponent.h"
 #include "Components/CapsuleComponent.h"
 #include "Components/ArrowComponent.h"
-#include "Components/InputComponent.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "GameFramework/Controller.h"
 #include "GameFramework/PlayerState.h"
@@ -15,8 +14,8 @@
 #include "UnrealNetwork.h"
 #include "HeroState.h"
 #include "HeroController.h"
-
-
+#include "WeaponPickupBase.h"
+#include "GameFramework/InputSettings.h"
 
 /// Lifecycle
 
@@ -59,7 +58,7 @@ AHeroCharacter::AHeroCharacter()
 	FollowCamera->SetupAttachment(CameraBoom, USpringArmComponent::SocketName); // Attach the camera to the end of the boom and let the boom adjust to match the controller orientation
 	FollowCamera->bAbsoluteRotation = false;
 	FollowCamera->bUsePawnControlRotation = false; // Camera does not rotate relative to arm
-	FollowCamera->SetFieldOfView(67);
+	FollowCamera->SetFieldOfView(38);
 
 	// Note: The skeletal mesh and anim blueprint references on the Mesh component (inherited from Character) 
 	// are set in the derived blueprint asset named MyCharacter (to avoid direct content references in C++)
@@ -70,10 +69,10 @@ AHeroCharacter::AHeroCharacter()
 
 void AHeroCharacter::EndPlay(const EEndPlayReason::Type EndPlayReason)
 {
-	if (ROLE_Authority == Role && ServerCurrentWeapon != nullptr)
+	if (ROLE_Authority == Role && CurrentWeapon != nullptr)
 	{
-		ServerCurrentWeapon->Destroy();
-		ServerCurrentWeapon = nullptr;
+		CurrentWeapon->Destroy();
+		CurrentWeapon = nullptr;
 	}
 }
 
@@ -82,19 +81,8 @@ void AHeroCharacter::Restart()
 	Super::Restart();
 	LogMsgWithRole("AHeroCharacter::Restart()");
 
-	bool bIsOwningClient = Role == ROLE_AutonomousProxy;// || GetRemoteRole() == ROLE_SimulatedProxy;
-	if (bIsOwningClient)
-	{
-		auto cont = GetController();
-		if (cont != nullptr)
-		{
-			auto heroCont = (AHeroController*)cont;
-			heroCont->ShowHud(true);
-		}
-	}
-
-
-	Health = 100;
+	Health = MaxHealth;
+	Armour = 0.f;
 
 	// Randomly select a weapon
 	if (WeaponClasses.Num() > 0)
@@ -110,7 +98,9 @@ void AHeroCharacter::Restart()
 void AHeroCharacter::GetLifetimeReplicatedProps(TArray< FLifetimeProperty >& OutLifetimeProps) const
 {
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
-	DOREPLIFETIME(AHeroCharacter, ServerCurrentWeapon);
+	DOREPLIFETIME(AHeroCharacter, CurrentWeapon);
+	DOREPLIFETIME(AHeroCharacter, Health);
+	DOREPLIFETIME(AHeroCharacter, Armour);
 }
 
 
@@ -119,32 +109,15 @@ AHeroState* AHeroCharacter::GetHeroState() const
 	return GetPlayerState<AHeroState>();
 }
 
-
 AHeroController* AHeroCharacter::GetHeroController() const
 {
 	return GetController<AHeroController>();
 }
 
-
-void AHeroCharacter::SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent)
-{
-	// Set up gameplay key bindings
-	check(PlayerInputComponent);
-
-	PlayerInputComponent->BindAxis("MoveUp");
-	PlayerInputComponent->BindAxis("MoveRight");
-	PlayerInputComponent->BindAxis("FaceUp");
-	PlayerInputComponent->BindAxis("FaceRight");
-	PlayerInputComponent->BindAction(
-		"FireWeapon", IE_Pressed, this, &AHeroCharacter::Input_FirePressed);
-	PlayerInputComponent->BindAction(
-		"FireWeapon", IE_Released, this, &AHeroCharacter::Input_FireReleased);
-	PlayerInputComponent->BindAction(
-		"Reload", IE_Released, this, &AHeroCharacter::Input_Reload);
-}
-
 void AHeroCharacter::ServerRPC_SpawnWeapon_Implementation(TSubclassOf<AWeapon> weaponClass)
 {
+	LogMsgWithRole("AHeroCharacter::ServerRPC_SpawnWeapon");
+
 	FActorSpawnParameters params;
 	params.Instigator = this;
 	params.Owner = this;
@@ -153,10 +126,21 @@ void AHeroCharacter::ServerRPC_SpawnWeapon_Implementation(TSubclassOf<AWeapon> w
 		weaponClass,
 		WeaponAnchor->GetComponentTransform(), params);
 
-	weapon->AttachToComponent(
-		WeaponAnchor, FAttachmentTransformRules{ EAttachmentRule::KeepWorld, true });
+	weapon->AttachToComponent(WeaponAnchor, FAttachmentTransformRules{ EAttachmentRule::KeepWorld, true });
+	weapon->SetHeroControllerId(GetHeroController()->GetUniqueID());
 
-	ServerCurrentWeapon = weapon;
+
+	// Cleanup previous weapon
+	if (CurrentWeapon != nullptr)
+	{
+		CurrentWeapon->Destroy();
+		CurrentWeapon = nullptr;
+	}
+
+	// TODO Will this fuckup in flight projectiles
+
+	// Make sure server has a copy
+	CurrentWeapon = weapon;
 }
 
 bool AHeroCharacter::ServerRPC_SpawnWeapon_Validate(TSubclassOf<AWeapon> weaponClass)
@@ -164,49 +148,91 @@ bool AHeroCharacter::ServerRPC_SpawnWeapon_Validate(TSubclassOf<AWeapon> weaponC
 	return true;
 }
 
-void AHeroCharacter::OnRep_ServerStateChanged()
-{
-	// TODO Destroy other current weapons?
-	// TODO Branch for ROLE_Auto, ROLE_Sim
-	CurrentWeapon = ServerCurrentWeapon;
-}
 
-void AHeroCharacter::Input_FirePressed()
-{
-	if (CurrentWeapon == nullptr) return;
-	CurrentWeapon->Input_PullTrigger();
-}
-
-void AHeroCharacter::Input_FireReleased()
-{
-	if (CurrentWeapon == nullptr) return;
-	CurrentWeapon->Input_ReleaseTrigger();
-}
-
-void AHeroCharacter::Input_Reload()
-{
-	if (CurrentWeapon == nullptr) return;
-	CurrentWeapon->Input_Reload();
-}
 /// Methods
 
 void AHeroCharacter::Tick(float DeltaSeconds)
 {
+	// Look for interactable objects - owning client only as it's just for UI prompt
+	if (ROLE_AutonomousProxy == Role)
+	{
+		auto* const Pickup = ScanForInteractable<AWeaponPickupBase>();
+		if (Pickup && Pickup->CanInteract())
+		{
+			auto World = GetWorld();
+
+			UInputSettings* InputSettings = UInputSettings::GetInputSettings();
+
+			TArray<FInputActionKeyMapping> Mappings;
+			InputSettings->GetActionMappingByName("Interact", OUT Mappings);
+			
+			auto ActionText = FText::FromString( "Undefined" );
+			for (FInputActionKeyMapping Mapping : Mappings)
+			{
+				bool canUseKeyboardKey = bUseMouseAim && !Mapping.Key.IsGamepadKey();
+				bool canUseGamepadKey = !bUseMouseAim && Mapping.Key.IsGamepadKey();
+
+				if (canUseKeyboardKey || canUseGamepadKey)
+				{
+					ActionText = Mapping.Key.GetDisplayName();
+					break;
+				}
+			}
+			auto asdf = ActionText.ToString();
+			if (World) DrawDebugString(World, Pickup->GetActorLocation() + FVector{ 0,0,200 }, "Equip (" + asdf + ")", nullptr, FColor::White, DeltaSeconds*0.5);
+			
+			//LogMsgWithRole("Can Interact! ");
+		}
+	}
+
+
+
 	// Handle Input
 	if (Controller == nullptr) return;
 
 	const auto deadzoneSquared = 0.25f * 0.25f;
 
 	// Move character
-	const auto moveVec = FVector{ GetInputAxisValue("MoveUp"), GetInputAxisValue("MoveRight"), 0 };
+	const auto moveVec = FVector{ AxisMoveUp, AxisMoveRight, 0 };
 	if (moveVec.SizeSquared() >= deadzoneSquared)
 	{
 		AddMovementInput(FVector{ 1.f, 0.f, 0.f }, moveVec.X);
 		AddMovementInput(FVector{ 0.f, 1.f, 0.f }, moveVec.Y);
 	}
 
-	// Aim character with look, if look is below deadzone then try use move vec
-	const auto lookVec = FVector{ GetInputAxisValue("FaceUp"), GetInputAxisValue("FaceRight"), 0 };
+
+	// Calculate Look Vector
+	FVector lookVec;
+	if (bUseMouseAim)
+	{
+		if (HasAuthority()) return;
+
+		const FVector Anchor = WeaponAnchor->GetComponentLocation();
+
+		const auto Hero = GetHeroController();
+		if (Hero)
+		{
+			FVector WorldLocation, WorldDirection;
+			const auto Success = Hero->DeprojectMousePositionToWorld(OUT WorldLocation, OUT WorldDirection);
+			if (Success)
+			{
+				const FVector Hit = FMath::LinePlaneIntersection(
+					WorldLocation, 
+					WorldLocation + (WorldDirection * 5000), 
+					Anchor,
+					FVector(0,0,1));
+
+				lookVec = Hit - Anchor;
+			}
+		}
+	}
+	else // Use gamepad
+	{
+		lookVec = FVector{ AxisFaceUp, AxisFaceRight, 0 };
+	}
+
+
+	// Apply Look Vector - Aim character with look, if look is below deadzone then try use move vec
 	if (lookVec.SizeSquared() >= deadzoneSquared)
 	{
 		Controller->SetControlRotation(lookVec.Rotation());
@@ -215,36 +241,167 @@ void AHeroCharacter::Tick(float DeltaSeconds)
 	{
 		Controller->SetControlRotation(moveVec.Rotation());
 	}
+
 }
 
-void AHeroCharacter::ApplyDamage(AHeroCharacter* DamageInstigator, float Damage)
+void AHeroCharacter::ApplyDamage(uint32 InstigatorHeroControllerId, float Damage)
 {
+	//This must only run on a dedicated server or listen server
+
+	if (!HasAuthority()) return;
 	// TODO Only on authority, then rep player state to all clients.
-	Health -= Damage;
 
-	if (Role == ROLE_Authority)
+	if (Damage > Armour)
 	{
-		UE_LOG(LogTemp, Warning, TEXT("%fhp"), Health);
+		const float DamageToHealth = Damage - Armour;
+		Armour = 0;
+		Health -= DamageToHealth;
+	}
+	else
+	{
+		Armour -= Damage;
+	}
+	
+	FString S = FString::Printf(TEXT("%fhp"), Health);
+	LogMsgWithRole(S);
 
-		if (Health <= 0)
-		{
-			HealthDepletedEvent.Broadcast(this, DamageInstigator);
-		}
+	if (Health <= 0)
+	{
+		// Let HeroController know we're not feeling great
+		auto HC = GetHeroController();
+		if (HC) HC->HealthDepleted(InstigatorHeroControllerId);
 	}
 }
 
+bool AHeroCharacter::TryGiveHealth(float Hp)
+{
+	LogMsgWithRole("TryGiveHealth");
+	//if (!HasAuthority()) return;
+	if (Health == MaxHealth) return false;
+	
+	Health = FMath::Min(Health + Hp, MaxHealth);
+	return true;
+}
+
+bool AHeroCharacter::TryGiveAmmo()
+{
+	LogMsgWithRole("AHeroCharacter::TryGiveAmmo");
+	//if (!HasAuthority()) return;
+
+	if (CurrentWeapon != nullptr)
+	{
+		return CurrentWeapon->TryGiveAmmo();
+	}
+
+	return false;
+}
+
+bool AHeroCharacter::TryGiveArmour(float Delta)
+{
+	LogMsgWithRole("TryGiveArmour");
+	//if (!HasAuthority()) return;
+	if (Armour == MaxArmour) return false;
+
+	Armour = FMath::Min(Armour + Delta, MaxArmour);
+	return true;
+}
+
+bool AHeroCharacter::TryGiveWeapon(const TSubclassOf<AWeapon>& Class)
+{
+	LogMsgWithRole("AHeroCharacter::TryGiveWeapon");
+
+	if (Class == nullptr) return false;
+	if (!HasAuthority()) return false;
+
+	
+	if (CurrentWeapon)
+	{
+		// If we already have the gun, treat it as an ammo pickup!
+		if (CurrentWeapon->IsA(Class))
+		{
+			return TryGiveAmmo();
+		}
+
+		// Otherwise, destroy our current weapon to make space for the new one!
+		CurrentWeapon->Destroy();
+		CurrentWeapon = nullptr;
+	}
+
+
+	ServerRPC_SpawnWeapon(Class);
+
+	return true;
+}
 
 
 
 
+void AHeroCharacter::Input_Interact()
+{
+	LogMsgWithRole("AHeroCharacter::Input_Interact()");
+	ServerRPC_TryInteract();
+}
+
+void AHeroCharacter::ServerRPC_TryInteract_Implementation()
+{
+	LogMsgWithRole("AHeroCharacter::ServerRPC_TryInteract_Implementation()");
+
+	auto* const Pickup = ScanForInteractable<AWeaponPickupBase>();
+	if (Pickup && Pickup->CanInteract())
+	{
+		LogMsgWithRole("AHeroCharacter::ServerRPC_TryInteract_Implementation() : Found");
+		Pickup->TryInteract(this);
+	}
+}
+
+bool AHeroCharacter::ServerRPC_TryInteract_Validate()
+{
+	return true;
+}
 
 
-void AHeroCharacter::LogMsgWithRole(FString message)
+template <class T>
+T* AHeroCharacter::ScanForInteractable()
+{
+	FHitResult Hit = GetFirstPhysicsBodyInReach();
+	return Cast<T>(Hit.GetActor());
+}
+
+FHitResult AHeroCharacter::GetFirstPhysicsBodyInReach() const
+{
+	//LogMsgWithRole("AHeroCharacter::GetFirstPhysicsBodyInReach()");
+
+	FVector traceStart, traceEnd;
+	GetReachLine(OUT traceStart, OUT traceEnd);
+
+	//DrawDebugLine(GetWorld(), traceStart, traceEnd, FColor{ 255,0,0 }, false, -1., 0, 5.f);
+
+	// Raycast along line to find intersecting physics object
+	FHitResult hitResult;
+	bool isHit = GetWorld()->LineTraceSingleByObjectType(
+		OUT hitResult,
+		traceStart,
+		traceEnd,
+		FCollisionObjectQueryParams{ ECollisionChannel::ECC_WorldDynamic },//TODO Make a custom channel for interactables!
+		FCollisionQueryParams{ FName(""), false, GetOwner() }
+	);
+
+	return hitResult;
+}
+void AHeroCharacter::GetReachLine(OUT FVector& outStart, OUT FVector& outEnd) const
+{
+	outStart = GetActorLocation();
+	
+	outStart.Z -= 60; // check about ankle height
+	outEnd = outStart + GetActorRotation().Vector() * InteractableSearchDistance;
+}
+
+void AHeroCharacter::LogMsgWithRole(FString message) const
 {
 	FString m = GetRoleText() + ": " + message;
 	UE_LOG(LogTemp, Warning, TEXT("%s"), *m);
 }
-FString AHeroCharacter::GetEnumText(ENetRole role)
+FString AHeroCharacter::GetEnumText(ENetRole role) const
 {
 	switch (role) {
 	case ROLE_None:
@@ -260,7 +417,7 @@ FString AHeroCharacter::GetEnumText(ENetRole role)
 		return "ERROR";
 	}
 }
-FString AHeroCharacter::GetRoleText()
+FString AHeroCharacter::GetRoleText() const
 {
 	auto Local = Role;
 	auto Remote = GetRemoteRole();

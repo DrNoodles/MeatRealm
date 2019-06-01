@@ -6,6 +6,7 @@
 #include "GameFramework/Actor.h"
 #include "Engine/Public/TimerManager.h"
 #include "Projectile.h"
+
 #include "Weapon.generated.h"
 
 class UArrowComponent;
@@ -30,6 +31,9 @@ public:
 	void Input_PullTrigger();
 	void Input_ReleaseTrigger();
 	void Input_Reload();
+	bool TryGiveAmmo();
+	uint32 HeroControllerId;
+	void SetHeroControllerId(uint32 HeroControllerUid) { this->HeroControllerId = HeroControllerUid; }
 
 public:
 	FTimerHandle CanActionTimerHandle;
@@ -47,8 +51,22 @@ public:
 		UArrowComponent* MuzzleLocationComp = nullptr;
 
 
-	UPROPERTY(BlueprintReadOnly, Category = Weapon)
-	int AmmoInClip;
+	UPROPERTY(BlueprintReadOnly, Category = Weapon, Replicated)
+		int AmmoInClip;
+
+	UPROPERTY(BlueprintReadOnly, Category = Weapon, Replicated)
+		int AmmoInPool;
+
+
+	UPROPERTY(EditAnywhere)
+		int ClipSize = 10;
+
+	UPROPERTY(EditAnywhere)
+		int AmmoPoolSize = 50;
+
+	UPROPERTY(EditAnywhere)
+		int AmmoGivenPerPickup = 10;
+
 
 	// Projectile class to spawn.
 	UPROPERTY(EditDefaultsOnly, Category = Weapon)
@@ -66,20 +84,29 @@ public:
 	UPROPERTY(EditAnywhere)
 		bool bUseClip = true;
 
-	UPROPERTY(EditAnywhere)
-		int ClipSize = 10;
-
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Replicated)
 	bool bIsReloading;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
 	float ReloadProgress = 0.f;
 
+	UPROPERTY(EditAnywhere, BlueprintReadOnly)
+	float HipfireSpread = 20;
+
+
+
+	UFUNCTION(Server, Reliable, WithValidation)
+		void ServerRPC_Reload();
+
+	UFUNCTION(Server, Reliable, WithValidation)
+		void ServerRPC_PullTrigger();
+
+	UFUNCTION(Server, Reliable, WithValidation)
+		void ServerRPC_ReleaseTrigger();
+
 	UFUNCTION(Server, Reliable, WithValidation)
 		void RPC_Fire_OnServer();
 
-	UFUNCTION(NetMulticast, Reliable)
-		void RPC_Fire_RepToClients();
 
 private:
 	UFUNCTION()
@@ -100,6 +127,7 @@ private:
 	bool bTriggerPulled;
 	bool bHasActionedThisTriggerPull;
 	bool bReloadQueued;
-	FDateTime ReloadStartTime;
 
+	UPROPERTY(Replicated)
+	FDateTime ReloadStartTime;
 };

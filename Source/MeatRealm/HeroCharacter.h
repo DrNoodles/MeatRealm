@@ -5,6 +5,7 @@
 #include "CoreMinimal.h"
 #include "GameFramework/Character.h"
 #include "Weapon.h"
+#include "Interfaces/AffectableInterface.h"
 
 #include "HeroCharacter.generated.h"
 
@@ -12,7 +13,7 @@ class AHeroState;
 class AHeroController;
 
 UCLASS()
-class MEATREALM_API AHeroCharacter : public ACharacter
+class MEATREALM_API AHeroCharacter : public ACharacter, public IAffectableInterface
 {
 	GENERATED_BODY()
 
@@ -23,17 +24,18 @@ class MEATREALM_API AHeroCharacter : public ACharacter
 	/** Follow camera */
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Camera, meta = (AllowPrivateAccess = "true"))
 		class UCameraComponent* FollowCamera;
+	
 
 public:
 
+	UPROPERTY(EditAnywhere)
+	float InteractableSearchDistance = 150.f; //cm
 
 	// Sets default values for this character's properties
 	AHeroCharacter();
 	void Restart() override;
 	void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
 
-	DECLARE_EVENT_TwoParams(AHeroCharacter, FHealthDepleted, AHeroCharacter*, AHeroCharacter*)
-	FHealthDepleted& OnHealthDepleted() { return HealthDepletedEvent; }
 
 	AHeroState* GetHeroState() const;
 	AHeroController* GetHeroController() const;
@@ -51,64 +53,76 @@ public:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Camera)
 		float BaseLookUpRate;
 
-	UPROPERTY(BlueprintReadOnly, EditAnywhere)
+	UPROPERTY(BlueprintReadOnly, VisibleAnywhere, Replicated)
 		float Health = 100.f;
 
-	UFUNCTION(BlueprintCallable)
-		void ApplyDamage(AHeroCharacter* DamageInstigator, float Damage);
+	UPROPERTY(BlueprintReadOnly, VisibleAnywhere, Replicated)
+		float Armour = 0.f;
+
+	UPROPERTY(BlueprintReadWrite, EditAnywhere)
+		float MaxHealth = 100.f;
+
+	UPROPERTY(BlueprintReadWrite, EditAnywhere)
+		float MaxArmour = 100.f;
+
+	UFUNCTION()
+	virtual void ApplyDamage(uint32 InstigatorHeroControllerId, float Damage) override;
+	UFUNCTION()
+	virtual bool TryGiveHealth(float Hp) override;
+	UFUNCTION()
+	virtual bool TryGiveAmmo() override;
+	UFUNCTION()
+	virtual bool TryGiveArmour(float Delta) override;
+	UFUNCTION()
+	virtual bool TryGiveWeapon(const TSubclassOf<AWeapon>& Class) override;
 
 
-protected:
-	// AActor interface
-	virtual void Tick(float DeltaSeconds) override;
-	// End of AActor interface
-
-	// APawn interface
-	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
-	// End of APawn interface
-
-public:
-	/** Returns CameraBoom subobject **/
-	FORCEINLINE class USpringArmComponent* GetCameraBoom() const { return CameraBoom; }
-	/** Returns FollowCamera subobject **/
-	FORCEINLINE class UCameraComponent* GetFollowCamera() const { return FollowCamera; }
-
+	/// Components
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
+		UArrowComponent* WeaponAnchor = nullptr;
 
 	UFUNCTION(Server, Reliable, WithValidation)
 		void ServerRPC_SpawnWeapon(TSubclassOf<AWeapon> weaponClass);
 
-	UPROPERTY(ReplicatedUsing = OnRep_ServerStateChanged)
-		AWeapon* ServerCurrentWeapon;
-
-	UFUNCTION()
-		void OnRep_ServerStateChanged();
-
-
-	UPROPERTY(BlueprintReadOnly)
+	UPROPERTY(BlueprintReadOnly, Replicated)
 		AWeapon* CurrentWeapon = nullptr;
-
-private:
-	/// Events
-	FHealthDepleted HealthDepletedEvent;
 
 
 	/// Input
 
-	void Input_FirePressed();
-	void Input_FireReleased();
-	void Input_Reload();
+	void Input_FirePressed() const { if (CurrentWeapon) CurrentWeapon->Input_PullTrigger(); }
+	void Input_FireReleased() const { if (CurrentWeapon) CurrentWeapon->Input_ReleaseTrigger(); }
+	void Input_Reload() const { if (CurrentWeapon) CurrentWeapon->Input_Reload(); }
+	void Input_MoveUp(float Value) {	AxisMoveUp = Value; }
+	void Input_MoveRight(float Value) { AxisMoveRight = Value; }
+	void Input_FaceUp(float Value) { AxisFaceUp = Value; }
+	void Input_FaceRight(float Value) { AxisFaceRight = Value; }
+	void Input_Interact();
 
-	/// Components
-
-
-	UPROPERTY(VisibleAnywhere)
-		UArrowComponent* WeaponAnchor = nullptr;
-
-
-
+	void SetUseMouseAim(bool bUseMouseAimIn) { bUseMouseAim = bUseMouseAimIn; }
 
 
-	void LogMsgWithRole(FString message);
-	FString GetEnumText(ENetRole role);
-	FString GetRoleText();
+protected:
+	virtual void Tick(float DeltaSeconds) override;
+
+
+private:
+	bool bUseMouseAim = true;
+	float AxisMoveUp;
+	float AxisMoveRight;
+	float AxisFaceUp;
+	float AxisFaceRight;
+
+	template<class T>
+	T* ScanForInteractable();
+
+	UFUNCTION(Server, Reliable, WithValidation)
+		void ServerRPC_TryInteract();
+
+	FHitResult GetFirstPhysicsBodyInReach() const;
+	void GetReachLine(FVector& outStart, FVector& outEnd) const;
+
+	void LogMsgWithRole(FString message) const;
+	FString GetEnumText(ENetRole role) const;
+	FString GetRoleText() const;
 };

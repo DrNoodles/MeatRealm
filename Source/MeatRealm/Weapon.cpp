@@ -6,6 +6,7 @@
 #include "Components/ArrowComponent.h"
 #include "Components/StaticMeshComponent.h"
 #include "DrawDebugHelpers.h"
+#include "UnrealNetwork.h"
 
 AWeapon::AWeapon()
 {
@@ -25,11 +26,22 @@ AWeapon::AWeapon()
 	MuzzleLocationComp->SetupAttachment(RootComponent);
 }
 
+void AWeapon::GetLifetimeReplicatedProps(TArray< FLifetimeProperty >& OutLifetimeProps) const
+{
+	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
+	DOREPLIFETIME(AWeapon, AmmoInClip);
+	DOREPLIFETIME(AWeapon, AmmoInPool);
+	DOREPLIFETIME(AWeapon, bIsReloading);
+	DOREPLIFETIME(AWeapon, ReloadStartTime);
+}
+
+
 void AWeapon::BeginPlay()
 {
 	Super::BeginPlay();
 	bCanAction = true;
 	AmmoInClip = ClipSize;
+	AmmoInPool = AmmoPoolSize;
 }
 
 void AWeapon::Tick(float DeltaTime)
@@ -38,23 +50,16 @@ void AWeapon::Tick(float DeltaTime)
 
 	if (bIsReloading)
 	{
-		const FTimespan ElapsedTime = FDateTime::Now() - ReloadStartTime;
-		ReloadProgress = ElapsedTime.GetTotalSeconds() / ReloadTime;
-		//auto Text = "Reloading";
-		//DrawDebugString(GetWorld(), FVector(0, 0, 200), "Reloading", this, FColor::Blue, DeltaTime * .8f);
+		const auto ElapsedReloadTime = (FDateTime::Now() - ReloadStartTime).GetTotalSeconds();
+		ReloadProgress = ElapsedReloadTime / ReloadTime;
 	}
-	/*else if (NeedsReload())
-	{
-		auto Text = "Empty!";
-		DrawDebugString(GetWorld(), FVector(0, 0, 200), "Empty!", this, FColor::Red, DeltaTime * .8f);
-	}*/
 
 	if (!bCanAction) return;
 
 
 
 	// Reload!
-	if (bReloadQueued)
+	if (bReloadQueued && CanReload())
 	{
 		ClientReloadStart();
 		return;
@@ -67,11 +72,11 @@ void AWeapon::Tick(float DeltaTime)
 	const auto bWeaponCanCycle = bFullAuto || !bHasActionedThisTriggerPull;
 	if (bTriggerPulled && bWeaponCanCycle)
 	{
-		if (NeedsReload())
+		if (NeedsReload() && CanReload())
 		{
 			ClientReloadStart();
 		}
-		else
+		else if (AmmoInClip > 0)
 		{
 			ClientFireStart();
 		}
@@ -120,7 +125,13 @@ void AWeapon::ClientReloadEnd()
 	ReloadProgress = 0;
 	bIsReloading = false;
 	bCanAction = true;
-	AmmoInClip = ClipSize;
+
+	// Take ammo from pool
+	const int AmmoNeeded = ClipSize - AmmoInClip;
+	const int AmmoReceived = (AmmoNeeded > AmmoInPool) ? AmmoInPool : AmmoNeeded;
+	AmmoInPool -= AmmoReceived;
+	AmmoInClip += AmmoReceived;
+	
 	bReloadQueued = false;
 
 	if (CanActionTimerHandle.IsValid())
@@ -131,7 +142,9 @@ void AWeapon::ClientReloadEnd()
 
 bool AWeapon::CanReload() const
 {
-	return bUseClip && AmmoInClip < ClipSize;
+	return bUseClip && 
+		AmmoInClip < ClipSize && 
+		AmmoInPool > 0;
 }
 
 bool AWeapon::NeedsReload() const
@@ -139,22 +152,59 @@ bool AWeapon::NeedsReload() const
 	return bUseClip && AmmoInClip < 1;
 }
 
+void AWeapon::ServerRPC_PullTrigger_Implementation()
+{
+	bTriggerPulled = true;
+	bHasActionedThisTriggerPull = false;
+}
+
+bool AWeapon::ServerRPC_PullTrigger_Validate()
+{
+	return true;
+}
+
+void AWeapon::ServerRPC_ReleaseTrigger_Implementation()
+{
+	bTriggerPulled = false;
+	bHasActionedThisTriggerPull = false;
+}
+
+bool AWeapon::ServerRPC_ReleaseTrigger_Validate()
+{
+	return true;
+}
+
+void AWeapon::ServerRPC_Reload_Implementation()
+{
+	if (bTriggerPulled || !CanReload()) return;
+	bReloadQueued = true;
+}
+
+bool AWeapon::ServerRPC_Reload_Validate()
+{
+	return true;
+}
+
 void AWeapon::Shoot()
 {
 	//LogMsgWithRole("Shoot");
 
-	if (ProjectileClass == nullptr) return;
-	// TODO Set an error message in log suggesting the designer set a projectile class
+	if (ProjectileClass == nullptr)
+	{
+		UE_LOG(LogTemp, Error, TEXT("Set a Projectile Class in your Weapon Blueprint to shoot"));
+		return;
+	};
 
 	UWorld * World = GetWorld();
 	if (World == nullptr) return;
 
 
+	// Spawn the projectile at the muzzle.
+
 	FActorSpawnParameters SpawnParams;
 	SpawnParams.Owner = GetOwner();
 	SpawnParams.Instigator = Instigator;
-
-	// Spawn the projectile at the muzzle.
+	
 	AProjectile * Projectile = GetWorld()->SpawnActorAbsolute<AProjectile>(
 		ProjectileClass,
 		MuzzleLocationComp->GetComponentTransform(), SpawnParams);
@@ -162,10 +212,21 @@ void AWeapon::Shoot()
 	// Set the projectile velocity
 	if (Projectile == nullptr) return;
 
-	const auto AdditionalVelocity = GetOwner()->GetVelocity(); // inherits player's velocity
+	Projectile->SetHeroControllerId(HeroControllerId);
+
+	
+
+	// Perterb the shot direction by the hipfire spread.
 	const auto ShootDirection = MuzzleLocationComp->GetForwardVector();
 
-	Projectile->FireInDirection(ShootDirection, FVector::ZeroVector);
+	const float SpreadInRadians = FMath::DegreesToRadians(HipfireSpread);
+	const float OffsetAngle = FMath::RandRange(-SpreadInRadians / 2, SpreadInRadians / 2);
+	const float OffsetHeadingAngle = ShootDirection.HeadingAngle() + OffsetAngle;
+	const FVector ShootDirectionWithSpread = FVector{ FMath::Cos(OffsetHeadingAngle), FMath::Sin(OffsetHeadingAngle), 0 };
+
+	// Take the shot!
+	Projectile->FireInDirection(ShootDirectionWithSpread);
+
 	//UE_LOG(LogTemp, Warning, TEXT("Fired!"));
 }
 
@@ -175,23 +236,37 @@ void AWeapon::Shoot()
 
 void AWeapon::Input_PullTrigger()
 {
+	ServerRPC_PullTrigger();
 	//LogMsgWithRole("PullTrigger");
-	bTriggerPulled = true;
-	bHasActionedThisTriggerPull = false;
+	/*bTriggerPulled = true;
+	bHasActionedThisTriggerPull = false;*/
 }
 
 void AWeapon::Input_ReleaseTrigger()
 {
+	ServerRPC_ReleaseTrigger();
 	//UE_LOG(LogTemp, Warning, TEXT("ReleaseTrigger!"));
-	bTriggerPulled = false;
-	bHasActionedThisTriggerPull = false;
+	/*bTriggerPulled = false;
+	bHasActionedThisTriggerPull = false;*/
 }
 
 void AWeapon::Input_Reload()
 {
-	if (bTriggerPulled || !CanReload()) return;
-	//UE_LOG(LogTemp, Warning, TEXT("Input_Reload!"));
-	bReloadQueued = true;
+	ServerRPC_Reload();
+	//if (bTriggerPulled || !CanReload()) return;
+	////UE_LOG(LogTemp, Warning, TEXT("Input_Reload!"));
+	//bReloadQueued = true;
+}
+
+bool AWeapon::TryGiveAmmo()
+{
+	LogMsgWithRole("AWeapon::TryGiveAmmo()");
+
+	if (AmmoInPool == AmmoPoolSize) return false;
+
+	AmmoInPool = FMath::Min(AmmoInPool + AmmoGivenPerPickup, AmmoPoolSize);
+	
+	return true;
 }
 
 
@@ -200,7 +275,9 @@ void AWeapon::Input_Reload()
 void AWeapon::RPC_Fire_OnServer_Implementation()
 {
 	//LogMsgWithRole("RPC_Fire_OnServer_Impl");
-	RPC_Fire_RepToClients();
+	Shoot();
+
+	//RPC_Fire_RepToClients();
 }
 
 bool AWeapon::RPC_Fire_OnServer_Validate()
@@ -208,11 +285,19 @@ bool AWeapon::RPC_Fire_OnServer_Validate()
 	return true;
 }
 
-void AWeapon::RPC_Fire_RepToClients_Implementation()
-{
+//void AWeapon::RPC_Fire_RepToClients_Implementation()
+//{
+	// This method runs on ALL clients
+
+	// For now(?) lets ONLY shoot this on the server
+	/*if (GetOwner()->Role != ROLE_Authority) 
+	{
+		return;
+	}
+*/
 	//LogMsgWithRole("RPC_Fire_RepToClients_Impl");
-	Shoot();
-}
+
+//}
 
 
 

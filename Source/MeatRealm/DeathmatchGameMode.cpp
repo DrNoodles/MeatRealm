@@ -7,6 +7,8 @@
 #include "HeroCharacter.h"
 #include "HeroState.h"
 #include "ScoreboardEntryData.h"
+#include "HeroController.h"
+#include "Projectile.h"
 
 ADeathmatchGameMode::ADeathmatchGameMode()
 {
@@ -29,70 +31,93 @@ void ADeathmatchGameMode::PostLogin(APlayerController* NewPlayer)
 {
 	Super::PostLogin(NewPlayer);
 
-	const auto Hero = static_cast<AHeroController*>(NewPlayer);
-	ConnectedHeroControllers.AddUnique(Hero);
 
+	const auto Hero = static_cast<AHeroController*>(NewPlayer);
+	const uint32 UID = Hero->GetUniqueID();
+
+	ConnectedHeroControllers.Add(UID, Hero);
 	UE_LOG(LogTemp, Warning, TEXT("ConnectedHeroControllers: %d"), ConnectedHeroControllers.Num());
+
+	// Monitor for player death events
+	const FDelegateHandle Handle = Hero->OnHealthDepleted().AddUObject(this, &ADeathmatchGameMode::OnPlayerDie);
+	OnPlayerDieHandles.Add(UID, Handle);
 }
 
 
 void ADeathmatchGameMode::Logout(AController* Exiting)
 {
-	Super::Logout(Exiting);
-
 	const auto Hero = static_cast<AHeroController*>(Exiting);
-	ConnectedHeroControllers.Remove(Hero);
 
+	ConnectedHeroControllers.Remove(Hero->GetUniqueID());
 	UE_LOG(LogTemp, Warning, TEXT("ConnectedHeroControllers: %d"), ConnectedHeroControllers.Num());
+
+	// Unbind event when player leaves!
+	const uint32 UID = Hero->GetUniqueID();
+	const auto Handle = OnPlayerDieHandles[UID];
+	Hero->OnHealthDepleted().Remove(Handle);
+
+	Super::Logout(Exiting);
 }
 
 
 bool ADeathmatchGameMode::ShouldSpawnAtStartSpot(AController* Player)
 {
-	// Always pick a random spawn
-	return false;
+	return false; // Always pick a random spawn
 }
 
-
-void ADeathmatchGameMode::SetPlayerDefaults(APawn* PlayerPawn)
+void ADeathmatchGameMode::OnPlayerDie(uint32 DeadControllerId, uint32 KillerControllerId)
 {
-	UE_LOG(LogTemp, Warning, TEXT("SetPlayerDefaults"));
+	if (!ConnectedHeroControllers.Contains(DeadControllerId))
+	{
+		UE_LOG(LogTemp, Error, TEXT("ADeathmatchGameMode::OnPlayerDie cant find dead controller!"));
+		return;
+	}
+	if (!ConnectedHeroControllers.Contains(KillerControllerId))
+	{
+		UE_LOG(LogTemp, Error, TEXT("ADeathmatchGameMode::OnPlayerDie cant find killer controller!"));
+		return;
+	}
+
+
+	// Award the killer a point
+	const auto KillerController = ConnectedHeroControllers[KillerControllerId];
+	if (KillerController) KillerController->GetPlayerState<AHeroState>()->Kills++;
+
+
+	// Award death point, kill then respawn character
+	const auto DeadController = ConnectedHeroControllers[DeadControllerId];
+	if (DeadController)
+	{
+		DeadController->GetPlayerState<AHeroState>()->Deaths++;
+
+		AHeroCharacter* DeadChar = DeadController->GetHeroCharacter();
+		if (DeadChar) DeadChar->Destroy();
+
+		RestartPlayer(DeadController);
+	}
+
 	
-	auto heroChar = (AHeroCharacter*)PlayerPawn;
-	heroChar->Health = 100;
-	heroChar->OnHealthDepleted().AddUObject(this, &ADeathmatchGameMode::OnPlayerDie);
+	if (EndGameIfFragLimitReached()) return;
 }
 
-void ADeathmatchGameMode::OnPlayerDie(AHeroCharacter* dead, AHeroCharacter* killer)
-{
-	auto DeadState = dead->GetHeroState();
-	auto KillerState = killer->GetHeroState();
-
-	DeadState->Deaths++;
-	KillerState->Kills++;
-	UE_LOG(LogTemp, Warning, TEXT("Deadguy: %dk:%dd"), DeadState->Kills, DeadState->Deaths);
-	UE_LOG(LogTemp, Warning, TEXT("Killer: %dk:%dd"), KillerState->Kills, KillerState->Deaths);
-
-	AHeroController* Controller = dead->GetHeroController();
-	dead->Destroy();
 
 
-	RestartPlayer(Controller);
-
-	EndGameIfFragLimitReached();
-}
-
-void ADeathmatchGameMode::EndGameIfFragLimitReached() const
+bool ADeathmatchGameMode::EndGameIfFragLimitReached() const
 {
 	auto DMGameState = GetGameState<ADeathmatchGameState>();
 	auto Scores = DMGameState->GetScoreboard();
-	if (Scores.Num() > 0 && Scores[0]->Kills >= DMGameState->FragLimit)
+	
+	const auto bFragLimitReached = Scores.Num() > 0 && Scores[0]->Kills >= DMGameState->FragLimit;
+	if (bFragLimitReached)
 	{
 		UE_LOG(LogTemp, Warning, TEXT("Hit Frag Limit!"));
 
 		const auto World = GetWorld();
 		if (World) World->ServerTravel("/Game/MeatRealm/Maps/TestMap");
+		return true;
 	}
+
+	return false;
 }
 
 
