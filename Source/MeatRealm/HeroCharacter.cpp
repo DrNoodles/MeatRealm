@@ -80,18 +80,6 @@ void AHeroCharacter::Restart()
 	Super::Restart();
 	LogMsgWithRole("AHeroCharacter::Restart()");
 
-	bool bIsOwningClient = Role == ROLE_AutonomousProxy;// || GetRemoteRole() == ROLE_SimulatedProxy;
-	if (bIsOwningClient)
-	{
-		auto cont = GetController();
-		if (cont != nullptr)
-		{
-			auto heroCont = (AHeroController*)cont;
-			heroCont->ShowHud(true);
-		}
-	}
-
-
 	Health = MaxHealth;
 	Armour = 0.f;
 
@@ -164,8 +152,8 @@ bool AHeroCharacter::ServerRPC_SpawnWeapon_Validate(TSubclassOf<AWeapon> weaponC
 
 void AHeroCharacter::Tick(float DeltaSeconds)
 {
-	// Look for interactable objects
-	if (true/*HasAuthority()*/) // only has to run on authority, but then we dont see the debug trace line
+	// Look for interactable objects - owning client only as it's just for UI prompt
+	if (ROLE_AutonomousProxy == Role)
 	{
 		auto* const Pickup = ScanForInteractable<AWeaponPickupBase>();
 		if (Pickup && Pickup->CanInteract())
