@@ -5,10 +5,36 @@
 #include "CoreMinimal.h"
 #include "GameFramework/PlayerController.h"
 #include "Blueprint/UserWidget.h"
+#include "DeathmatchGameMode.h"
 
 #include "HeroController.generated.h"
 
 class AHeroCharacter;
+
+
+
+// TODO Use something built in already?
+USTRUCT()
+struct MEATREALM_API FMRHitResult
+{
+	GENERATED_BODY()
+
+	UPROPERTY()
+		uint32 ReceiverControllerId;
+	UPROPERTY()
+		uint32 AttackerControllerId;
+	UPROPERTY()
+		int HealthRemaining;
+	UPROPERTY()
+	int DamageTaken;
+	UPROPERTY()
+		bool bHitArmour;
+	UPROPERTY()
+		FVector HitLocation;
+	UPROPERTY()
+		FVector HitDirection;
+};
+
 
 UCLASS()
 class MEATREALM_API AHeroController : public APlayerController
@@ -37,6 +63,11 @@ public:
 	FString GetEnumText(ENetRole role);
 	FString GetRoleText();
 	void DamageTaken(uint32 InstigatorHeroControllerId, float HealthRemaining, int DamageTaken, bool bHitArmour) const;
+	
+	void SimulateHitGiven(const FMRHitResult& Hit);
+	
+	UFUNCTION(Client, Reliable)
+	void ClientRPC_PlayHit(const FMRHitResult& Hit);
 
 	//DECLARE_EVENT_TwoParams(AHeroController, FHealthDepleted, uint32, uint32)
 	//FHealthDepleted& OnHealthDepleted() { return HealthDepletedEvent; }

@@ -31,7 +31,6 @@ void ADeathmatchGameMode::PostLogin(APlayerController* NewPlayer)
 {
 	Super::PostLogin(NewPlayer);
 
-
 	const auto Hero = static_cast<AHeroController*>(NewPlayer);
 	const uint32 UID = Hero->GetUniqueID();
 
@@ -67,7 +66,7 @@ bool ADeathmatchGameMode::ShouldSpawnAtStartSpot(AController* Player)
 
 void ADeathmatchGameMode::OnPlayerTakeDamage(uint32 ReceiverControllerId, uint32 AttackerControllerId, int HealthRemaining, int DamageTaken, bool bHitArmour)
 {
-	UE_LOG(LogTemp, Warning, TEXT("TakeDamage"));
+	UE_LOG(LogTemp, Warning, TEXT("TakeDamage %d"), DamageTaken);
 
 	if (!ConnectedHeroControllers.Contains(ReceiverControllerId))
 	{
@@ -81,11 +80,18 @@ void ADeathmatchGameMode::OnPlayerTakeDamage(uint32 ReceiverControllerId, uint32
 	}
 
 	const auto AttackerController = ConnectedHeroControllers[AttackerControllerId];
-
-	// 
+	// TODO Route hit location through OnPlayerTakeDamage. Probs time to introduce a hit struct!
+	FMRHitResult Hit{};
+	Hit.ReceiverControllerId = ReceiverControllerId;
+	Hit.AttackerControllerId = AttackerControllerId;
+	Hit.HealthRemaining = HealthRemaining;
+	Hit.DamageTaken = DamageTaken;
+	Hit.bHitArmour = bHitArmour;
+	AttackerController->SimulateHitGiven(Hit);
 
 
 	const auto ReceivingController = ConnectedHeroControllers[ReceiverControllerId];
+	//ReceivingController->HitTaken(Hit);
 
 
 

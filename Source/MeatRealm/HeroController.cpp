@@ -4,6 +4,7 @@
 #include "HeroController.h"
 #include "HeroCharacter.h"
 #include "MRLocalPlayer.h"
+#include "Engine/Public/DrawDebugHelpers.h"
 
 
 AHeroController::AHeroController()
@@ -91,6 +92,48 @@ void AHeroController::ShowHud(bool bMakeVisible)
 void AHeroController::DamageTaken(uint32 InstigatorHeroControllerId, float HealthRemaining, int DamageTaken, bool bHitArmour) const
 {
 	TakenDamageEvent.Broadcast(GetUniqueID(), InstigatorHeroControllerId, (int)HealthRemaining, DamageTaken, bHitArmour);
+}
+
+void AHeroController::SimulateHitGiven(const FMRHitResult& Hit)
+{
+	if (!IsLocalController())
+	{
+		//UE_LOG(LogTemp, Warning, TEXT("HitGiven() - NotLocal. Damage(%d)"), Hit.DamageTaken);
+		ClientRPC_PlayHit(Hit);
+		return;
+	}
+
+	UE_LOG(LogTemp, Warning, TEXT("HitGiven() - Local. Damage(%d)"), Hit.DamageTaken);
+
+	// Display a hit marker in the world
+	auto World = GetWorld();
+	if (World)
+	{
+		DrawDebugString(World, 
+			Hit.HitLocation + FVector{ 0,0,100 },
+			FString::FromInt(Hit.DamageTaken), 
+			nullptr,
+			Hit.bHitArmour ? FColor::Blue : FColor::White,
+			0.5);
+	}
+}
+
+void AHeroController::ClientRPC_PlayHit_Implementation(const FMRHitResult& Hit)
+{
+	SimulateHitGiven(Hit);
+	//UE_LOG(LogTemp, Warning, TEXT("HitGiven() - Local. Damage(%d)"), Hit.DamageTaken);
+
+	//// Display a hit marker in the world
+	//auto World = GetWorld();
+	//if (World)
+	//{
+	//	DrawDebugString(World,
+	//		Hit.HitLocation + FVector{ 0,0,100 },
+	//		FString::FromInt(Hit.DamageTaken),
+	//		nullptr,
+	//		Hit.bHitArmour ? FColor::Blue : FColor::White,
+	//		0.5);
+	//}
 }
 
 /// Input
