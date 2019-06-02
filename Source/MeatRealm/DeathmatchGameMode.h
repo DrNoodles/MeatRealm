@@ -28,6 +28,6 @@ private:
 	TMap<uint32, AHeroController*> ConnectedHeroControllers;
 	TMap<uint32, FDelegateHandle> OnPlayerDieHandles;
 
-	void OnPlayerDie(uint32 DeadControllerId, uint32 KillerControllerId);
+	void OnPlayerTakeDamage(uint32 ReceiverControllerId, uint32 AttackerControllerId, int HealthRemaining, int DamageTaken, bool bHitArmour);
 	bool EndGameIfFragLimitReached() const;
 };

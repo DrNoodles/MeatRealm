@@ -36,10 +36,15 @@ public:
 	void LogMsgWithRole(FString message);
 	FString GetEnumText(ENetRole role);
 	FString GetRoleText();
-	void HealthDepleted(uint32 InstigatorHeroControllerId) const;
+	void DamageTaken(uint32 InstigatorHeroControllerId, float HealthRemaining, int DamageTaken, bool bHitArmour) const;
 
-	DECLARE_EVENT_TwoParams(AHeroController, FHealthDepleted, uint32, uint32)
-	FHealthDepleted& OnHealthDepleted() { return HealthDepletedEvent; }
+	//DECLARE_EVENT_TwoParams(AHeroController, FHealthDepleted, uint32, uint32)
+	//FHealthDepleted& OnHealthDepleted() { return HealthDepletedEvent; }
+
+	// receiverId, instigatorId, healthRemaining, damageTaken, isArmour
+	DECLARE_MULTICAST_DELEGATE_FiveParams(FTakenDamage, uint32, uint32, int, int, bool)
+	FTakenDamage& OnTakenDamage() { return TakenDamageEvent; }
+
 
 protected:
 	virtual void PreInitializeComponents() override;
@@ -51,7 +56,8 @@ protected:
 
 private:
 	
-	FHealthDepleted HealthDepletedEvent;
+	FTakenDamage TakenDamageEvent;
+	//FHealthDepleted HealthDepletedEvent;
 
 	/// Input
 	void Input_MoveUp(float Value);

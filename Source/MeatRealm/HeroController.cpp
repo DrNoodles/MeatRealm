@@ -88,9 +88,9 @@ void AHeroController::ShowHud(bool bMakeVisible)
 }
 
 
-void AHeroController::HealthDepleted(uint32 InstigatorHeroControllerId) const
+void AHeroController::DamageTaken(uint32 InstigatorHeroControllerId, float HealthRemaining, int DamageTaken, bool bHitArmour) const
 {
-	HealthDepletedEvent.Broadcast(GetUniqueID(), InstigatorHeroControllerId);
+	TakenDamageEvent.Broadcast(GetUniqueID(), InstigatorHeroControllerId, (int)HealthRemaining, DamageTaken, bHitArmour);
 }
 
 /// Input

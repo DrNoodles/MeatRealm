@@ -262,7 +262,7 @@ void AHeroCharacter::Tick(float DeltaSeconds)
 			? CalcLinearLeanVector(CursorLoc, ViewportSize)
 			: FVector2D{ AxisFaceRight, AxisFaceUp };
 		
-		UE_LOG(LogTemp, Warning, TEXT("Lean: %s"), *LinearLeanVector.ToString());
+		//UE_LOG(LogTemp, Warning, TEXT("Lean: %s"), *LinearLeanVector.ToString());
 
 		const FTransform CompTform = FollowCameraOffsetComp->GetComponentTransform();
 
@@ -347,13 +347,17 @@ void AHeroCharacter::ApplyDamage(uint32 InstigatorHeroControllerId, float Damage
 	//This must only run on a dedicated server or listen server
 
 	if (!HasAuthority()) return;
-	// TODO Only on authority, then rep player state to all clients.
+
+	Damage = FMath::Min(Health + Armour, Damage);
+
+	auto bHitArmour = false;
 
 	if (Damage > Armour)
 	{
 		const float DamageToHealth = Damage - Armour;
 		Armour = 0;
 		Health -= DamageToHealth;
+		bHitArmour = true;
 	}
 	else
 	{
@@ -363,12 +367,9 @@ void AHeroCharacter::ApplyDamage(uint32 InstigatorHeroControllerId, float Damage
 	FString S = FString::Printf(TEXT("%fhp"), Health);
 	LogMsgWithRole(S);
 
-	if (Health <= 0)
-	{
-		// Let HeroController know we're not feeling great
-		auto HC = GetHeroController();
-		if (HC) HC->HealthDepleted(InstigatorHeroControllerId);
-	}
+	// Report hit to controller
+	auto HC = GetHeroController();
+	if (HC) HC->DamageTaken(InstigatorHeroControllerId, Health, Damage, bHitArmour);
 }
 
 bool AHeroCharacter::TryGiveHealth(float Hp)
