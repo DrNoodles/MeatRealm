@@ -53,9 +53,13 @@ AHeroCharacter::AHeroCharacter()
 	CameraBoom->bDoCollisionTest = false; // Don't want to pull camera in when it collides with level
 	CameraBoom->bEnableCameraLag = true;
 
+	// Create a follow camera offset node
+	FollowCameraOffsetComp = CreateDefaultSubobject<USceneComponent>(TEXT("FollowCameraOffset"));
+	FollowCameraOffsetComp->SetupAttachment(CameraBoom, USpringArmComponent::SocketName); // Attach 
+
 	// Create a follow camera
 	FollowCamera = CreateDefaultSubobject<UCameraComponent>(TEXT("FollowCamera"));
-	FollowCamera->SetupAttachment(CameraBoom, USpringArmComponent::SocketName); // Attach the camera to the end of the boom and let the boom adjust to match the controller orientation
+	FollowCamera->SetupAttachment(FollowCameraOffsetComp); 
 	FollowCamera->bAbsoluteRotation = false;
 	FollowCamera->bUsePawnControlRotation = false; // Camera does not rotate relative to arm
 	FollowCamera->SetFieldOfView(38);
@@ -201,6 +205,8 @@ void AHeroCharacter::Tick(float DeltaSeconds)
 	}
 
 
+	const auto HeroCont = GetHeroController();
+
 	// Calculate Look Vector
 	FVector lookVec;
 	if (bUseMouseAim)
@@ -209,11 +215,10 @@ void AHeroCharacter::Tick(float DeltaSeconds)
 
 		const FVector Anchor = WeaponAnchor->GetComponentLocation();
 
-		const auto Hero = GetHeroController();
-		if (Hero)
+		if (HeroCont)
 		{
 			FVector WorldLocation, WorldDirection;
-			const auto Success = Hero->DeprojectMousePositionToWorld(OUT WorldLocation, OUT WorldDirection);
+			const auto Success = HeroCont->DeprojectMousePositionToWorld(OUT WorldLocation, OUT WorldDirection);
 			if (Success)
 			{
 				const FVector Hit = FMath::LinePlaneIntersection(
@@ -242,6 +247,99 @@ void AHeroCharacter::Tick(float DeltaSeconds)
 		Controller->SetControlRotation(moveVec.Rotation());
 	}
 
+
+
+	// Compute camera lean
+	const auto ViewportSize = GetGameViewportSize();
+	FVector2D CursorLoc;
+
+	if (bLeanCameraWithAim &&
+		Role == ROLE_AutonomousProxy &&
+		(!bUseMouseAim || HeroCont && HeroCont->GetMousePosition(OUT CursorLoc.X, OUT CursorLoc.Y)) &&
+		ViewportSize.SizeSquared() > 0)
+	{
+		FVector2D LinearLeanVector = bUseMouseAim
+			? CalcLinearLeanVector(CursorLoc, ViewportSize)
+			: FVector2D{ AxisFaceRight, AxisFaceUp };
+		
+		UE_LOG(LogTemp, Warning, TEXT("Lean: %s"), *LinearLeanVector.ToString());
+
+		const FTransform CompTform = FollowCameraOffsetComp->GetComponentTransform();
+
+		// TODO Calculate camera facing in world space
+		FVector ForwardVec{ 1,0,0 };
+
+		// TODO Calculate right tangent vector in world space
+		FVector RightVec = FVector::CrossProduct(ForwardVec, FVector::UpVector);// TODO Maybe needs DownVector
+
+		// Calculate a world space offset based on LeanVector
+		const auto ModifiedVec = InterpolateVec(LinearLeanVector);
+		const auto ScaledVec = ModifiedVec * LeanDistance;
+		FVector Offset_WorldSpace = FVector{ ScaledVec.Y, ScaledVec.X, 0.f };
+
+		// Find the origin of our camera offset node
+		FVector Origin_WorldSpace = CompTform.TransformPosition(FVector::ZeroVector);
+
+		// Calc the goal location in world space by adding our offset to the origin in world space
+		FVector GoalLocation_WorldSpace = Origin_WorldSpace + Offset_WorldSpace;
+
+		// Transform goal location from world space to cam offset space
+		FVector GoalLocation_LocalSpace = CompTform.InverseTransformPosition(GoalLocation_WorldSpace);
+
+		// Move towards goal!
+		const auto Current = FollowCameraOffsetComp->RelativeLocation;
+		const auto Diff = GoalLocation_LocalSpace - Current;
+
+		float Rate = bUseMouseAim
+			? LeanCushionRateMouse * DeltaSeconds
+			: LeanCushionRateGamepad * DeltaSeconds;
+		Rate = FMath::Clamp(Rate, 0.0f, 1.f);
+
+		FVector Change = Diff * Rate;
+
+		FollowCameraOffsetComp->SetRelativeLocation(Current + Change);
+	}
+}
+
+
+
+FVector2D AHeroCharacter::InterpolateVec(FVector2D InVec)
+{
+	if (!bIsQuadraticLeaning) return InVec;
+
+	// Quadratic interpolation
+	return InVec * InVec.Size();
+}
+FVector2D AHeroCharacter::CalcLinearLeanVector(const FVector2D& CursorLoc, const FVector2D& ViewportSize)
+{
+	const auto Mid = ViewportSize / 2.f;
+
+	// Define a circle that touches the top and bottom of the screen
+	const auto Radius = ViewportSize.Y / 2.f;
+
+	// Create a vector from the middle to the cursor that has a length ratio relative to the radius
+	const auto CursorVecFromMid = CursorLoc - Mid;
+	const auto CursorVecRelative = CursorVecFromMid / Radius;
+
+	// Make sure it isn't bigger than the circle
+	const auto CursorVecClipped = CursorVecRelative.SizeSquared() > 1
+		? CursorVecRelative.GetSafeNormal()
+		: CursorVecRelative;
+
+	// Flip Y
+	return CursorVecClipped * FVector2D{ 1, -1 };
+}
+
+FVector2D AHeroCharacter::GetGameViewportSize()
+{
+	FVector2D Result{};
+
+	if (GEngine && GEngine->GameViewport)
+	{
+		GEngine->GameViewport->GetViewportSize(OUT Result);
+	}
+
+	return Result;
 }
 
 void AHeroCharacter::ApplyDamage(uint32 InstigatorHeroControllerId, float Damage)
@@ -333,9 +431,6 @@ bool AHeroCharacter::TryGiveWeapon(const TSubclassOf<AWeapon>& Class)
 	return true;
 }
 
-
-
-
 void AHeroCharacter::Input_Interact()
 {
 	LogMsgWithRole("AHeroCharacter::Input_Interact()");
@@ -358,7 +453,6 @@ bool AHeroCharacter::ServerRPC_TryInteract_Validate()
 {
 	return true;
 }
-
 
 template <class T>
 T* AHeroCharacter::ScanForInteractable()
