@@ -12,6 +12,30 @@
 class AHeroState;
 class AHeroController;
 
+
+// TODO Use something built in already?
+USTRUCT()
+struct MEATREALM_API FMRHitResult
+{
+	GENERATED_BODY()
+
+	UPROPERTY()
+		uint32 ReceiverControllerId;
+	UPROPERTY()
+		uint32 AttackerControllerId;
+	UPROPERTY()
+		int HealthRemaining;
+	UPROPERTY()
+		int DamageTaken;
+	UPROPERTY()
+		bool bHitArmour;
+	UPROPERTY()
+		FVector HitLocation;
+	UPROPERTY()
+		FVector HitDirection;
+};
+
+
 UCLASS()
 class MEATREALM_API AHeroCharacter : public ACharacter, public IAffectableInterface
 {
@@ -64,7 +88,7 @@ public:
 
 
 	UFUNCTION()
-	virtual void ApplyDamage(uint32 InstigatorHeroControllerId, float Damage) override;
+	virtual void ApplyDamage(uint32 InstigatorHeroControllerId, float Damage, FVector Location) override;
 	UFUNCTION()
 	virtual bool TryGiveHealth(float Hp) override;
 	UFUNCTION()

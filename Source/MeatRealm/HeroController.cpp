@@ -89,9 +89,11 @@ void AHeroController::ShowHud(bool bMakeVisible)
 }
 
 
-void AHeroController::DamageTaken(uint32 InstigatorHeroControllerId, float HealthRemaining, int DamageTaken, bool bHitArmour) const
+void AHeroController::DamageTaken(const FMRHitResult& Hit) const
 {
-	TakenDamageEvent.Broadcast(GetUniqueID(), InstigatorHeroControllerId, (int)HealthRemaining, DamageTaken, bHitArmour);
+	// TODO Broadcast hit event here for BP to play a sound?
+
+	TakenDamageEvent.Broadcast(Hit);
 }
 
 void AHeroController::SimulateHitGiven(const FMRHitResult& Hit)

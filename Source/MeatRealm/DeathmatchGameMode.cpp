@@ -64,39 +64,34 @@ bool ADeathmatchGameMode::ShouldSpawnAtStartSpot(AController* Player)
 	return false; // Always pick a random spawn
 }
 
-void ADeathmatchGameMode::OnPlayerTakeDamage(uint32 ReceiverControllerId, uint32 AttackerControllerId, int HealthRemaining, int DamageTaken, bool bHitArmour)
+void ADeathmatchGameMode::OnPlayerTakeDamage(FMRHitResult Hit)
 {
-	UE_LOG(LogTemp, Warning, TEXT("TakeDamage %d"), DamageTaken);
+	UE_LOG(LogTemp, Warning, TEXT("TakeDamage %d"), Hit.DamageTaken);
 
-	if (!ConnectedHeroControllers.Contains(ReceiverControllerId))
+	if (!ConnectedHeroControllers.Contains(Hit.ReceiverControllerId))
 	{
 		UE_LOG(LogTemp, Error, TEXT("ADeathmatchGameMode::OnPlayerTakeDamage cant find receiver controller!"));
 		return;
 	}
-	if (!ConnectedHeroControllers.Contains(AttackerControllerId))
+	if (!ConnectedHeroControllers.Contains(Hit.AttackerControllerId))
 	{
 		UE_LOG(LogTemp, Error, TEXT("ADeathmatchGameMode::OnPlayerTakeDamage cant find attacker controller!"));
 		return;
 	}
 
-	const auto AttackerController = ConnectedHeroControllers[AttackerControllerId];
+	const auto AttackerController = ConnectedHeroControllers[Hit.AttackerControllerId];
 	// TODO Route hit location through OnPlayerTakeDamage. Probs time to introduce a hit struct!
-	FMRHitResult Hit{};
-	Hit.ReceiverControllerId = ReceiverControllerId;
-	Hit.AttackerControllerId = AttackerControllerId;
-	Hit.HealthRemaining = HealthRemaining;
-	Hit.DamageTaken = DamageTaken;
-	Hit.bHitArmour = bHitArmour;
+	
 	AttackerController->SimulateHitGiven(Hit);
 
 
-	const auto ReceivingController = ConnectedHeroControllers[ReceiverControllerId];
+	const auto ReceivingController = ConnectedHeroControllers[Hit.ReceiverControllerId];
 	//ReceivingController->HitTaken(Hit);
 
 
 
 
-	if (HealthRemaining <= 0)
+	if (Hit.HealthRemaining <= 0)
 	{
 		// Award the killer a point
 		if (AttackerController) AttackerController->GetPlayerState<AHeroState>()->Kills++;

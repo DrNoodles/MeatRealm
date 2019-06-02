@@ -6,35 +6,12 @@
 #include "GameFramework/PlayerController.h"
 #include "Blueprint/UserWidget.h"
 #include "DeathmatchGameMode.h"
+#include "HeroCharacter.h" // TODO Make this a forward decl - Need to pull FMRHitResult out of the file
 
 #include "HeroController.generated.h"
 
+//struct FMRHitResult;
 class AHeroCharacter;
-
-
-
-// TODO Use something built in already?
-USTRUCT()
-struct MEATREALM_API FMRHitResult
-{
-	GENERATED_BODY()
-
-	UPROPERTY()
-		uint32 ReceiverControllerId;
-	UPROPERTY()
-		uint32 AttackerControllerId;
-	UPROPERTY()
-		int HealthRemaining;
-	UPROPERTY()
-	int DamageTaken;
-	UPROPERTY()
-		bool bHitArmour;
-	UPROPERTY()
-		FVector HitLocation;
-	UPROPERTY()
-		FVector HitDirection;
-};
-
 
 UCLASS()
 class MEATREALM_API AHeroController : public APlayerController
@@ -62,8 +39,7 @@ public:
 	void LogMsgWithRole(FString message);
 	FString GetEnumText(ENetRole role);
 	FString GetRoleText();
-	void DamageTaken(uint32 InstigatorHeroControllerId, float HealthRemaining, int DamageTaken, bool bHitArmour) const;
-	
+	void DamageTaken(const FMRHitResult& Hit) const;
 	void SimulateHitGiven(const FMRHitResult& Hit);
 	
 	UFUNCTION(Client, Reliable)
@@ -73,7 +49,7 @@ public:
 	//FHealthDepleted& OnHealthDepleted() { return HealthDepletedEvent; }
 
 	// receiverId, instigatorId, healthRemaining, damageTaken, isArmour
-	DECLARE_MULTICAST_DELEGATE_FiveParams(FTakenDamage, uint32, uint32, int, int, bool)
+	DECLARE_MULTICAST_DELEGATE_OneParam(FTakenDamage, FMRHitResult)
 	FTakenDamage& OnTakenDamage() { return TakenDamageEvent; }
 
 

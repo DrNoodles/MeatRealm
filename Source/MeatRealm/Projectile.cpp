@@ -72,7 +72,7 @@ void AProjectile::OnCompBeginOverlap(UPrimitiveComponent* OverlappedComp, AActor
 		{
 			UE_LOG(LogTemp, Error, TEXT("AffectableReceiver of damage is null!"));
 		}
-		AffectableReceiver->ApplyDamage(HeroControllerId, ShotDamage);
+		AffectableReceiver->ApplyDamage(HeroControllerId, ShotDamage, GetActorLocation());
 	}
 
 	Destroy();

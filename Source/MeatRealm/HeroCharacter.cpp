@@ -342,34 +342,55 @@ FVector2D AHeroCharacter::GetGameViewportSize()
 	return Result;
 }
 
-void AHeroCharacter::ApplyDamage(uint32 InstigatorHeroControllerId, float Damage)
+void AHeroCharacter::ApplyDamage(uint32 InstigatorHeroControllerId, float Damage, FVector Location)
 {
 	//This must only run on a dedicated server or listen server
 
 	if (!HasAuthority()) return;
 
-	Damage = FMath::Min(Health + Armour, Damage);
-
 	auto bHitArmour = false;
 
-	if (Damage > Armour)
+	if (Armour > 0)
 	{
-		const float DamageToHealth = Damage - Armour;
-		Armour = 0;
-		Health -= DamageToHealth;
 		bHitArmour = true;
+
+		if (Damage > Armour)
+		{
+			const float DamageToHealth = Damage - Armour;
+			Armour = 0;
+			Health -= DamageToHealth;
+		}
+		else
+		{
+			Armour -= Damage;
+		}
 	}
 	else
 	{
-		Armour -= Damage;
+		Health -= Damage;
 	}
+
 	
 	FString S = FString::Printf(TEXT("%fhp"), Health);
 	LogMsgWithRole(S);
 
+
 	// Report hit to controller
 	auto HC = GetHeroController();
-	if (HC) HC->DamageTaken(InstigatorHeroControllerId, Health, Damage, bHitArmour);
+	if (HC)
+	{
+		FMRHitResult Hit{};
+		Hit.ReceiverControllerId = HC->GetUniqueID();
+		Hit.AttackerControllerId = InstigatorHeroControllerId;
+		Hit.HealthRemaining = (int)Health;
+		Hit.DamageTaken = (int)Damage;
+		Hit.bHitArmour = bHitArmour;
+		Hit.HitLocation = Location;
+		//Hit.HitDirection
+
+		HC->DamageTaken(Hit);
+	}
+	
 }
 
 bool AHeroCharacter::TryGiveHealth(float Hp)
