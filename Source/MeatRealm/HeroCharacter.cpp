@@ -273,8 +273,8 @@ void AHeroCharacter::Tick(float DeltaSeconds)
 		FVector RightVec = FVector::CrossProduct(ForwardVec, FVector::UpVector);// TODO Maybe needs DownVector
 
 		// Calculate a world space offset based on LeanVector
-		auto ModifiedVec = InterpolateVec(LinearLeanVector);
-		auto ScaledVec = ModifiedVec * LeanFactor;
+		const auto ModifiedVec = InterpolateVec(LinearLeanVector);
+		const auto ScaledVec = ModifiedVec * LeanDistance;
 		FVector Offset_WorldSpace = FVector{ ScaledVec.Y, ScaledVec.X, 0.f };
 
 		// Find the origin of our camera offset node
@@ -286,7 +286,18 @@ void AHeroCharacter::Tick(float DeltaSeconds)
 		// Transform goal location from world space to cam offset space
 		FVector GoalLocation_LocalSpace = CompTform.InverseTransformPosition(GoalLocation_WorldSpace);
 
-		FollowCameraOffsetComp->SetRelativeLocation(GoalLocation_LocalSpace);
+		// Move towards goal!
+		const auto Current = FollowCameraOffsetComp->RelativeLocation;
+		const auto Diff = GoalLocation_LocalSpace - Current;
+
+		float Rate = bUseMouseAim
+			? LeanCushionRateMouse * DeltaSeconds
+			: LeanCushionRateGamepad * DeltaSeconds;
+		Rate = FMath::Clamp(Rate, 0.0f, 1.f);
+
+		FVector Change = Diff * Rate;
+
+		FollowCameraOffsetComp->SetRelativeLocation(Current + Change);
 	}
 }
 

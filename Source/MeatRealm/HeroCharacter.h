@@ -22,10 +22,16 @@ public:
 	UPROPERTY(EditAnywhere, Category = Camera)
 		bool bLeanCameraWithAim = true;
 
-	UPROPERTY(EditAnywhere, Category = Camera, meta = (EditCondition = "bMoveCameraWithAim"))
-		float LeanFactor = 300;
+	UPROPERTY(EditAnywhere, Category = Camera, meta = (EditCondition = "bLeanCameraWithAim"))
+		float LeanCushionRateGamepad = 5;
 
-	UPROPERTY(EditAnywhere, Category = Camera, meta = (EditCondition = "bMoveCameraWithAim"))
+	UPROPERTY(EditAnywhere, Category = Camera, meta = (EditCondition = "bLeanCameraWithAim"))
+		float LeanCushionRateMouse = 20;
+
+	UPROPERTY(EditAnywhere, Category = Camera, meta = (EditCondition = "bLeanCameraWithAim"))
+		float LeanDistance = 300;
+
+	UPROPERTY(EditAnywhere, Category = Camera, meta = (EditCondition = "bLeanCameraWithAim"))
 		bool bIsQuadraticLeaning = false;
 
 	UPROPERTY(EditAnywhere)
@@ -54,6 +60,7 @@ public:
 
 	UPROPERTY(BlueprintReadWrite, EditAnywhere)
 		float MaxArmour = 100.f;
+	
 
 
 	UFUNCTION()
@@ -124,7 +131,6 @@ private:
 	/** Follow camera */
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Camera, meta = (AllowPrivateAccess = "true"))
 		class UCameraComponent* FollowCamera;
-
 
 	bool bUseMouseAim = true;
 	float AxisMoveUp;
