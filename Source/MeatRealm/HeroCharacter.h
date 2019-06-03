@@ -56,7 +56,11 @@ public:
 		float LeanCushionRateMouse = 5;
 
 	UPROPERTY(EditAnywhere, Category = Camera, meta = (EditCondition = "bLeanCameraWithAim"))
-	int ClippingModeMouse = 3;
+		int ClippingModeMouse = 1;
+
+	UPROPERTY(EditAnywhere, Category = Camera, meta = (EditCondition = "bLeanCameraWithAim"))
+		bool bUseExperimentalMouseTracking = false;
+
 
 	UPROPERTY(EditAnywhere)
 	float InteractableSearchDistance = 150.f; //cm
@@ -121,6 +125,9 @@ public:
 	UPROPERTY(BlueprintReadOnly, Replicated)
 		AWeapon* CurrentWeapon = nullptr;
 
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
+		UStaticMeshComponent* AimPosComp = nullptr;
+
 
 	/// Input
 
@@ -141,9 +148,9 @@ protected:
 	static FVector2D CalcLinearLeanVectorUnclipped(const FVector2D& CursorLoc, const FVector2D& ViewportSize);
 	void MoveCameraByOffsetVector(const FVector2D& Vector2D, float DeltaSeconds) const;
 	virtual void Tick(float DeltaSeconds) override;
-	//FVector2D TrackCameraWithAimMouse2(const FVector& AimVec) const;
 	FVector2D TrackCameraWithAimMouse() const;
 	FVector2D TrackCameraWithAimGamepad() const;
+	void ExperimentalMouseAimTracking(float DT);
 
 
 private:
@@ -177,6 +184,9 @@ private:
 	void LogMsgWithRole(FString message) const;
 	FString GetEnumText(ENetRole role) const;
 	FString GetRoleText() const;
+
+	FVector2D AimPos_ScreenSpace = FVector2D::ZeroVector;
+	FVector AimPos_WorldSpace = FVector::ZeroVector;
 };
 
 

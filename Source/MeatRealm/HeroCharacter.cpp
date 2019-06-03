@@ -4,10 +4,12 @@
 #include "HeadMountedDisplayFunctionLibrary.h"
 #include "Camera/CameraComponent.h"
 #include "Components/CapsuleComponent.h"
+#include "Components/StaticMeshComponent.h"
 #include "Components/ArrowComponent.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "GameFramework/Controller.h"
 #include "GameFramework/PlayerState.h"
+
 #include "GameFramework/SpringArmComponent.h"
 #include "Engine/Public/DrawDebugHelpers.h"
 #include "Engine/Engine.h"
@@ -16,6 +18,7 @@
 #include "HeroController.h"
 #include "WeaponPickupBase.h"
 #include "GameFramework/InputSettings.h"
+#include "Kismet/GameplayStatics.h"
 
 /// Lifecycle
 
@@ -64,11 +67,14 @@ AHeroCharacter::AHeroCharacter()
 	FollowCamera->bUsePawnControlRotation = false; // Camera does not rotate relative to arm
 	FollowCamera->SetFieldOfView(38);
 
-	// Note: The skeletal mesh and anim blueprint references on the Mesh component (inherited from Character) 
-	// are set in the derived blueprint asset named MyCharacter (to avoid direct content references in C++)
+	// Note: The skeletal mesh and anim blueprint references on the Mesh component (inherited from Character) are set in the derived blueprint asset named MyCharacter (to avoid direct content references in C++)
 
 	WeaponAnchor = CreateDefaultSubobject<UArrowComponent>(TEXT("WeaponAnchor"));
 	WeaponAnchor->SetupAttachment(RootComponent);
+
+	// Create TEMP aim pos comp to help visualise aiming target
+	AimPosComp = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("AimPosComp"));
+	AimPosComp->SetupAttachment(RootComponent);
 }
 
 void AHeroCharacter::EndPlay(const EEndPlayReason::Type EndPlayReason)
@@ -208,7 +214,7 @@ void AHeroCharacter::Tick(float DeltaSeconds)
 	const auto HeroCont = GetHeroController();
 
 	// Calculate Look Vector
-	FVector GunAnchorToCursorVec;
+	FVector AimVec;
 	if (bUseMouseAim)
 	{
 		if (HasAuthority()) return;
@@ -227,20 +233,20 @@ void AHeroCharacter::Tick(float DeltaSeconds)
 					Anchor,
 					FVector(0,0,1));
 
-				GunAnchorToCursorVec = Hit - Anchor;
+				AimVec = Hit - Anchor;
 			}
 		}
 	}
 	else // Use gamepad
 	{
-		GunAnchorToCursorVec = FVector{ AxisFaceUp, AxisFaceRight, 0 };
+		AimVec = FVector{ AxisFaceUp, AxisFaceRight, 0 };
 	}
 
 
 	// Apply Look Vector - Aim character with look, if look is below deadzone then try use move vec
-	if (GunAnchorToCursorVec.SizeSquared() >= deadzoneSquared)
+	if (AimVec.SizeSquared() >= deadzoneSquared)
 	{
-		Controller->SetControlRotation(GunAnchorToCursorVec.Rotation());
+		Controller->SetControlRotation(AimVec.Rotation());
 	}
 	else if (moveVec.SizeSquared() >= deadzoneSquared)
 	{
@@ -256,6 +262,12 @@ void AHeroCharacter::Tick(float DeltaSeconds)
 
 		if (bUseMouseAim)
 		{
+			if (bUseExperimentalMouseTracking)
+			{
+				ExperimentalMouseAimTracking(DeltaSeconds);
+				return;
+			}
+			
 			LinearLeanVector = TrackCameraWithAimMouse();
 		}
 		else
@@ -267,6 +279,10 @@ void AHeroCharacter::Tick(float DeltaSeconds)
 		MoveCameraByOffsetVector(OffsetVec, DeltaSeconds);
 	}
 }
+
+
+
+
 void AHeroCharacter::MoveCameraByOffsetVector(const FVector2D& OffsetVec, float DeltaSeconds) const
 {
 	// Calculate a world space offset based on LeanVector
@@ -286,7 +302,7 @@ void AHeroCharacter::MoveCameraByOffsetVector(const FVector2D& OffsetVec, float 
 	const auto Current = FollowCameraOffsetComp->RelativeLocation;
 	const auto Diff = GoalLocation_LocalSpace - Current;
 
-	float Rate = bUseMouseAim
+	float Rate = bUseMouseAim && !bUseExperimentalMouseTracking
 		? 1// Trying no cushion //LeanCushionRateMouse * DeltaSeconds
 		: LeanCushionRateGamepad * DeltaSeconds;
 	Rate = FMath::Clamp(Rate, 0.0f, 1.f);
@@ -295,11 +311,6 @@ void AHeroCharacter::MoveCameraByOffsetVector(const FVector2D& OffsetVec, float 
 
 	FollowCameraOffsetComp->SetRelativeLocation(Current + Change);
 }
-
-//FVector2D AHeroCharacter::TrackCameraWithAimMouse2(const FVector& AimVec) const
-//{
-//	FVector2D{ AimVec.X, AimVec.Y };
-//}
 
 FVector2D AHeroCharacter::TrackCameraWithAimMouse() const
 {
@@ -312,6 +323,7 @@ FVector2D AHeroCharacter::TrackCameraWithAimMouse() const
 	{
 		return FVector2D::ZeroVector;
 	}
+	//UE_LOG(LogTemp, Warning, TEXT("Cursor: %s"), *CursorLoc.ToString());
 
 	FVector2D LinearLeanVector = CalcLinearLeanVectorUnclipped(CursorLoc, ViewportSize);
 	FVector2D ClippedLinearLeanVector;
@@ -349,6 +361,79 @@ FVector2D AHeroCharacter::TrackCameraWithAimGamepad() const
 	FVector2D LinearLeanVector = FVector2D{ AxisFaceRight, AxisFaceUp };
 	return LinearLeanVector;
 }
+
+void AHeroCharacter::ExperimentalMouseAimTracking(float DT)
+{
+	auto*const Hero = GetHeroController();
+	if (!Hero) return;
+
+	// Hide the cursor - NOTE the cursor still exists and works nicely, just cant see it!
+	Hero->bShowMouseCursor = false;
+
+	// Track change in mouse
+	FVector2D MousePos;
+	Hero->GetMousePosition(OUT MousePos.X, OUT MousePos.Y);
+	FVector2D MouseDelta = MousePos - AimPos_ScreenSpace;
+	AimPos_ScreenSpace = MousePos;
+
+	//UE_LOG(LogTemp, Warning, TEXT("CursorPos: %s, Delta: %s"), *MousePos.ToString(), *MouseDelta.ToString());
+
+	FVector WorldLocation;
+	FVector WorldDirection;
+	if (!UGameplayStatics::DeprojectScreenToWorld(Hero, MousePos, OUT WorldLocation, OUT WorldDirection))
+	{
+		UE_LOG(LogTemp, Error, TEXT("Couldn't project screen position into world"));
+		return;
+	}
+
+
+	const FVector AnchorPos = WeaponAnchor->GetComponentLocation();
+	AimPos_WorldSpace = FMath::LinePlaneIntersection(
+		WorldLocation,
+		WorldLocation + (WorldDirection * 5000),
+		AnchorPos,
+		FVector(0, 0, 1));
+
+	AimPosComp->SetWorldLocation(AimPos_WorldSpace);
+
+	const FVector AimVec = AimPos_WorldSpace - AnchorPos;
+
+	// Face the player at this
+	Controller->SetControlRotation((AimVec*-1).Rotation()); // reverse aim vec just to help see setcontrolrotation works here
+
+
+
+	const auto ViewportSize = GetGameViewportSize();
+	FVector2D LinearLeanVector = CalcLinearLeanVectorUnclipped(AimPos_ScreenSpace, ViewportSize);
+
+
+	const auto OffsetVec = LinearLeanVector * LeanDistance;
+	MoveCameraByOffsetVector(OffsetVec, DT);
+
+	/*
+	
+	
+	
+	// Create a custom camera that contains a "frame offset pointer" pos
+
+	// Get mouse input deltas (dx dy) and move the frame offset pointer accordingly
+
+	// Project offset pointer into the character's aim plane to get world position
+
+	//
+
+	AimPos_World = GetMouseDelta.ProjectToAimPlane()
+
+		AimPos_Screen = AimPos_World.ProjectToScreen()
+		AimVec_Screen = AimPos_Screen - Center_Screen
+		NormalizedAimVec_Screen = AimVec_Screen / (Viewport.Y / 2)
+
+	*/
+//	FVector2D{ AimVec.X, AimVec.Y };
+}
+
+
+
 
 
 FVector2D AHeroCharacter::CalcLinearLeanVectorUnclipped(const FVector2D& CursorLoc, const FVector2D& ViewportSize)

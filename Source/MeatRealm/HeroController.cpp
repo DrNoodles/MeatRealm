@@ -182,6 +182,8 @@ void AHeroController::SetupInputComponent()
 
 bool AHeroController::InputAxis(FKey Key, float Delta, float DeltaTime, int32 NumSamples, bool bGamepad)
 {
+	//UE_LOG(LogTemp, Warning, TEXT("Key:%s Delta:%f DeltaTime:%f"), *Key.ToString(), Delta, DeltaTime);
+
 	bool ret = Super::InputAxis(Key, Delta, DeltaTime, NumSamples, bGamepad);
 	if (IsLocalController()) { SetUseMouseaim(!bGamepad); }
 	return ret;
