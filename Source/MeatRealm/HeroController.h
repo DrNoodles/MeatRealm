@@ -5,9 +5,12 @@
 #include "CoreMinimal.h"
 #include "GameFramework/PlayerController.h"
 #include "Blueprint/UserWidget.h"
+#include "DeathmatchGameMode.h"
+#include "HeroCharacter.h" // TODO Make this a forward decl - Need to pull FMRHitResult out of the file
 
 #include "HeroController.generated.h"
 
+//struct FMRHitResult;
 class AHeroCharacter;
 
 UCLASS()
@@ -36,10 +39,19 @@ public:
 	void LogMsgWithRole(FString message);
 	FString GetEnumText(ENetRole role);
 	FString GetRoleText();
-	void HealthDepleted(uint32 InstigatorHeroControllerId) const;
+	void DamageTaken(const FMRHitResult& Hit) const;
+	void SimulateHitGiven(const FMRHitResult& Hit);
+	
+	UFUNCTION(Client, Reliable)
+	void ClientRPC_PlayHit(const FMRHitResult& Hit);
 
-	DECLARE_EVENT_TwoParams(AHeroController, FHealthDepleted, uint32, uint32)
-	FHealthDepleted& OnHealthDepleted() { return HealthDepletedEvent; }
+	//DECLARE_EVENT_TwoParams(AHeroController, FHealthDepleted, uint32, uint32)
+	//FHealthDepleted& OnHealthDepleted() { return HealthDepletedEvent; }
+
+	// receiverId, instigatorId, healthRemaining, damageTaken, isArmour
+	DECLARE_MULTICAST_DELEGATE_OneParam(FTakenDamage, FMRHitResult)
+	FTakenDamage& OnTakenDamage() { return TakenDamageEvent; }
+
 
 protected:
 	virtual void PreInitializeComponents() override;
@@ -51,7 +63,8 @@ protected:
 
 private:
 	
-	FHealthDepleted HealthDepletedEvent;
+	FTakenDamage TakenDamageEvent;
+	//FHealthDepleted HealthDepletedEvent;
 
 	/// Input
 	void Input_MoveUp(float Value);
