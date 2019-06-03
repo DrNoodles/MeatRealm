@@ -250,66 +250,69 @@ void AHeroCharacter::Tick(float DeltaSeconds)
 
 
 	// Compute camera lean
+	if (bLeanCameraWithAim && Role == ROLE_AutonomousProxy)
+	{
+		const FVector2D LinearLeanVector = bUseMouseAim ? TrackCameraWithAimMouse(DeltaSeconds) : TrackCameraWithAimGamepad(DeltaSeconds);
+
+		//UE_LOG(LogTemp, Warning, TEXT("Lean: %s"), *LinearLeanVector.ToString());
+
+		const auto OffsetVec = LinearLeanVector * LeanDistance;
+		MoveCameraByOffsetVector(OffsetVec, DeltaSeconds);
+
+	}
+}
+void AHeroCharacter::MoveCameraByOffsetVector(const FVector2D& OffsetVec, float DeltaSeconds) const
+{
+	// Calculate a world space offset based on LeanVector
+	const FVector Offset_WorldSpace = FVector{ OffsetVec.Y, OffsetVec.X, 0.f };
+
+	// Find the origin of our camera offset node
+	const FTransform CompTform = FollowCameraOffsetComp->GetComponentTransform();
+	const FVector Origin_WorldSpace = CompTform.TransformPosition(FVector::ZeroVector);
+
+	// Calc the goal location in world space by adding our offset to the origin in world space
+	const FVector GoalLocation_WorldSpace = Origin_WorldSpace + Offset_WorldSpace;
+
+	// Transform goal location from world space to cam offset space
+	const FVector GoalLocation_LocalSpace = CompTform.InverseTransformPosition(GoalLocation_WorldSpace);
+
+	// Move towards goal!
+	const auto Current = FollowCameraOffsetComp->RelativeLocation;
+	const auto Diff = GoalLocation_LocalSpace - Current;
+
+	float Rate = bUseMouseAim
+		? 1// Trying no cushion //LeanCushionRateMouse * DeltaSeconds
+		: LeanCushionRateGamepad * DeltaSeconds;
+	Rate = FMath::Clamp(Rate, 0.0f, 1.f);
+
+	const FVector Change = Diff * Rate;
+
+	FollowCameraOffsetComp->SetRelativeLocation(Current + Change);
+}
+
+FVector2D AHeroCharacter::TrackCameraWithAimMouse(float DT) const
+{
+	// Inputs
+	const auto HeroCont = GetHeroController();
 	const auto ViewportSize = GetGameViewportSize();
 	FVector2D CursorLoc;
 
-	if (bLeanCameraWithAim &&
-		Role == ROLE_AutonomousProxy &&
-		(!bUseMouseAim || HeroCont && HeroCont->GetMousePosition(OUT CursorLoc.X, OUT CursorLoc.Y)) &&
-		ViewportSize.SizeSquared() > 0)
+	if (!HeroCont || !HeroCont->GetMousePosition(OUT CursorLoc.X, OUT CursorLoc.Y) || ViewportSize.SizeSquared() <= 0)
 	{
-		FVector2D LinearLeanVector = bUseMouseAim
-			? CalcLinearLeanVector(CursorLoc, ViewportSize)
-			: FVector2D{ AxisFaceRight, AxisFaceUp };
-		
-		//UE_LOG(LogTemp, Warning, TEXT("Lean: %s"), *LinearLeanVector.ToString());
-
-		const FTransform CompTform = FollowCameraOffsetComp->GetComponentTransform();
-
-		// TODO Calculate camera facing in world space
-		FVector ForwardVec{ 1,0,0 };
-
-		// TODO Calculate right tangent vector in world space
-		FVector RightVec = FVector::CrossProduct(ForwardVec, FVector::UpVector);// TODO Maybe needs DownVector
-
-		// Calculate a world space offset based on LeanVector
-		const auto ModifiedVec = InterpolateVec(LinearLeanVector);
-		const auto ScaledVec = ModifiedVec * LeanDistance;
-		FVector Offset_WorldSpace = FVector{ ScaledVec.Y, ScaledVec.X, 0.f };
-
-		// Find the origin of our camera offset node
-		FVector Origin_WorldSpace = CompTform.TransformPosition(FVector::ZeroVector);
-
-		// Calc the goal location in world space by adding our offset to the origin in world space
-		FVector GoalLocation_WorldSpace = Origin_WorldSpace + Offset_WorldSpace;
-
-		// Transform goal location from world space to cam offset space
-		FVector GoalLocation_LocalSpace = CompTform.InverseTransformPosition(GoalLocation_WorldSpace);
-
-		// Move towards goal!
-		const auto Current = FollowCameraOffsetComp->RelativeLocation;
-		const auto Diff = GoalLocation_LocalSpace - Current;
-
-		float Rate = bUseMouseAim
-			? LeanCushionRateMouse * DeltaSeconds
-			: LeanCushionRateGamepad * DeltaSeconds;
-		Rate = FMath::Clamp(Rate, 0.0f, 1.f);
-
-		FVector Change = Diff * Rate;
-
-		FollowCameraOffsetComp->SetRelativeLocation(Current + Change);
+		return FVector2D::ZeroVector;
 	}
+
+	FVector2D LinearLeanVector = CalcLinearLeanVector(CursorLoc, ViewportSize);
+
+	return LinearLeanVector;
 }
 
-
-
-FVector2D AHeroCharacter::InterpolateVec(FVector2D InVec)
+FVector2D AHeroCharacter::TrackCameraWithAimGamepad(float DT) const
 {
-	if (!bIsQuadraticLeaning) return InVec;
-
-	// Quadratic interpolation
-	return InVec * InVec.Size();
+	FVector2D LinearLeanVector = FVector2D{ AxisFaceRight, AxisFaceUp };
+	return LinearLeanVector;
 }
+
 FVector2D AHeroCharacter::CalcLinearLeanVector(const FVector2D& CursorLoc, const FVector2D& ViewportSize)
 {
 	const auto Mid = ViewportSize / 2.f;

@@ -47,16 +47,13 @@ public:
 		bool bLeanCameraWithAim = true;
 
 	UPROPERTY(EditAnywhere, Category = Camera, meta = (EditCondition = "bLeanCameraWithAim"))
-		float LeanCushionRateGamepad = 5;
-
-	UPROPERTY(EditAnywhere, Category = Camera, meta = (EditCondition = "bLeanCameraWithAim"))
-		float LeanCushionRateMouse = 20;
-
-	UPROPERTY(EditAnywhere, Category = Camera, meta = (EditCondition = "bLeanCameraWithAim"))
 		float LeanDistance = 300;
 
 	UPROPERTY(EditAnywhere, Category = Camera, meta = (EditCondition = "bLeanCameraWithAim"))
-		bool bIsQuadraticLeaning = false;
+		float LeanCushionRateGamepad = 2.5;
+
+	UPROPERTY(EditAnywhere, Category = Camera, meta = (EditCondition = "bLeanCameraWithAim"))
+		float LeanCushionRateMouse = 5;
 
 	UPROPERTY(EditAnywhere)
 	float InteractableSearchDistance = 150.f; //cm
@@ -139,8 +136,10 @@ public:
 protected:
 	static FVector2D GetGameViewportSize();
 	static FVector2D CalcLinearLeanVector(const FVector2D& CursorLoc, const FVector2D& ViewportSize);
+	void MoveCameraByOffsetVector(const FVector2D& Vector2D, float DeltaSeconds) const;
 	virtual void Tick(float DeltaSeconds) override;
-	FVector2D InterpolateVec(FVector2D InVec);
+	FVector2D TrackCameraWithAimMouse(float DT) const;
+	FVector2D TrackCameraWithAimGamepad(float DT) const;
 
 
 private:
@@ -175,3 +174,5 @@ private:
 	FString GetEnumText(ENetRole role) const;
 	FString GetRoleText() const;
 };
+
+
