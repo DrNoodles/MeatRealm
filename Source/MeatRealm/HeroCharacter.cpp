@@ -208,7 +208,7 @@ void AHeroCharacter::Tick(float DeltaSeconds)
 	const auto HeroCont = GetHeroController();
 
 	// Calculate Look Vector
-	FVector lookVec;
+	FVector GunAnchorToCursorVec;
 	if (bUseMouseAim)
 	{
 		if (HasAuthority()) return;
@@ -227,20 +227,20 @@ void AHeroCharacter::Tick(float DeltaSeconds)
 					Anchor,
 					FVector(0,0,1));
 
-				lookVec = Hit - Anchor;
+				GunAnchorToCursorVec = Hit - Anchor;
 			}
 		}
 	}
 	else // Use gamepad
 	{
-		lookVec = FVector{ AxisFaceUp, AxisFaceRight, 0 };
+		GunAnchorToCursorVec = FVector{ AxisFaceUp, AxisFaceRight, 0 };
 	}
 
 
 	// Apply Look Vector - Aim character with look, if look is below deadzone then try use move vec
-	if (lookVec.SizeSquared() >= deadzoneSquared)
+	if (GunAnchorToCursorVec.SizeSquared() >= deadzoneSquared)
 	{
-		Controller->SetControlRotation(lookVec.Rotation());
+		Controller->SetControlRotation(GunAnchorToCursorVec.Rotation());
 	}
 	else if (moveVec.SizeSquared() >= deadzoneSquared)
 	{
@@ -252,13 +252,19 @@ void AHeroCharacter::Tick(float DeltaSeconds)
 	// Compute camera lean
 	if (bLeanCameraWithAim && Role == ROLE_AutonomousProxy)
 	{
-		const FVector2D LinearLeanVector = bUseMouseAim ? TrackCameraWithAimMouse(DeltaSeconds) : TrackCameraWithAimGamepad(DeltaSeconds);
+		FVector2D LinearLeanVector;
 
-		//UE_LOG(LogTemp, Warning, TEXT("Lean: %s"), *LinearLeanVector.ToString());
+		if (bUseMouseAim)
+		{
+			LinearLeanVector = TrackCameraWithAimMouse();
+		}
+		else
+		{
+			LinearLeanVector = TrackCameraWithAimGamepad();
+		}
 
 		const auto OffsetVec = LinearLeanVector * LeanDistance;
 		MoveCameraByOffsetVector(OffsetVec, DeltaSeconds);
-
 	}
 }
 void AHeroCharacter::MoveCameraByOffsetVector(const FVector2D& OffsetVec, float DeltaSeconds) const
@@ -290,7 +296,12 @@ void AHeroCharacter::MoveCameraByOffsetVector(const FVector2D& OffsetVec, float 
 	FollowCameraOffsetComp->SetRelativeLocation(Current + Change);
 }
 
-FVector2D AHeroCharacter::TrackCameraWithAimMouse(float DT) const
+//FVector2D AHeroCharacter::TrackCameraWithAimMouse2(const FVector& AimVec) const
+//{
+//	FVector2D{ AimVec.X, AimVec.Y };
+//}
+
+FVector2D AHeroCharacter::TrackCameraWithAimMouse() const
 {
 	// Inputs
 	const auto HeroCont = GetHeroController();
@@ -302,35 +313,57 @@ FVector2D AHeroCharacter::TrackCameraWithAimMouse(float DT) const
 		return FVector2D::ZeroVector;
 	}
 
-	FVector2D LinearLeanVector = CalcLinearLeanVector(CursorLoc, ViewportSize);
+	FVector2D LinearLeanVector = CalcLinearLeanVectorUnclipped(CursorLoc, ViewportSize);
+	FVector2D ClippedLinearLeanVector;
 
-	return LinearLeanVector;
+	// Clip LeanVector
+	
+	if (ClippingModeMouse == 0)
+	{
+		// Circle
+		ClippedLinearLeanVector = LinearLeanVector.SizeSquared() > 1
+			? LinearLeanVector.GetSafeNormal()
+			: LinearLeanVector;
+	} 
+	else if (ClippingModeMouse == 1)
+	{
+		// Square
+		ClippedLinearLeanVector = LinearLeanVector.ClampAxes(-1.f, 1.f);
+	}
+	else if (ClippingModeMouse == 2)
+	{
+		// 16:9
+		ClippedLinearLeanVector = LinearLeanVector.ClampAxes(-1.78f, 1.78f);
+	}
+	else
+	{
+		// Unbounded
+		ClippedLinearLeanVector = LinearLeanVector; // unbounded
+	}
+
+	return ClippedLinearLeanVector;
 }
 
-FVector2D AHeroCharacter::TrackCameraWithAimGamepad(float DT) const
+FVector2D AHeroCharacter::TrackCameraWithAimGamepad() const
 {
 	FVector2D LinearLeanVector = FVector2D{ AxisFaceRight, AxisFaceUp };
 	return LinearLeanVector;
 }
 
-FVector2D AHeroCharacter::CalcLinearLeanVector(const FVector2D& CursorLoc, const FVector2D& ViewportSize)
+
+FVector2D AHeroCharacter::CalcLinearLeanVectorUnclipped(const FVector2D& CursorLoc, const FVector2D& ViewportSize)
 {
 	const auto Mid = ViewportSize / 2.f;
 
 	// Define a circle that touches the top and bottom of the screen
-	const auto Radius = ViewportSize.Y / 2.f;
+	const auto HalfSideLen = ViewportSize.Y / 2.f;
 
 	// Create a vector from the middle to the cursor that has a length ratio relative to the radius
 	const auto CursorVecFromMid = CursorLoc - Mid;
-	const auto CursorVecRelative = CursorVecFromMid / Radius;
-
-	// Make sure it isn't bigger than the circle
-	const auto CursorVecClipped = CursorVecRelative.SizeSquared() > 1
-		? CursorVecRelative.GetSafeNormal()
-		: CursorVecRelative;
-
+	const auto CursorVecRelative = CursorVecFromMid / HalfSideLen;
+	
 	// Flip Y
-	return CursorVecClipped * FVector2D{ 1, -1 };
+	return CursorVecRelative * FVector2D{ 1, -1 };
 }
 
 FVector2D AHeroCharacter::GetGameViewportSize()

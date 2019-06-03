@@ -55,6 +55,9 @@ public:
 	UPROPERTY(EditAnywhere, Category = Camera, meta = (EditCondition = "bLeanCameraWithAim"))
 		float LeanCushionRateMouse = 5;
 
+	UPROPERTY(EditAnywhere, Category = Camera, meta = (EditCondition = "bLeanCameraWithAim"))
+	int ClippingModeMouse = 3;
+
 	UPROPERTY(EditAnywhere)
 	float InteractableSearchDistance = 150.f; //cm
 
@@ -81,7 +84,7 @@ public:
 
 	UPROPERTY(BlueprintReadWrite, EditAnywhere)
 		float MaxArmour = 100.f;
-	
+
 
 
 	UFUNCTION()
@@ -135,11 +138,12 @@ public:
 
 protected:
 	static FVector2D GetGameViewportSize();
-	static FVector2D CalcLinearLeanVector(const FVector2D& CursorLoc, const FVector2D& ViewportSize);
+	static FVector2D CalcLinearLeanVectorUnclipped(const FVector2D& CursorLoc, const FVector2D& ViewportSize);
 	void MoveCameraByOffsetVector(const FVector2D& Vector2D, float DeltaSeconds) const;
 	virtual void Tick(float DeltaSeconds) override;
-	FVector2D TrackCameraWithAimMouse(float DT) const;
-	FVector2D TrackCameraWithAimGamepad(float DT) const;
+	//FVector2D TrackCameraWithAimMouse2(const FVector& AimVec) const;
+	FVector2D TrackCameraWithAimMouse() const;
+	FVector2D TrackCameraWithAimGamepad() const;
 
 
 private:
