@@ -14,23 +14,27 @@ void ADeathmatchGameState::PostInitializeComponents()
 
 	if (HasAuthority())
 	{
-		KillTallyObj = NewObject<UKillfeedEntryData>(this);
+		//KillfeedData = NewObject <TArray<UKillfeedEntryData*> >(this);
+		//KillTallyObj = NewObject<UKillfeedEntryData>(this);
 	}
 }
 
 void ADeathmatchGameState::GetLifetimeReplicatedProps(TArray< FLifetimeProperty >& OutLifetimeProps) const
 {
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
-	DOREPLIFETIME(ADeathmatchGameState, KillTallyObj);
+	DOREPLIFETIME(ADeathmatchGameState, KillfeedData);
 }
 
 bool ADeathmatchGameState::ReplicateSubobjects(UActorChannel* Channel, FOutBunch* Bunch, FReplicationFlags* RepFlags)
 {
 	bool WroteSomething = Super::ReplicateSubobjects(Channel, Bunch, RepFlags);
 
-	if (KillTallyObj != nullptr)
+	for (auto* Item : KillfeedData)
 	{
-		WroteSomething |= Channel->ReplicateSubobject(KillTallyObj, *Bunch, *RepFlags);
+		if (Item != nullptr)
+		{
+			WroteSomething |= Channel->ReplicateSubobject(Item, *Bunch, *RepFlags);
+		}
 	}
 
 	return WroteSomething;
@@ -98,15 +102,15 @@ void ADeathmatchGameState::AddKillfeedData(const FString& Victor, const FString&
 	LogMsgWithRole("ADeathmatchGameState::AddKillfeedData()");
 	
 	//KillTallyObj->TotalKills++;
-	KillTallyObj->Winner = Victor;
+	/*KillTallyObj->Winner = Victor;
 	KillTallyObj->Verb = Verb;
-	KillTallyObj->Loser = Dead;
+	KillTallyObj->Loser = Dead;*/
 
-	/*UKillfeedEntryData* Entry = NewObject<UKillfeedEntryData>(this);
+	UKillfeedEntryData* Entry = NewObject<UKillfeedEntryData>(this);
 	Entry->Winner = Victor;
 	Entry->Verb = "killed";
 	Entry->Loser = Dead;
-	LastKill = Entry;*/
+	KillfeedData.Add(Entry);
 	
 	
 
@@ -123,16 +127,32 @@ void ADeathmatchGameState::AddKillfeedData(const FString& Victor, const FString&
 	}
 	*/
 }
-
-void ADeathmatchGameState::OnRep_KillTallyObj()
-{
-	LogMsgWithRole("ADeathmatchGameState::OnRep_KillTallyObj()");
-}
-
-//void ADeathmatchGameState::OnRep_KillfeedDataUpdated()
+//
+//void ADeathmatchGameState::OnRep_KillTallyObj()
 //{
-//	
+//	LogMsgWithRole("ADeathmatchGameState::OnRep_KillTallyObj()");
 //}
+
+void ADeathmatchGameState::OnRep_KillfeedDataUpdated()
+{
+	auto str = FString::Printf(
+		TEXT("ADeathmatchGameState::OnRep_KillfeedDataUpdated() %d"), KillfeedData.Num());
+	LogMsgWithRole(str);
+
+
+	UE_LOG(LogTemp, Warning, TEXT("KILLFEED"));
+	for (UKillfeedEntryData* entry : KillfeedData)
+	{
+		if (!entry)
+		{
+			UE_LOG(LogTemp, Warning, TEXT("  Entry is null"));
+			continue;
+		}
+
+		UE_LOG(LogTemp, Warning, TEXT("  Entry %d %s %s %s"), KillfeedData.Num(),
+			*entry->Winner, *entry->Verb, *entry->Loser);
+	}
+}
 
 
 

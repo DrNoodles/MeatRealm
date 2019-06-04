@@ -53,15 +53,15 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly)
 		float TimeLimit = 10;
 
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Replicated)
-		UKillfeedEntryData* KillTallyObj = nullptr;
-		void OnRep_KillTallyObj();
+	//UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Replicated)
+	//	UKillfeedEntryData* KillTallyObj = nullptr;
+	//	void OnRep_KillTallyObj();
 
-	//UPROPERTY(ReplicatedUsing = OnRep_KillfeedDataUpdated)
-	//	TArray<UKillfeedEntryData*> KillfeedData{};
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, ReplicatedUsing = OnRep_KillfeedDataUpdated)
+		TArray<UKillfeedEntryData*> KillfeedData;
 
-	//UFUNCTION()
-	//void OnRep_KillfeedDataUpdated();
+	UFUNCTION()
+	void OnRep_KillfeedDataUpdated();
 
 	
 private:
