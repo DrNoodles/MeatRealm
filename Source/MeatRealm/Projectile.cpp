@@ -60,6 +60,7 @@ void AProjectile::OnCompBeginOverlap(UPrimitiveComponent* OverlappedComp, AActor
 
 	// Ignore other projectiles
 	if (TheReceiver->IsA(AProjectile::StaticClass())) return;
+	if (TheReceiver->IsA(APickupBase::StaticClass())) return;
 
 	if (TheReceiver->GetClass()->ImplementsInterface(UAffectableInterface::StaticClass()))
 	{
