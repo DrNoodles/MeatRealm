@@ -52,7 +52,7 @@ bool APickupBase::TryPickup(IAffectableInterface* const Affectable)
 	{
 		return false;
 	}
-	LogMsgWithRole("APickupBase::TryPickup()");
+	//LogMsgWithRole("APickupBase::TryPickup()");
 
 	if (!TryApplyAffect(Affectable))
 	{

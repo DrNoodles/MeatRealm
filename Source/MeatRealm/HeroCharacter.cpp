@@ -126,7 +126,7 @@ AHeroController* AHeroCharacter::GetHeroController() const
 
 void AHeroCharacter::ServerRPC_SpawnWeapon_Implementation(TSubclassOf<AWeapon> weaponClass)
 {
-	LogMsgWithRole("AHeroCharacter::ServerRPC_SpawnWeapon");
+	//LogMsgWithRole("AHeroCharacter::ServerRPC_SpawnWeapon");
 
 	FActorSpawnParameters params;
 	params.Instigator = this;
@@ -551,7 +551,7 @@ bool AHeroCharacter::TryGiveArmour(float Delta)
 
 bool AHeroCharacter::TryGiveWeapon(const TSubclassOf<AWeapon>& Class)
 {
-	LogMsgWithRole("AHeroCharacter::TryGiveWeapon");
+	//LogMsgWithRole("AHeroCharacter::TryGiveWeapon");
 
 	if (Class == nullptr) return false;
 	if (!HasAuthority()) return false;

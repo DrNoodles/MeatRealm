@@ -16,15 +16,15 @@ void AHeroController::OnPossess(APawn* InPawn)
 {
 	// Called on server upon possessing a pawn
 
-	LogMsgWithRole("AHeroController::OnPossess()");
+	//LogMsgWithRole("AHeroController::OnPossess()");
 	Super::OnPossess(InPawn);
 }
 
 void AHeroController::AcknowledgePossession(APawn* P)
 {
-	// Called on owning-client upon possessing a pawn
+	// Called on controlling-client upon possessing a pawn
 
-	LogMsgWithRole("AHeroController::AcknowledgePossession()");
+	//LogMsgWithRole("AHeroController::AcknowledgePossession()");
 	Super::AcknowledgePossession(P);
 
 	auto Char = GetHeroCharacter();
@@ -41,7 +41,7 @@ void AHeroController::OnUnPossess()
 {
 	// Called on server and owning-client upon depossessing a pawn
 
-	LogMsgWithRole("AHeroController::OnUnPossess()");
+	//LogMsgWithRole("AHeroController::OnUnPossess()");
 
 	if (IsLocalController())
 	{
