@@ -29,6 +29,10 @@ public:
 	UPROPERTY(BlueprintAssignable, Category = "Event Dispatchers")
 		FKillfeedChanged OnKillfeedChanged;
 
+
+	void StartARemoveTimer();
+	void FinishOldestTimer();
+
 	void AddKillfeedData(const FString& Victor, const FString& Verb, const FString& Dead);
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly)
@@ -38,6 +42,10 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly)
 		float TimeLimit = 10;
 
+	// How long (in seconds) a killfeed item is on screen
+	UPROPERTY(EditAnywhere, BlueprintReadOnly)
+	float KillfeedItemDuration = 3;
+
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, ReplicatedUsing=OnRep_KillfeedDataChanged)
 		TArray<UKillfeedEntryData*> KillfeedData;
 	UFUNCTION()
@@ -45,6 +53,9 @@ public:
 
 private:
 	bool IsClientControllingServerOwnedActor() const;
+
+
+	TArray<FTimerHandle> Timers{};
 
 	void LogMsgWithRole(FString message) const;
 	FString GetEnumText(ENetRole role) const;

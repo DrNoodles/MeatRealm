@@ -6,7 +6,8 @@
 #include "ScoreboardEntryData.h"
 #include "UnrealNetwork.h"
 #include "Engine/ActorChannel.h"
-
+#include "Engine/World.h"
+#include "TimerManager.h"
 
 void ADeathmatchGameState::PostInitializeComponents()
 {
@@ -70,17 +71,65 @@ TArray<UScoreboardEntryData*> ADeathmatchGameState::GetScoreboard()
 	return std::move(Scoreboard);
 }
 
+void ADeathmatchGameState::StartARemoveTimer()
+{
+	// Create a timer
+	FTimerHandle Handle;
+
+	UWorld* World = GetWorld();
+	if (World)
+	{
+		World->GetTimerManager().SetTimer(
+			Handle, this, &ADeathmatchGameState::FinishOldestTimer, KillfeedItemDuration, false, -1);
+		
+		Timers.Add(Handle);
+	}
+}
+
+void ADeathmatchGameState::FinishOldestTimer()
+{
+	if (Timers.Num() == 0) 
+		UE_LOG(LogTemp, Error, TEXT("Attempted to move a timer but there aren't any!"));
+
+	if (KillfeedData.Num() == 0) 
+		UE_LOG(LogTemp, Error, TEXT("Attempted to move a timer but there aren't any!"));
+
+	auto FirstTimer = Timers[0];
+	Timers.RemoveAt(0);
+	KillfeedData.RemoveAt(0);
+
+	UWorld* World = GetWorld();
+	if (FirstTimer.IsValid() && World)
+	{
+		World->GetTimerManager().ClearTimer(FirstTimer);
+	}
+	
+	// Make sure a listen server knows about this
+	if (IsClientControllingServerOwnedActor())
+	{
+		OnRep_KillfeedDataChanged();
+	}
+}
+
 void ADeathmatchGameState::AddKillfeedData(const FString& Victor, const FString& Verb, const FString& Dead)
 {
 	if (!HasAuthority()) return;
 
-	LogMsgWithRole("ADeathmatchGameState::AddKillfeedData()");
+	//LogMsgWithRole("ADeathmatchGameState::AddKillfeedData()");
 
 	UKillfeedEntryData* Entry = NewObject<UKillfeedEntryData>(this);
 	Entry->Winner = Victor;
 	Entry->Verb = "killed";
 	Entry->Loser = Dead;
 	KillfeedData.Add(Entry);
+
+	if (KillfeedData.Num() > 4)
+	{
+		FinishOldestTimer();
+	}
+
+	StartARemoveTimer();
+	
 
 	// Make sure this is called on the authority in case it's a listen server
 	if (IsClientControllingServerOwnedActor())
