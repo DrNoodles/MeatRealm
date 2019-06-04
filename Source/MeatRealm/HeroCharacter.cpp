@@ -518,7 +518,7 @@ void AHeroCharacter::ApplyDamage(uint32 InstigatorHeroControllerId, float Damage
 bool AHeroCharacter::TryGiveHealth(float Hp)
 {
 	//LogMsgWithRole("TryGiveHealth");
-	//if (!HasAuthority()) return;
+	if (!HasAuthority()) return;
 	if (Health == MaxHealth) return false;
 	
 	Health = FMath::Min(Health + Hp, MaxHealth);
@@ -528,7 +528,7 @@ bool AHeroCharacter::TryGiveHealth(float Hp)
 bool AHeroCharacter::TryGiveAmmo()
 {
 	//LogMsgWithRole("AHeroCharacter::TryGiveAmmo");
-	//if (!HasAuthority()) return;
+	if (!HasAuthority()) return;
 
 	if (CurrentWeapon != nullptr)
 	{
@@ -541,7 +541,7 @@ bool AHeroCharacter::TryGiveAmmo()
 bool AHeroCharacter::TryGiveArmour(float Delta)
 {
 	//LogMsgWithRole("TryGiveArmour");
-	//if (!HasAuthority()) return;
+	if (!HasAuthority()) return;
 	if (Armour == MaxArmour) return false;
 
 	Armour = FMath::Min(Armour + Delta, MaxArmour);
