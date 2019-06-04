@@ -31,4 +31,6 @@ private:
 
 	void OnPlayerTakeDamage(FMRHitResult Hit);
 	bool EndGameIfFragLimitReached() const;
+	void AddKillfeedEntry(AHeroController* const Killer, AHeroController* const Dead);
+
 };

@@ -3,3 +3,9 @@
 
 #include "KillfeedEntryData.h"
 
+void UKillfeedEntryData::GetLifetimeReplicatedProps(TArray< FLifetimeProperty >& OutLifetimeProps) const
+{
+	DOREPLIFETIME(UKillfeedEntryData, Winner);
+	DOREPLIFETIME(UKillfeedEntryData, Verb);
+	DOREPLIFETIME(UKillfeedEntryData, Loser);
+}

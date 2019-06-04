@@ -4,21 +4,42 @@
 
 #include "CoreMinimal.h"
 #include "UObject/NoExportTypes.h"
+#include "UnrealNetwork.h"
+#include "Engine/EngineTypes.h"
+#include "GameFramework/Info.h"
 
 #include "KillfeedEntryData.generated.h"
 
+
+//class MEATREALM_API UNetworkObject : public UObject
+//{
+//	GENERATED_BODY()
+//
+//protected:
+//	virtual bool IsSupportedForNetworking() const override;
+//	virtual bool ReplicateSubobjects(UActorChannel* Channel, FOutBunch* Bunch, FReplicationFlags* RepFlags);
+//};
+//
+
 UCLASS(BlueprintType)
-class MEATREALM_API UKillfeedEntryData : public UObject
+class MEATREALM_API UKillfeedEntryData : public UActorComponent
 {
 	GENERATED_BODY()
 
 public:
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
+
+	//virtual Replica
+	//virtual bool ReplicateSubobjects(UActorChannel* Channel, FOutBunch* Bunch, FReplicationFlags* RepFlags)
+	//{
+	//	return true;
+	//}
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Replicated)
 		FString Winner;
 
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Replicated)
 		FString Verb;
 
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Replicated)
 		FString Loser;
 };

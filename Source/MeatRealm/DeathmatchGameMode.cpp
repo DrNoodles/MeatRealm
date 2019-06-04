@@ -9,6 +9,7 @@
 #include "ScoreboardEntryData.h"
 #include "HeroController.h"
 #include "Projectile.h"
+#include "KillfeedEntryData.h"
 
 ADeathmatchGameMode::ADeathmatchGameMode()
 {
@@ -107,11 +108,11 @@ void ADeathmatchGameMode::OnPlayerTakeDamage(FMRHitResult Hit)
 			RestartPlayer(ReceivingController);
 		}
 
+		AddKillfeedEntry(AttackerController, ReceivingController);
 
 		if (EndGameIfFragLimitReached()) return;
 	}
 }
-
 
 
 bool ADeathmatchGameMode::EndGameIfFragLimitReached() const
@@ -132,4 +133,18 @@ bool ADeathmatchGameMode::EndGameIfFragLimitReached() const
 	return false;
 }
 
+
+void ADeathmatchGameMode::AddKillfeedEntry(AHeroController* const Killer, AHeroController* const Dead)
+{
+	FString KillerName{}, DeadName{};
+
+	if (Killer) KillerName = Killer->PlayerState->GetPlayerName(); // will this crash if they've left?
+	if (Dead) DeadName = Dead->PlayerState->GetPlayerName();
+
+	auto*const GS = GetGameState<ADeathmatchGameState>();
+	if (GS)
+	{
+		GS->AddKillfeedData(KillerName, "killed", DeadName);
+	}
+}
 

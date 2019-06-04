@@ -4,6 +4,14 @@
 #include "DeathmatchGameState.h"
 #include "HeroState.h"
 #include "ScoreboardEntryData.h"
+#include "UnrealNetwork.h"
+
+
+void ADeathmatchGameState::GetLifetimeReplicatedProps(TArray< FLifetimeProperty >& OutLifetimeProps) const
+{
+	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
+	DOREPLIFETIME(ADeathmatchGameState, TotalKills);
+}
 
 TArray<UScoreboardEntryData*> ADeathmatchGameState::GetScoreboard()
 {
@@ -34,3 +42,108 @@ TArray<UScoreboardEntryData*> ADeathmatchGameState::GetScoreboard()
 
 	return std::move(Scoreboard);
 }
+
+//TArray<UKillfeedEntryData*> ADeathmatchGameState::GetKillfeed()
+//{
+	/*
+	TArray<UKillfeedEntryData*> Killfeed{};
+
+	for (auto* Entry : KillfeedData)
+	{
+		UKillfeedEntryData* Copy = NewObject<UKillfeedEntryData>();
+		Copy->Winner = Entry->Winner;
+		Copy->Verb = Entry->Verb;
+		Copy->Loser = Entry->Loser;
+
+		Killfeed.Add(Copy);
+	}
+
+	UE_LOG(LogTemp, Warning, TEXT("GETTING KILLFEED"));
+	for (auto* e : Killfeed)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("  Entry %d %s %s %s"), KillfeedData.Num(),
+			*e->Winner, *e->Verb, *e->Loser);
+	}
+
+	return std::move(Killfeed);*/
+//}
+
+void ADeathmatchGameState::AddKillfeedData(const FString& Victor, const FString& Verb, const FString& Dead)
+{
+	TotalKills++;
+	auto str = FString::Printf(TEXT("ADeathmatchGameState::AddKillfeedData() : %d"), TotalKills);
+	LogMsgWithRole(str);
+
+	OnRep_TotalKills();
+	/*UKillfeedEntryData* Entry = NewObject<UKillfeedEntryData>(this);
+	Entry->Winner = Victor;
+	Entry->Verb = "killed";
+	Entry->Loser = Dead;
+	KillfeedData.Add(Entry);
+
+
+	UE_LOG(LogTemp, Warning, TEXT("KILLFEED"));
+	for (auto* entry : KillfeedData)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("  Entry %d %s %s %s"), KillfeedData.Num(),
+			*entry->Winner, *entry->Verb, *entry->Loser);
+	}*/
+}
+
+void ADeathmatchGameState::OnRep_TotalKills()
+{
+	auto str = FString::Printf(TEXT("ADeathmatchGameState::OnRep_TotalKills() : %d"), TotalKills);
+	LogMsgWithRole(str);
+}
+
+//void ADeathmatchGameState::OnRep_KillfeedDataUpdated()
+//{
+//	
+//}
+
+
+
+void ADeathmatchGameState::LogMsgWithRole(FString message) const
+{
+	FString m = GetRoleText() + ": " + message;
+	UE_LOG(LogTemp, Warning, TEXT("%s"), *m);
+}
+FString ADeathmatchGameState::GetEnumText(ENetRole role) const
+{
+	switch (role) {
+	case ROLE_None:
+		return "None";
+	case ROLE_SimulatedProxy:
+		return "Sim";
+	case ROLE_AutonomousProxy:
+		return "Auto";
+	case ROLE_Authority:
+		return "Auth";
+	case ROLE_MAX:
+		return "MAX (error?)";
+	default:
+		return "ERROR";
+	}
+}
+FString ADeathmatchGameState::GetRoleText() const
+{
+	auto Local = Role;
+	auto Remote = GetRemoteRole();
+
+
+	//if (Remote == ROLE_SimulatedProxy) //&& Local == ROLE_Authority
+	//	return "ListenServer";
+
+	//if (Local == ROLE_Authority)
+	//	return "Server";
+
+	//if (Local == ROLE_AutonomousProxy) // && Remote == ROLE_Authority
+	//	return "OwningClient";
+
+	//if (Local == ROLE_SimulatedProxy) // && Remote == ROLE_Authority
+	//	return "SimClient";
+
+	return GetEnumText(Role) + " " + GetEnumText(GetRemoteRole()) + " Ded:" + (IsRunningDedicatedServer() ? "True" : "False");
+
+}
+
