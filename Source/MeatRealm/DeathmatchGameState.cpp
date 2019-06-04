@@ -12,11 +12,11 @@ void ADeathmatchGameState::PostInitializeComponents()
 {
 	Super::PostInitializeComponents();
 
-	if (HasAuthority())
+	/*if (HasAuthority())
 	{
-		//KillfeedData = NewObject <TArray<UKillfeedEntryData*> >(this);
-		//KillTallyObj = NewObject<UKillfeedEntryData>(this);
-	}
+		auto Entry = NewObject<UKillfeedEntryData>(this);
+		KillfeedData.Add(Entry);
+	}*/
 }
 
 void ADeathmatchGameState::GetLifetimeReplicatedProps(TArray< FLifetimeProperty >& OutLifetimeProps) const
@@ -70,77 +70,37 @@ TArray<UScoreboardEntryData*> ADeathmatchGameState::GetScoreboard()
 	return std::move(Scoreboard);
 }
 
-//TArray<UKillfeedEntryData*> ADeathmatchGameState::GetKillfeed()
-//{
-	/*
-	TArray<UKillfeedEntryData*> Killfeed{};
-
-	for (auto* Entry : KillfeedData)
-	{
-		UKillfeedEntryData* Copy = NewObject<UKillfeedEntryData>();
-		Copy->Winner = Entry->Winner;
-		Copy->Verb = Entry->Verb;
-		Copy->Loser = Entry->Loser;
-
-		Killfeed.Add(Copy);
-	}
-
-	UE_LOG(LogTemp, Warning, TEXT("GETTING KILLFEED"));
-	for (auto* e : Killfeed)
-	{
-		UE_LOG(LogTemp, Warning, TEXT("  Entry %d %s %s %s"), KillfeedData.Num(),
-			*e->Winner, *e->Verb, *e->Loser);
-	}
-
-	return std::move(Killfeed);*/
-//}
-
 void ADeathmatchGameState::AddKillfeedData(const FString& Victor, const FString& Verb, const FString& Dead)
 {
 	if (!HasAuthority()) return;
-	
+
 	LogMsgWithRole("ADeathmatchGameState::AddKillfeedData()");
-	
-	//KillTallyObj->TotalKills++;
-	/*KillTallyObj->Winner = Victor;
-	KillTallyObj->Verb = Verb;
-	KillTallyObj->Loser = Dead;*/
 
 	UKillfeedEntryData* Entry = NewObject<UKillfeedEntryData>(this);
 	Entry->Winner = Victor;
 	Entry->Verb = "killed";
 	Entry->Loser = Dead;
 	KillfeedData.Add(Entry);
-	
-	
 
-
-
-//	KillfeedData.Add(Entry);
-
-	/*
-	UE_LOG(LogTemp, Warning, TEXT("KILLFEED"));
-	for (auto* entry : KillfeedData)
+	// Make sure this is called on the authority in case it's a listen server
+	if (IsClientControllingServerOwnedActor())
 	{
-		UE_LOG(LogTemp, Warning, TEXT("  Entry %d %s %s %s"), KillfeedData.Num(),
-			*entry->Winner, *entry->Verb, *entry->Loser);
+		OnRep_KillfeedDataChanged();
 	}
-	*/
 }
-//
-//void ADeathmatchGameState::OnRep_KillTallyObj()
-//{
-//	LogMsgWithRole("ADeathmatchGameState::OnRep_KillTallyObj()");
-//}
 
-void ADeathmatchGameState::OnRep_KillfeedDataUpdated()
+void ADeathmatchGameState::OnRep_KillfeedDataChanged() const
 {
-	auto str = FString::Printf(
-		TEXT("ADeathmatchGameState::OnRep_KillfeedDataUpdated() %d"), KillfeedData.Num());
-	LogMsgWithRole(str);
+	/*auto str = FString::Printf(
+	TEXT("ADeathmatchGameState::OnRep_KillfeedDataChanged() %d"), KillfeedData.Num());
+LogMsgWithRole(str);*/
+
+	OnKillfeedChanged.Broadcast();
 
 
-	UE_LOG(LogTemp, Warning, TEXT("KILLFEED"));
+
+
+	/*UE_LOG(LogTemp, Warning, TEXT("KILLFEED"));
 	for (UKillfeedEntryData* entry : KillfeedData)
 	{
 		if (!entry)
@@ -151,10 +111,14 @@ void ADeathmatchGameState::OnRep_KillfeedDataUpdated()
 
 		UE_LOG(LogTemp, Warning, TEXT("  Entry %d %s %s %s"), KillfeedData.Num(),
 			*entry->Winner, *entry->Verb, *entry->Loser);
-	}
+	}*/
 }
 
-
+bool ADeathmatchGameState::IsClientControllingServerOwnedActor() const
+{
+	return Role == ROLE_AutonomousProxy // Client on server
+		|| (HasAuthority() && !IsRunningDedicatedServer()); // listen server
+}
 
 void ADeathmatchGameState::LogMsgWithRole(FString message) const
 {

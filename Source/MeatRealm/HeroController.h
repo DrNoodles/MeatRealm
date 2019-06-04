@@ -10,7 +10,6 @@
 
 #include "HeroController.generated.h"
 
-//struct FMRHitResult;
 class AHeroCharacter;
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FPlayerSpawned);
@@ -23,6 +22,7 @@ class MEATREALM_API AHeroController : public APlayerController
 public:
 
 	AHeroController();
+	void CleanupPlayerState() override;
 
 	UPROPERTY(EditDefaultsOnly, Category = "Widgets")
 		TSubclassOf<class UUserWidget> HudClass;
@@ -35,7 +35,8 @@ public:
 	void OnUnPossess() override;
 
 	AHeroCharacter* GetHeroCharacter() const;
-	void ShowHud(bool bMakeVisible);
+	void CreateHud();
+	void DestroyHud();
 
 	// Debug helpers
 	void LogMsgWithRole(FString message);
@@ -49,9 +50,6 @@ public:
 
 	UPROPERTY(BlueprintAssignable, Category = "Event Dispatchers")
 		FPlayerSpawned OnPlayerSpawned;
-
-	
-	//FPlayerSpawned& OnPlayerSpawned() { return PlayerSpawnedEvent; }
 
 	//DECLARE_EVENT_TwoParams(AHeroController, FHealthDepleted, uint32, uint32)
 	//FHealthDepleted& OnHealthDepleted() { return HealthDepletedEvent; }
@@ -71,7 +69,6 @@ protected:
 
 private:
 
-	//FPlayerSpawned PlayerSpawnedEvent;
 	FTakenDamage TakenDamageEvent;
 	//FHealthDepleted HealthDepletedEvent;
 

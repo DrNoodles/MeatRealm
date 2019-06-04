@@ -12,39 +12,24 @@
 class UScoreboardEntryData;
 class UKillfeedEntryData;
 
+DECLARE_DYNAMIC_MULTICAST_DELEGATE(FKillfeedChanged);
+
 UCLASS()
 class MEATREALM_API ADeathmatchGameState : public AGameStateBase
 {
 	GENERATED_BODY()
 
 public:
-	//ADeathmatchGameState();
-	//{
-		/*UKillfeedEntryData* Entry = NewObject<UKillfeedEntryData>();
-		Entry->Winner = "W1";
-		Entry->Verb = "V1";
-		Entry->Loser = "L1";
-
-		UKillfeedEntryData* Entry2 = NewObject<UKillfeedEntryData>();
-		Entry->Winner = "W2";
-		Entry->Verb = "V2";
-		Entry->Loser = "L2";
-
-		KillfeedData.Add(Entry);
-		KillfeedData.Add(Entry2);*/
-	//}
-
 	virtual void PostInitializeComponents() override;
 	virtual bool ReplicateSubobjects(UActorChannel* Channel, FOutBunch* Bunch, FReplicationFlags* RepFlags) override;
 
 	UFUNCTION(BlueprintCallable)
 		TArray<UScoreboardEntryData*> GetScoreboard();
 
-	/*UFUNCTION(BlueprintCallable)
-		TArray<UKillfeedEntryData*> GetKillfeed();*/
+	UPROPERTY(BlueprintAssignable, Category = "Event Dispatchers")
+		FKillfeedChanged OnKillfeedChanged;
 
 	void AddKillfeedData(const FString& Victor, const FString& Verb, const FString& Dead);
-
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly)
 		int FragLimit = 15;
@@ -53,22 +38,16 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly)
 		float TimeLimit = 10;
 
-	//UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Replicated)
-	//	UKillfeedEntryData* KillTallyObj = nullptr;
-	//	void OnRep_KillTallyObj();
-
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, ReplicatedUsing = OnRep_KillfeedDataUpdated)
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, ReplicatedUsing=OnRep_KillfeedDataChanged)
 		TArray<UKillfeedEntryData*> KillfeedData;
-
 	UFUNCTION()
-	void OnRep_KillfeedDataUpdated();
+		void OnRep_KillfeedDataChanged() const;
 
-	
 private:
+	bool IsClientControllingServerOwnedActor() const;
 
 	void LogMsgWithRole(FString message) const;
 	FString GetEnumText(ENetRole role) const;
 	FString GetRoleText() const;
-
 };
 

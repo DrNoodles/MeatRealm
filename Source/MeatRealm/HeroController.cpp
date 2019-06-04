@@ -12,6 +12,11 @@ AHeroController::AHeroController()
 
 }
 
+void AHeroController::CleanupPlayerState()
+{
+	DestroyHud();
+}
+
 void AHeroController::OnPossess(APawn* InPawn)
 {
 	// Called on server upon possessing a pawn
@@ -30,11 +35,8 @@ void AHeroController::AcknowledgePossession(APawn* P)
 	auto Char = GetHeroCharacter();
 	if (Char) Char->SetUseMouseAim(bShowMouseCursor);
 
-	if (!HudInstance) ShowHud(true);
-	/*if (IsLocalController())
-	{
-		ShowHud(true);
-	}*/
+
+	if (IsLocalController() && !HudInstance) CreateHud();
 	
 	//if (OnPlayerSpawned.IsBound())
 	OnPlayerSpawned.Broadcast();
@@ -60,7 +62,7 @@ AHeroCharacter* AHeroController::GetHeroCharacter() const
 	return Char == nullptr ? nullptr : (AHeroCharacter*)Char;
 }
 
-void AHeroController::ShowHud(bool bMakeVisible)
+void AHeroController::CreateHud()
 {
 	if (!IsLocalController()) return;
 
@@ -70,24 +72,26 @@ void AHeroController::ShowHud(bool bMakeVisible)
 		return;
 	};
 
+	if (HudInstance) return; // dont create more than one
 
-	// If the hud exists, remove it!
+	// Create and attach a new hud
+	HudInstance = CreateWidget<UUserWidget>(this, HudClass);
+	if (HudInstance)
+	{
+		HudInstance->AddToViewport();
+		UE_LOG(LogTemp, Warning, TEXT("Created HUD"));
+	}
+}
+
+void AHeroController::DestroyHud()
+{
+	if (!IsLocalController()) return;
+
 	if (HudInstance != nullptr)
 	{
 		HudInstance->RemoveFromParent();
 		HudInstance = nullptr;
 		UE_LOG(LogTemp, Warning, TEXT("Destroyed HUD"));
-	}
-
-	if (bMakeVisible)
-	{
-		// Create and attach a new hud
-		HudInstance = CreateWidget<UUserWidget>(this, HudClass);
-		if (HudInstance != nullptr)
-		{
-			HudInstance->AddToViewport();
-			UE_LOG(LogTemp, Warning, TEXT("Created HUD"));
-		}
 	}
 }
 
