@@ -126,7 +126,7 @@ AHeroController* AHeroCharacter::GetHeroController() const
 
 void AHeroCharacter::ServerRPC_SpawnWeapon_Implementation(TSubclassOf<AWeapon> weaponClass)
 {
-	LogMsgWithRole("AHeroCharacter::ServerRPC_SpawnWeapon");
+	//LogMsgWithRole("AHeroCharacter::ServerRPC_SpawnWeapon");
 
 	FActorSpawnParameters params;
 	params.Instigator = this;
@@ -493,7 +493,7 @@ void AHeroCharacter::ApplyDamage(uint32 InstigatorHeroControllerId, float Damage
 
 	
 	FString S = FString::Printf(TEXT("%fhp"), Health);
-	LogMsgWithRole(S);
+	//LogMsgWithRole(S);
 
 
 	// Report hit to controller
@@ -516,7 +516,7 @@ void AHeroCharacter::ApplyDamage(uint32 InstigatorHeroControllerId, float Damage
 
 bool AHeroCharacter::TryGiveHealth(float Hp)
 {
-	LogMsgWithRole("TryGiveHealth");
+	//LogMsgWithRole("TryGiveHealth");
 	//if (!HasAuthority()) return;
 	if (Health == MaxHealth) return false;
 	
@@ -526,7 +526,7 @@ bool AHeroCharacter::TryGiveHealth(float Hp)
 
 bool AHeroCharacter::TryGiveAmmo()
 {
-	LogMsgWithRole("AHeroCharacter::TryGiveAmmo");
+	//LogMsgWithRole("AHeroCharacter::TryGiveAmmo");
 	//if (!HasAuthority()) return;
 
 	if (CurrentWeapon != nullptr)
@@ -539,7 +539,7 @@ bool AHeroCharacter::TryGiveAmmo()
 
 bool AHeroCharacter::TryGiveArmour(float Delta)
 {
-	LogMsgWithRole("TryGiveArmour");
+	//LogMsgWithRole("TryGiveArmour");
 	//if (!HasAuthority()) return;
 	if (Armour == MaxArmour) return false;
 
@@ -549,7 +549,7 @@ bool AHeroCharacter::TryGiveArmour(float Delta)
 
 bool AHeroCharacter::TryGiveWeapon(const TSubclassOf<AWeapon>& Class)
 {
-	LogMsgWithRole("AHeroCharacter::TryGiveWeapon");
+	//LogMsgWithRole("AHeroCharacter::TryGiveWeapon");
 
 	if (Class == nullptr) return false;
 	if (!HasAuthority()) return false;
@@ -576,18 +576,18 @@ bool AHeroCharacter::TryGiveWeapon(const TSubclassOf<AWeapon>& Class)
 
 void AHeroCharacter::Input_Interact()
 {
-	LogMsgWithRole("AHeroCharacter::Input_Interact()");
+	//LogMsgWithRole("AHeroCharacter::Input_Interact()");
 	ServerRPC_TryInteract();
 }
 
 void AHeroCharacter::ServerRPC_TryInteract_Implementation()
 {
-	LogMsgWithRole("AHeroCharacter::ServerRPC_TryInteract_Implementation()");
+	//LogMsgWithRole("AHeroCharacter::ServerRPC_TryInteract_Implementation()");
 
 	auto* const Pickup = ScanForInteractable<AWeaponPickupBase>();
 	if (Pickup && Pickup->CanInteract())
 	{
-		LogMsgWithRole("AHeroCharacter::ServerRPC_TryInteract_Implementation() : Found");
+		//LogMsgWithRole("AHeroCharacter::ServerRPC_TryInteract_Implementation() : Found");
 		Pickup->TryInteract(this);
 	}
 }

@@ -105,7 +105,7 @@ void AHeroController::SimulateHitGiven(const FMRHitResult& Hit)
 		return;
 	}
 
-	UE_LOG(LogTemp, Warning, TEXT("HitGiven() - Local. Damage(%d)"), Hit.DamageTaken);
+	//UE_LOG(LogTemp, Warning, TEXT("HitGiven() - Local. Damage(%d)"), Hit.DamageTaken);
 
 	// Display a hit marker in the world
 	auto World = GetWorld();
