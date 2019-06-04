@@ -161,7 +161,7 @@ void AHeroController::BeginPlay()
 	const auto LP = GetLocalPlayer();
 	if (LP && IsLocalController())
 	{
-		LogMsgWithRole("LP Get");
+		//LogMsgWithRole("LP Get");
 		LP->AspectRatioAxisConstraint = EAspectRatioAxisConstraint::AspectRatio_MaintainYFOV;
 	}
 }

@@ -126,7 +126,7 @@ AHeroController* AHeroCharacter::GetHeroController() const
 
 void AHeroCharacter::ServerRPC_SpawnWeapon_Implementation(TSubclassOf<AWeapon> weaponClass)
 {
-	//LogMsgWithRole("AHeroCharacter::ServerRPC_SpawnWeapon");
+	LogMsgWithRole("AHeroCharacter::ServerRPC_SpawnWeapon");
 
 	FActorSpawnParameters params;
 	params.Instigator = this;
@@ -161,46 +161,23 @@ bool AHeroCharacter::ServerRPC_SpawnWeapon_Validate(TSubclassOf<AWeapon> weaponC
 
 /// Methods
 
+bool AHeroCharacter::IsClientControlleringServerOwnedActor()
+{
+	return Role == ROLE_AutonomousProxy // Client on server
+		|| HasAuthority() && !IsRunningDedicatedServer();
+}
+
 void AHeroCharacter::Tick(float DeltaSeconds)
 {
-	// Look for interactable objects - owning client only as it's just for UI prompt
-	if (ROLE_AutonomousProxy == Role)
-	{
-		auto* const Pickup = ScanForInteractable<AWeaponPickupBase>();
-		if (Pickup && Pickup->CanInteract())
-		{
-			auto World = GetWorld();
-
-			UInputSettings* InputSettings = UInputSettings::GetInputSettings();
-
-			TArray<FInputActionKeyMapping> Mappings;
-			InputSettings->GetActionMappingByName("Interact", OUT Mappings);
-			
-			auto ActionText = FText::FromString( "Undefined" );
-			for (FInputActionKeyMapping Mapping : Mappings)
-			{
-				bool canUseKeyboardKey = bUseMouseAim && !Mapping.Key.IsGamepadKey();
-				bool canUseGamepadKey = !bUseMouseAim && Mapping.Key.IsGamepadKey();
-
-				if (canUseKeyboardKey || canUseGamepadKey)
-				{
-					ActionText = Mapping.Key.GetDisplayName();
-					break;
-				}
-			}
-			auto asdf = ActionText.ToString();
-			if (World) DrawDebugString(World, Pickup->GetActorLocation() + FVector{ 0,0,200 }, "Equip (" + asdf + ")", nullptr, FColor::White, DeltaSeconds*0.5);
-			
-			//LogMsgWithRole("Can Interact! ");
-		}
-	}
+	const auto HeroCont = GetHeroController();
+	if (HeroCont == nullptr || !IsClientControlleringServerOwnedActor()) return;
 
 
 
-	// Handle Input
-	if (Controller == nullptr) return;
+	// Handle Input (move and look)
 
 	const auto deadzoneSquared = 0.25f * 0.25f;
+
 
 	// Move character
 	const auto moveVec = FVector{ AxisMoveUp, AxisMoveRight, 0 };
@@ -211,42 +188,34 @@ void AHeroCharacter::Tick(float DeltaSeconds)
 	}
 
 
-	const auto HeroCont = GetHeroController();
-
-	// Calculate Look Vector
-	FVector AimVec;
+	// Calculate Look Vector for mouse or gamepad
+	FVector LookVec;
 	if (bUseMouseAim)
 	{
-		if (HasAuthority()) return;
-
-		const FVector Anchor = WeaponAnchor->GetComponentLocation();
-
-		if (HeroCont)
+		FVector WorldLocation, WorldDirection;
+		const auto Success = HeroCont->DeprojectMousePositionToWorld(OUT WorldLocation, OUT WorldDirection);
+		if (Success)
 		{
-			FVector WorldLocation, WorldDirection;
-			const auto Success = HeroCont->DeprojectMousePositionToWorld(OUT WorldLocation, OUT WorldDirection);
-			if (Success)
-			{
-				const FVector Hit = FMath::LinePlaneIntersection(
-					WorldLocation, 
-					WorldLocation + (WorldDirection * 5000), 
-					Anchor,
-					FVector(0,0,1));
+			const FVector AnchorLoc = WeaponAnchor->GetComponentLocation();
+			const FVector Hit = FMath::LinePlaneIntersection(
+				WorldLocation, 
+				WorldLocation + (WorldDirection * 5000), 
+				AnchorLoc,
+				FVector(0,0,1));
 
-				AimVec = Hit - Anchor;
-			}
+			LookVec = Hit - AnchorLoc;
 		}
 	}
 	else // Use gamepad
 	{
-		AimVec = FVector{ AxisFaceUp, AxisFaceRight, 0 };
+		LookVec = FVector{ AxisFaceUp, AxisFaceRight, 0 };
 	}
 
 
 	// Apply Look Vector - Aim character with look, if look is below deadzone then try use move vec
-	if (AimVec.SizeSquared() >= deadzoneSquared)
+	if (LookVec.SizeSquared() >= deadzoneSquared)
 	{
-		Controller->SetControlRotation(AimVec.Rotation());
+		Controller->SetControlRotation(LookVec.Rotation());
 	}
 	else if (moveVec.SizeSquared() >= deadzoneSquared)
 	{
@@ -255,11 +224,43 @@ void AHeroCharacter::Tick(float DeltaSeconds)
 
 
 
-	// Compute camera lean
+	// Scan for interables in front of player
+
+	auto* const Pickup = ScanForInteractable<AWeaponPickupBase>();
+	if (Pickup && Pickup->CanInteract())
+	{
+		auto World = GetWorld();
+
+		auto* InputSettings = UInputSettings::GetInputSettings();
+		TArray<FInputActionKeyMapping> Mappings;
+		InputSettings->GetActionMappingByName("Interact", OUT Mappings);
+
+		auto ActionText = FText::FromString("Undefined");
+		for (FInputActionKeyMapping Mapping : Mappings)
+		{
+			bool canUseKeyboardKey = bUseMouseAim && !Mapping.Key.IsGamepadKey();
+			bool canUseGamepadKey = !bUseMouseAim && Mapping.Key.IsGamepadKey();
+
+			if (canUseKeyboardKey || canUseGamepadKey)
+			{
+				ActionText = Mapping.Key.GetDisplayName();
+				break;
+			}
+		}
+		auto asdf = ActionText.ToString();
+		if (World) DrawDebugString(World, Pickup->GetActorLocation() + FVector{ 0,0,200 }, "Equip (" + asdf + ")", nullptr, FColor::White, DeltaSeconds * 0.5);
+
+		//LogMsgWithRole("Can Interact! ");
+	}
+
+
+
+	// Track camera with aim
+
 	if (bLeanCameraWithAim && Role == ROLE_AutonomousProxy)
 	{
 		FVector2D LinearLeanVector;
-
+		
 		if (bUseMouseAim)
 		{
 			if (bUseExperimentalMouseTracking)
@@ -549,7 +550,7 @@ bool AHeroCharacter::TryGiveArmour(float Delta)
 
 bool AHeroCharacter::TryGiveWeapon(const TSubclassOf<AWeapon>& Class)
 {
-	//LogMsgWithRole("AHeroCharacter::TryGiveWeapon");
+	LogMsgWithRole("AHeroCharacter::TryGiveWeapon");
 
 	if (Class == nullptr) return false;
 	if (!HasAuthority()) return false;
@@ -644,12 +645,13 @@ FString AHeroCharacter::GetEnumText(ENetRole role) const
 	case ROLE_None:
 		return "None";
 	case ROLE_SimulatedProxy:
-		return "SimulatedProxy";
+		return "Sim";
 	case ROLE_AutonomousProxy:
-		return "AutonomouseProxy";
+		return "Auto";
 	case ROLE_Authority:
-		return "Authority";
+		return "Auth";
 	case ROLE_MAX:
+		return "MAX (error?)";
 	default:
 		return "ERROR";
 	}
@@ -660,17 +662,18 @@ FString AHeroCharacter::GetRoleText() const
 	auto Remote = GetRemoteRole();
 
 
-	if (Remote == ROLE_SimulatedProxy) //&& Local == ROLE_Authority
-		return "ListenServer";
+	//if (Remote == ROLE_SimulatedProxy) //&& Local == ROLE_Authority
+	//	return "ListenServer";
 
-	if (Local == ROLE_Authority)
-		return "Server";
+	//if (Local == ROLE_Authority)
+	//	return "Server";
 
-	if (Local == ROLE_AutonomousProxy) // && Remote == ROLE_Authority
-		return "OwningClient";
+	//if (Local == ROLE_AutonomousProxy) // && Remote == ROLE_Authority
+	//	return "OwningClient";
 
-	if (Local == ROLE_SimulatedProxy) // && Remote == ROLE_Authority
-		return "SimClient";
+	//if (Local == ROLE_SimulatedProxy) // && Remote == ROLE_Authority
+	//	return "SimClient";
 
-	return "Unknown: " + GetEnumText(Role) + " " + GetEnumText(GetRemoteRole());
+	return GetEnumText(Role) + " " + GetEnumText(GetRemoteRole()) + " Ded:" + (IsRunningDedicatedServer() ? "True" : "False");
+
 }

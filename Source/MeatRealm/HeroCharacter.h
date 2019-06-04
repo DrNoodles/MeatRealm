@@ -147,6 +147,7 @@ protected:
 	static FVector2D GetGameViewportSize();
 	static FVector2D CalcLinearLeanVectorUnclipped(const FVector2D& CursorLoc, const FVector2D& ViewportSize);
 	void MoveCameraByOffsetVector(const FVector2D& Vector2D, float DeltaSeconds) const;
+	bool IsClientControlleringServerOwnedActor();
 	virtual void Tick(float DeltaSeconds) override;
 	FVector2D TrackCameraWithAimMouse() const;
 	FVector2D TrackCameraWithAimGamepad() const;
