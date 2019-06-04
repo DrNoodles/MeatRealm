@@ -7,6 +7,7 @@
 
 #include "DeathmatchGameMode.generated.h"
 
+struct FMRHitResult;
 struct FActorSpawnParameters;
 class AHeroCharacter;
 class AHeroController;
@@ -28,6 +29,8 @@ private:
 	TMap<uint32, AHeroController*> ConnectedHeroControllers;
 	TMap<uint32, FDelegateHandle> OnPlayerDieHandles;
 
-	void OnPlayerDie(uint32 DeadControllerId, uint32 KillerControllerId);
+	void OnPlayerTakeDamage(FMRHitResult Hit);
 	bool EndGameIfFragLimitReached() const;
+	void AddKillfeedEntry(AHeroController* const Killer, AHeroController* const Dead);
+
 };
