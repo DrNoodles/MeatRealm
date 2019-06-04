@@ -257,7 +257,7 @@ void AHeroCharacter::Tick(float DeltaSeconds)
 
 	// Track camera with aim
 
-	if (bLeanCameraWithAim && Role == ROLE_AutonomousProxy)
+	if (bLeanCameraWithAim)
 	{
 		FVector2D LinearLeanVector;
 		
