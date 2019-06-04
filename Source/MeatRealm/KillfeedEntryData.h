@@ -38,18 +38,18 @@ public:
 	//	return true;
 	//}
 
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, ReplicatedUsing=OnRep_Fart)
-		int TotalKills = 0;
+	//UPROPERTY(VisibleAnywhere, BlueprintReadOnly, ReplicatedUsing=OnRep_Fart)
+	//	int TotalKills = 0;
 
 	UFUNCTION()
 		void OnRep_Fart();
-	/*
+	
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Replicated)
-		FString Winner;
+		FString Winner = "Winrar";
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Replicated)
-		FString Verb;
+		FString Verb = "Blapped";
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Replicated)
-		FString Loser;*/
+		FString Loser = "Ded";
 };

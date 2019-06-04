@@ -15,7 +15,6 @@ void ADeathmatchGameState::PostInitializeComponents()
 	if (HasAuthority())
 	{
 		KillTallyObj = NewObject<UKillfeedEntryData>(this);
-		OnRep_KillTallyObj();
 	}
 }
 
@@ -98,8 +97,10 @@ void ADeathmatchGameState::AddKillfeedData(const FString& Victor, const FString&
 	
 	LogMsgWithRole("ADeathmatchGameState::AddKillfeedData()");
 	
-	KillTallyObj->TotalKills++;
-
+	//KillTallyObj->TotalKills++;
+	KillTallyObj->Winner = Victor;
+	KillTallyObj->Verb = Verb;
+	KillTallyObj->Loser = Dead;
 
 	/*UKillfeedEntryData* Entry = NewObject<UKillfeedEntryData>(this);
 	Entry->Winner = Victor;
