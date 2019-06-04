@@ -38,8 +38,9 @@ public:
 	//	return true;
 	//}
 
-	UPROPERTY(ReplicatedUsing=OnRep_Fart)
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, ReplicatedUsing=OnRep_Fart)
 		int TotalKills = 0;
+
 	UFUNCTION()
 		void OnRep_Fart();
 	/*
