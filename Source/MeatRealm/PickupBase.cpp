@@ -52,6 +52,7 @@ bool APickupBase::TryPickup(IAffectableInterface* const Affectable)
 	{
 		return false;
 	}
+	LogMsgWithRole("APickupBase::TryPickup()");
 
 	if (!TryApplyAffect(Affectable))
 	{
@@ -160,11 +161,11 @@ FString APickupBase::GetEnumText(ENetRole role)
 	case ROLE_None:
 		return "None";
 	case ROLE_SimulatedProxy:
-		return "SimulatedProxy";
+		return "Sim";
 	case ROLE_AutonomousProxy:
-		return "AutonomouseProxy";
+		return "Auto";
 	case ROLE_Authority:
-		return "Authority";
+		return "Auth";
 	case ROLE_MAX:
 	default:
 		return "ERROR";
@@ -174,7 +175,7 @@ FString APickupBase::GetRoleText()
 {
 	auto Local = Role;
 	auto Remote = GetRemoteRole();
-
+	return GetEnumText(Role) + " " + GetEnumText(GetRemoteRole()) + " Ded:" + (IsRunningDedicatedServer() ? "True" : "False");
 
 	if (Remote == ROLE_SimulatedProxy) //&& Local == ROLE_Authority
 		return "ListenServer";
