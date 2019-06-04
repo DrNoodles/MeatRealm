@@ -30,11 +30,14 @@ void AHeroController::AcknowledgePossession(APawn* P)
 	auto Char = GetHeroCharacter();
 	if (Char) Char->SetUseMouseAim(bShowMouseCursor);
 
-
-	if (IsLocalController())
+	if (!HudInstance) ShowHud(true);
+	/*if (IsLocalController())
 	{
 		ShowHud(true);
-	}
+	}*/
+	
+	//if (OnPlayerSpawned.IsBound())
+	OnPlayerSpawned.Broadcast();
 }
 
 void AHeroController::OnUnPossess()
@@ -43,10 +46,10 @@ void AHeroController::OnUnPossess()
 
 	//LogMsgWithRole("AHeroController::OnUnPossess()");
 
-	if (IsLocalController())
+	/*if (IsLocalController())
 	{
 		ShowHud(false);
-	}
+	}*/
 
 	Super::OnUnPossess();
 }

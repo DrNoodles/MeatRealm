@@ -11,16 +11,6 @@
 #include "KillfeedEntryData.generated.h"
 
 
-//class MEATREALM_API UNetworkObject : public UObject
-//{
-//	GENERATED_BODY()
-//
-//protected:
-//	virtual bool IsSupportedForNetworking() const override;
-//	virtual bool ReplicateSubobjects(UActorChannel* Channel, FOutBunch* Bunch, FReplicationFlags* RepFlags);
-//};
-//
-
 UCLASS(BlueprintType)
 class MEATREALM_API UKillfeedEntryData : public UActorComponent
 {
@@ -32,18 +22,7 @@ public:
 	{
 		return true;
 	}
-	//virtual Replica
-	//virtual bool ReplicateSubobjects(UActorChannel* Channel, FOutBunch* Bunch, FReplicationFlags* RepFlags)
-	//{
-	//	return true;
-	//}
 
-	//UPROPERTY(VisibleAnywhere, BlueprintReadOnly, ReplicatedUsing=OnRep_Fart)
-	//	int TotalKills = 0;
-
-	UFUNCTION()
-		void OnRep_Fart();
-	
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Replicated)
 		FString Winner = "Winrar";
 

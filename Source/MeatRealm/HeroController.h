@@ -13,6 +13,8 @@
 //struct FMRHitResult;
 class AHeroCharacter;
 
+DECLARE_DYNAMIC_MULTICAST_DELEGATE(FPlayerSpawned);
+
 UCLASS()
 class MEATREALM_API AHeroController : public APlayerController
 {
@@ -45,6 +47,12 @@ public:
 	UFUNCTION(Client, Reliable)
 	void ClientRPC_PlayHit(const FMRHitResult& Hit);
 
+	UPROPERTY(BlueprintAssignable, Category = "Event Dispatchers")
+		FPlayerSpawned OnPlayerSpawned;
+
+	
+	//FPlayerSpawned& OnPlayerSpawned() { return PlayerSpawnedEvent; }
+
 	//DECLARE_EVENT_TwoParams(AHeroController, FHealthDepleted, uint32, uint32)
 	//FHealthDepleted& OnHealthDepleted() { return HealthDepletedEvent; }
 
@@ -62,7 +70,8 @@ protected:
 	virtual bool InputKey(FKey Key, EInputEvent EventType, float AmountDepressed, bool bGamepad) override;
 
 private:
-	
+
+	//FPlayerSpawned PlayerSpawnedEvent;
 	FTakenDamage TakenDamageEvent;
 	//FHealthDepleted HealthDepletedEvent;
 
