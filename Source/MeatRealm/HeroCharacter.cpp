@@ -97,7 +97,7 @@ void AHeroCharacter::Restart()
 	// Randomly select a weapon
 	if (WeaponClasses.Num() > 0)
 	{
-		if (ROLE_AutonomousProxy == Role)
+		if (HasAuthority())
 		{
 			const auto Choice = FMath::RandRange(0, WeaponClasses.Num() - 1);
 			ServerRPC_SpawnWeapon(WeaponClasses[Choice]);
@@ -161,7 +161,7 @@ bool AHeroCharacter::ServerRPC_SpawnWeapon_Validate(TSubclassOf<AWeapon> weaponC
 
 /// Methods
 
-bool AHeroCharacter::IsClientControlleringServerOwnedActor()
+bool AHeroCharacter::IsClientControllingServerOwnedActor()
 {
 	return Role == ROLE_AutonomousProxy // Client on server
 		|| HasAuthority() && !IsRunningDedicatedServer();
@@ -170,7 +170,7 @@ bool AHeroCharacter::IsClientControlleringServerOwnedActor()
 void AHeroCharacter::Tick(float DeltaSeconds)
 {
 	const auto HeroCont = GetHeroController();
-	if (HeroCont == nullptr || !IsClientControlleringServerOwnedActor()) return;
+	if (HeroCont == nullptr || !IsClientControllingServerOwnedActor()) return;
 
 
 
