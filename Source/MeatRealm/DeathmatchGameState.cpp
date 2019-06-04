@@ -5,12 +5,36 @@
 #include "HeroState.h"
 #include "ScoreboardEntryData.h"
 #include "UnrealNetwork.h"
+#include "Engine/ActorChannel.h"
 
+
+void ADeathmatchGameState::PostInitializeComponents()
+{
+	Super::PostInitializeComponents();
+
+	if (HasAuthority())
+	{
+		KillTallyObj = NewObject<UKillfeedEntryData>(this);
+		OnRep_KillTallyObj();
+	}
+}
 
 void ADeathmatchGameState::GetLifetimeReplicatedProps(TArray< FLifetimeProperty >& OutLifetimeProps) const
 {
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
-	DOREPLIFETIME(ADeathmatchGameState, TotalKills);
+	DOREPLIFETIME(ADeathmatchGameState, KillTallyObj);
+}
+
+bool ADeathmatchGameState::ReplicateSubobjects(UActorChannel* Channel, FOutBunch* Bunch, FReplicationFlags* RepFlags)
+{
+	bool WroteSomething = Super::ReplicateSubobjects(Channel, Bunch, RepFlags);
+
+	if (KillTallyObj != nullptr)
+	{
+		WroteSomething |= Channel->ReplicateSubobject(KillTallyObj, *Bunch, *RepFlags);
+	}
+
+	return WroteSomething;
 }
 
 TArray<UScoreboardEntryData*> ADeathmatchGameState::GetScoreboard()
@@ -70,30 +94,38 @@ TArray<UScoreboardEntryData*> ADeathmatchGameState::GetScoreboard()
 
 void ADeathmatchGameState::AddKillfeedData(const FString& Victor, const FString& Verb, const FString& Dead)
 {
-	TotalKills++;
-	auto str = FString::Printf(TEXT("ADeathmatchGameState::AddKillfeedData() : %d"), TotalKills);
-	LogMsgWithRole(str);
+	if (!HasAuthority()) return;
+	
+	LogMsgWithRole("ADeathmatchGameState::AddKillfeedData()");
+	
+	KillTallyObj->TotalKills++;
 
-	OnRep_TotalKills();
+
 	/*UKillfeedEntryData* Entry = NewObject<UKillfeedEntryData>(this);
 	Entry->Winner = Victor;
 	Entry->Verb = "killed";
 	Entry->Loser = Dead;
-	KillfeedData.Add(Entry);
+	LastKill = Entry;*/
+	
+	
 
 
+
+//	KillfeedData.Add(Entry);
+
+	/*
 	UE_LOG(LogTemp, Warning, TEXT("KILLFEED"));
 	for (auto* entry : KillfeedData)
 	{
 		UE_LOG(LogTemp, Warning, TEXT("  Entry %d %s %s %s"), KillfeedData.Num(),
 			*entry->Winner, *entry->Verb, *entry->Loser);
-	}*/
+	}
+	*/
 }
 
-void ADeathmatchGameState::OnRep_TotalKills()
+void ADeathmatchGameState::OnRep_KillTallyObj()
 {
-	auto str = FString::Printf(TEXT("ADeathmatchGameState::OnRep_TotalKills() : %d"), TotalKills);
-	LogMsgWithRole(str);
+	LogMsgWithRole("ADeathmatchGameState::OnRep_KillTallyObj()");
 }
 
 //void ADeathmatchGameState::OnRep_KillfeedDataUpdated()

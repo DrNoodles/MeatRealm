@@ -18,8 +18,8 @@ class MEATREALM_API ADeathmatchGameState : public AGameStateBase
 	GENERATED_BODY()
 
 public:
-	ADeathmatchGameState()
-	{
+	//ADeathmatchGameState();
+	//{
 		/*UKillfeedEntryData* Entry = NewObject<UKillfeedEntryData>();
 		Entry->Winner = "W1";
 		Entry->Verb = "V1";
@@ -32,7 +32,10 @@ public:
 
 		KillfeedData.Add(Entry);
 		KillfeedData.Add(Entry2);*/
-	}
+	//}
+
+	virtual void PostInitializeComponents() override;
+	virtual bool ReplicateSubobjects(UActorChannel* Channel, FOutBunch* Bunch, FReplicationFlags* RepFlags) override;
 
 	UFUNCTION(BlueprintCallable)
 		TArray<UScoreboardEntryData*> GetScoreboard();
@@ -50,10 +53,11 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly)
 		float TimeLimit = 10;
 
-	UPROPERTY(ReplicatedUsing=OnRep_TotalKills)
-		int TotalKills = 0;
+	UPROPERTY(ReplicatedUsing=OnRep_KillTallyObj)
+		UKillfeedEntryData* KillTallyObj = nullptr;
+
 	UFUNCTION()
-		void OnRep_TotalKills();
+		void OnRep_KillTallyObj();
 
 	//UPROPERTY(ReplicatedUsing = OnRep_KillfeedDataUpdated)
 	//	TArray<UKillfeedEntryData*> KillfeedData{};
@@ -61,6 +65,7 @@ public:
 	//UFUNCTION()
 	//void OnRep_KillfeedDataUpdated();
 
+	
 private:
 
 	void LogMsgWithRole(FString message) const;

@@ -27,13 +27,22 @@ class MEATREALM_API UKillfeedEntryData : public UActorComponent
 	GENERATED_BODY()
 
 public:
-
+	
+	virtual bool IsSupportedForNetworking() const override
+	{
+		return true;
+	}
 	//virtual Replica
 	//virtual bool ReplicateSubobjects(UActorChannel* Channel, FOutBunch* Bunch, FReplicationFlags* RepFlags)
 	//{
 	//	return true;
 	//}
 
+	UPROPERTY(ReplicatedUsing=OnRep_Fart)
+		int TotalKills = 0;
+	UFUNCTION()
+		void OnRep_Fart();
+	/*
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Replicated)
 		FString Winner;
 
@@ -41,5 +50,5 @@ public:
 		FString Verb;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Replicated)
-		FString Loser;
+		FString Loser;*/
 };
