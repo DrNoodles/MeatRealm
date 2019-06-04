@@ -39,6 +39,9 @@ void AWeapon::GetLifetimeReplicatedProps(TArray< FLifetimeProperty >& OutLifetim
 void AWeapon::BeginPlay()
 {
 	Super::BeginPlay();
+
+	if (!HasAuthority()) return;
+
 	bCanAction = true;
 	AmmoInClip = ClipSize;
 	AmmoInPool = AmmoPoolSize;
@@ -189,6 +192,8 @@ void AWeapon::Shoot()
 {
 	//LogMsgWithRole("Shoot");
 
+	if (!HasAuthority()) return;
+
 	if (ProjectileClass == nullptr)
 	{
 		UE_LOG(LogTemp, Error, TEXT("Set a Projectile Class in your Weapon Blueprint to shoot"));
@@ -237,25 +242,16 @@ void AWeapon::Shoot()
 void AWeapon::Input_PullTrigger()
 {
 	ServerRPC_PullTrigger();
-	//LogMsgWithRole("PullTrigger");
-	/*bTriggerPulled = true;
-	bHasActionedThisTriggerPull = false;*/
 }
 
 void AWeapon::Input_ReleaseTrigger()
 {
 	ServerRPC_ReleaseTrigger();
-	//UE_LOG(LogTemp, Warning, TEXT("ReleaseTrigger!"));
-	/*bTriggerPulled = false;
-	bHasActionedThisTriggerPull = false;*/
 }
 
 void AWeapon::Input_Reload()
 {
 	ServerRPC_Reload();
-	//if (bTriggerPulled || !CanReload()) return;
-	////UE_LOG(LogTemp, Warning, TEXT("Input_Reload!"));
-	//bReloadQueued = true;
 }
 
 bool AWeapon::TryGiveAmmo()
@@ -276,30 +272,12 @@ void AWeapon::RPC_Fire_OnServer_Implementation()
 {
 	//LogMsgWithRole("RPC_Fire_OnServer_Impl");
 	Shoot();
-
-	//RPC_Fire_RepToClients();
 }
 
 bool AWeapon::RPC_Fire_OnServer_Validate()
 {
 	return true;
 }
-
-//void AWeapon::RPC_Fire_RepToClients_Implementation()
-//{
-	// This method runs on ALL clients
-
-	// For now(?) lets ONLY shoot this on the server
-	/*if (GetOwner()->Role != ROLE_Authority) 
-	{
-		return;
-	}
-*/
-	//LogMsgWithRole("RPC_Fire_RepToClients_Impl");
-
-//}
-
-
 
 
 void AWeapon::LogMsgWithRole(FString message)
@@ -313,11 +291,11 @@ FString GetEnumText(ENetRole role)
 	case ROLE_None:
 		return "None";
 	case ROLE_SimulatedProxy:
-		return "SimulatedProxy";
+		return "Sim";
 	case ROLE_AutonomousProxy:
-		return "AutonomouseProxy";
+		return "Auto";
 	case ROLE_Authority:
-		return "Authority";
+		return "Auth";
 	case ROLE_MAX:
 	default:
 		return "ERROR";
@@ -325,22 +303,23 @@ FString GetEnumText(ENetRole role)
 }
 FString AWeapon::GetRoleText()
 {
-	auto Local = GetOwner()->Role;
-	auto Remote = GetOwner()->GetRemoteRole();
+	//auto Local = GetOwner()->Role;
+	//auto Remote = GetOwner()->GetRemoteRole();
 
 
-	if (Remote == ROLE_SimulatedProxy) //&& Local == ROLE_Authority
-		return "ListenServer";
+	//if (Remote == ROLE_SimulatedProxy) //&& Local == ROLE_Authority
+	//	return "ListenServer";
 
-	if (Local == ROLE_Authority)
-		return "Server";
+	//if (Local == ROLE_Authority)
+	//	return "Server";
 
-	if (Local == ROLE_AutonomousProxy) // && Remote == ROLE_Authority
-		return "OwningClient";
+	//if (Local == ROLE_AutonomousProxy) // && Remote == ROLE_Authority
+	//	return "OwningClient";
 
-	if (Local == ROLE_SimulatedProxy) // && Remote == ROLE_Authority
-		return "SimClient";
+	//if (Local == ROLE_SimulatedProxy) // && Remote == ROLE_Authority
+	//	return "SimClient";
 
-	return "Unknown: " + GetEnumText(Role) + " " + GetEnumText(GetRemoteRole());
+	return GetEnumText(Role) + " " + GetEnumText(GetRemoteRole()) + " Ded:" + (IsRunningDedicatedServer() ? "True" : "False");
+
 }
 
