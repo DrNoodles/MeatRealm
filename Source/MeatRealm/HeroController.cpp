@@ -5,7 +5,7 @@
 #include "HeroCharacter.h"
 #include "MRLocalPlayer.h"
 #include "Engine/Public/DrawDebugHelpers.h"
-
+#include "Kismet/GameplayStatics.h"
 
 AHeroController::AHeroController()
 {
@@ -133,12 +133,16 @@ void AHeroController::SimulateHitGiven(const FMRHitResult& Hit)
 	
 		if (!HasAuthority()) // TODO Only do this on client!
 		{
-			auto DamageNumber = GetWorld()->SpawnActorAbsolute<ADamageNumber>(
-				DamageNumberClass, 
-				FTransform{ Hit.HitLocation },
-				FActorSpawnParameters{});
+			auto DamageNumber = GetWorld()->SpawnActorDeferred<ADamageNumber>(
+				DamageNumberClass,
+				FTransform{ Hit.HitLocation }, 
+				nullptr, nullptr, 
+				ESpawnActorCollisionHandlingMethod::AlwaysSpawn);
+
 			DamageNumber->SetDamage(Hit.DamageTaken);
 			DamageNumber->SetHitArmour(Hit.bHitArmour);
+
+			UGameplayStatics::FinishSpawningActor(DamageNumber, FTransform{ Hit.HitLocation });
 		}
 	}
 }

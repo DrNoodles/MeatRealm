@@ -11,6 +11,8 @@ ADamageNumber::ADamageNumber()
 	InitialLifeSpan = 3;
 
 	WidgetComp = CreateDefaultSubobject<UWidgetComponent>("WidgetComp");
-	WidgetComp->SetupAttachment(RootComponent);
+	//WidgetComp->SetupAttachment();
 	WidgetComp->SetWidgetSpace(EWidgetSpace::Screen);
+
+	RootComponent = WidgetComp;
 }

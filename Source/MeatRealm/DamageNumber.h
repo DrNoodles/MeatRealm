@@ -16,13 +16,19 @@ class MEATREALM_API ADamageNumber : public AActor
 	
 public:	
 	ADamageNumber();
-	void SetDamage(int Damage) { this->Damage = Damage; }
-	void SetHitArmour(bool bHitArmour) { this->bHitArmour; }
+	void SetDamage(int DamageIn) { Damage = DamageIn; }
+	void SetHitArmour(bool HitArmourIn) { bHitArmour = HitArmourIn; }
 
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
+		int Damage = -123;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
+		bool bHitArmour = true;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
+		UWidgetComponent* WidgetComp = nullptr;
 private:
-	UPROPERTY(VisibleAnywhere)
-	UWidgetComponent* WidgetComp = nullptr;
 
-	int Damage = 0;
-	bool bHitArmour = false;
+
 };
