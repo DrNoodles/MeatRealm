@@ -133,16 +133,18 @@ void AHeroController::SimulateHitGiven(const FMRHitResult& Hit)
 	
 		if (!HasAuthority()) // TODO Only do this on client!
 		{
+			const FVector Location = Hit.HitLocation;
+
 			auto DamageNumber = GetWorld()->SpawnActorDeferred<ADamageNumber>(
 				DamageNumberClass,
-				FTransform{ Hit.HitLocation }, 
+				FTransform{ Location }, 
 				nullptr, nullptr, 
 				ESpawnActorCollisionHandlingMethod::AlwaysSpawn);
 
 			DamageNumber->SetDamage(Hit.DamageTaken);
 			DamageNumber->SetHitArmour(Hit.bHitArmour);
 
-			UGameplayStatics::FinishSpawningActor(DamageNumber, FTransform{ Hit.HitLocation });
+			UGameplayStatics::FinishSpawningActor(DamageNumber, FTransform{ Location });
 		}
 	}
 }

@@ -3,16 +3,20 @@
 
 #include "DamageNumber.h"
 #include "WidgetComponent.h"
+#include "Components/SceneComponent.h"
 
-// Sets default values
 ADamageNumber::ADamageNumber()
 {
 	PrimaryActorTick.bCanEverTick = false;
 	InitialLifeSpan = 3;
 
+	// Create a follow camera offset node
+	OffsetComp = CreateDefaultSubobject<USceneComponent>(TEXT("OffsetComp"));
+	RootComponent = OffsetComp;
+
+
 	WidgetComp = CreateDefaultSubobject<UWidgetComponent>("WidgetComp");
-	//WidgetComp->SetupAttachment();
+	WidgetComp->SetupAttachment(OffsetComp);
 	WidgetComp->SetWidgetSpace(EWidgetSpace::Screen);
 
-	RootComponent = WidgetComp;
 }

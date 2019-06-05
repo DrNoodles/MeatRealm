@@ -8,6 +8,7 @@
 #include "DamageNumber.generated.h"
 
 class UWidgetComponent;
+class USceneComponent;
 
 UCLASS()
 class MEATREALM_API ADamageNumber : public AActor
@@ -19,7 +20,6 @@ public:
 	void SetDamage(int DamageIn) { Damage = DamageIn; }
 	void SetHitArmour(bool HitArmourIn) { bHitArmour = HitArmourIn; }
 
-
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
 		int Damage = -123;
 
@@ -28,7 +28,8 @@ public:
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
 		UWidgetComponent* WidgetComp = nullptr;
-private:
 
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
+		USceneComponent* OffsetComp = nullptr;
 
 };
