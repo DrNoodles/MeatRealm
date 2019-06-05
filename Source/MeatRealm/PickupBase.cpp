@@ -46,21 +46,22 @@ void APickupBase::GetLifetimeReplicatedProps(TArray< FLifetimeProperty >& OutLif
 
 bool APickupBase::TryPickup(IAffectableInterface* const Affectable)
 {
-	LogMsgWithRole("APickupBase::TryPickup()");
+	//LogMsgWithRole("APickupBase::TryPickup()");
 
 	if (!IsAvailable || !HasAuthority())
 	{
 		return false;
 	}
+	//LogMsgWithRole("APickupBase::TryPickup()");
 
 	if (!TryApplyAffect(Affectable))
 	{
-		LogMsgWithRole("APickupBase::TryPickup() : Cannot TryApplyAffect()");
+		//LogMsgWithRole("APickupBase::TryPickup() : Cannot TryApplyAffect()");
 		return false;
 	}
 
 	ServerRPC_PickupItem();
-	LogMsgWithRole("APickupBase::TryPickup() : Success!");
+	//LogMsgWithRole("APickupBase::TryPickup() : Success!");
 
 	return true;
 }
@@ -68,7 +69,7 @@ bool APickupBase::TryPickup(IAffectableInterface* const Affectable)
 void APickupBase::OnCompBeginOverlap(UPrimitiveComponent* OverlappedComp, AActor* OtherActor,
 	UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult)
 {
-	LogMsgWithRole("APickupBase::Overlapping()");
+	//LogMsgWithRole("APickupBase::Overlapping()");
 
 	if (bExplicitInteraction) { return; }
 
@@ -84,7 +85,7 @@ void APickupBase::OnCompBeginOverlap(UPrimitiveComponent* OverlappedComp, AActor
 
 void APickupBase::ServerRPC_PickupItem_Implementation()
 {
-	LogMsgWithRole("APickupBase::ServerRPC_PickupItem_Implementation()");
+	//LogMsgWithRole("APickupBase::ServerRPC_PickupItem_Implementation()");
 
 	MakePickupAvailable(false); // simulate on server
 	IsAvailable = false; // replicates to clients
@@ -102,13 +103,13 @@ bool APickupBase::ServerRPC_PickupItem_Validate()
 
 void APickupBase::OnRep_IsAvailableChanged()
 {
-	LogMsgWithRole("APickupBase::OnRep_IsAvailableChanged()");
+	//LogMsgWithRole("APickupBase::OnRep_IsAvailableChanged()");
 	MakePickupAvailable(IsAvailable);
 }
 
 void APickupBase::MakePickupAvailable(bool bIsAvailable)
 {
-	LogMsgWithRole("APickupBase::MakePickupAvailable()");
+	//LogMsgWithRole("APickupBase::MakePickupAvailable()");
 	if (bIsAvailable)
 	{
 		// Show visual
@@ -129,7 +130,7 @@ void APickupBase::MakePickupAvailable(bool bIsAvailable)
 
 void APickupBase::Respawn()
 {
-	LogMsgWithRole("Respawn()");
+	//LogMsgWithRole("Respawn()");
 
 	// Dispose pickup respawn timer
 	if (RespawnTimerHandle.IsValid()) { GetWorld()->GetTimerManager().ClearTimer(RespawnTimerHandle); }
@@ -160,11 +161,11 @@ FString APickupBase::GetEnumText(ENetRole role)
 	case ROLE_None:
 		return "None";
 	case ROLE_SimulatedProxy:
-		return "SimulatedProxy";
+		return "Sim";
 	case ROLE_AutonomousProxy:
-		return "AutonomouseProxy";
+		return "Auto";
 	case ROLE_Authority:
-		return "Authority";
+		return "Auth";
 	case ROLE_MAX:
 	default:
 		return "ERROR";
@@ -174,7 +175,7 @@ FString APickupBase::GetRoleText()
 {
 	auto Local = Role;
 	auto Remote = GetRemoteRole();
-
+	return GetEnumText(Role) + " " + GetEnumText(GetRemoteRole()) + " Ded:" + (IsRunningDedicatedServer() ? "True" : "False");
 
 	if (Remote == ROLE_SimulatedProxy) //&& Local == ROLE_Authority
 		return "ListenServer";

@@ -4,6 +4,7 @@
 #include "HeroController.h"
 #include "HeroCharacter.h"
 #include "MRLocalPlayer.h"
+#include "Engine/Public/DrawDebugHelpers.h"
 
 
 AHeroController::AHeroController()
@@ -11,41 +12,46 @@ AHeroController::AHeroController()
 
 }
 
+void AHeroController::CleanupPlayerState()
+{
+	DestroyHud();
+}
+
 void AHeroController::OnPossess(APawn* InPawn)
 {
 	// Called on server upon possessing a pawn
 
-	LogMsgWithRole("AHeroController::OnPossess()");
+	//LogMsgWithRole("AHeroController::OnPossess()");
 	Super::OnPossess(InPawn);
 }
 
 void AHeroController::AcknowledgePossession(APawn* P)
 {
-	// Called on owning-client upon possessing a pawn
+	// Called on controlling-client upon possessing a pawn
 
-	LogMsgWithRole("AHeroController::AcknowledgePossession()");
+	//LogMsgWithRole("AHeroController::AcknowledgePossession()");
 	Super::AcknowledgePossession(P);
 
 	auto Char = GetHeroCharacter();
 	if (Char) Char->SetUseMouseAim(bShowMouseCursor);
 
 
-	if (IsLocalController())
-	{
-		ShowHud(true);
-	}
+	if (IsLocalController() && !HudInstance) CreateHud();
+	
+	//if (OnPlayerSpawned.IsBound())
+	OnPlayerSpawned.Broadcast();
 }
 
 void AHeroController::OnUnPossess()
 {
 	// Called on server and owning-client upon depossessing a pawn
 
-	LogMsgWithRole("AHeroController::OnUnPossess()");
+	//LogMsgWithRole("AHeroController::OnUnPossess()");
 
-	if (IsLocalController())
+	/*if (IsLocalController())
 	{
 		ShowHud(false);
-	}
+	}*/
 
 	Super::OnUnPossess();
 }
@@ -56,7 +62,7 @@ AHeroCharacter* AHeroController::GetHeroCharacter() const
 	return Char == nullptr ? nullptr : (AHeroCharacter*)Char;
 }
 
-void AHeroController::ShowHud(bool bMakeVisible)
+void AHeroController::CreateHud()
 {
 	if (!IsLocalController()) return;
 
@@ -66,31 +72,77 @@ void AHeroController::ShowHud(bool bMakeVisible)
 		return;
 	};
 
+	if (HudInstance) return; // dont create more than one
 
-	// If the hud exists, remove it!
+	// Create and attach a new hud
+	HudInstance = CreateWidget<UUserWidget>(this, HudClass);
+	if (HudInstance)
+	{
+		HudInstance->AddToViewport();
+		UE_LOG(LogTemp, Warning, TEXT("Created HUD"));
+	}
+}
+
+void AHeroController::DestroyHud()
+{
+	if (!IsLocalController()) return;
+
 	if (HudInstance != nullptr)
 	{
 		HudInstance->RemoveFromParent();
 		HudInstance = nullptr;
 		UE_LOG(LogTemp, Warning, TEXT("Destroyed HUD"));
 	}
-
-	if (bMakeVisible)
-	{
-		// Create and attach a new hud
-		HudInstance = CreateWidget<UUserWidget>(this, HudClass);
-		if (HudInstance != nullptr)
-		{
-			HudInstance->AddToViewport();
-			UE_LOG(LogTemp, Warning, TEXT("Created HUD"));
-		}
-	}
 }
 
 
-void AHeroController::HealthDepleted(uint32 InstigatorHeroControllerId) const
+void AHeroController::DamageTaken(const FMRHitResult& Hit) const
 {
-	HealthDepletedEvent.Broadcast(GetUniqueID(), InstigatorHeroControllerId);
+	// TODO Broadcast hit event here for BP to play a sound?
+
+	TakenDamageEvent.Broadcast(Hit);
+}
+
+void AHeroController::SimulateHitGiven(const FMRHitResult& Hit)
+{
+	if (!IsLocalController())
+	{
+		//UE_LOG(LogTemp, Warning, TEXT("HitGiven() - NotLocal. Damage(%d)"), Hit.DamageTaken);
+		ClientRPC_PlayHit(Hit);
+		return;
+	}
+
+	//UE_LOG(LogTemp, Warning, TEXT("HitGiven() - Local. Damage(%d)"), Hit.DamageTaken);
+
+	// Display a hit marker in the world
+	auto World = GetWorld();
+	if (World)
+	{
+		DrawDebugString(World, 
+			Hit.HitLocation + FVector{ 0,0,100 },
+			FString::FromInt(Hit.DamageTaken), 
+			nullptr,
+			Hit.bHitArmour ? FColor::Blue : FColor::White,
+			0.5);
+	}
+}
+
+void AHeroController::ClientRPC_PlayHit_Implementation(const FMRHitResult& Hit)
+{
+	SimulateHitGiven(Hit);
+	//UE_LOG(LogTemp, Warning, TEXT("HitGiven() - Local. Damage(%d)"), Hit.DamageTaken);
+
+	//// Display a hit marker in the world
+	//auto World = GetWorld();
+	//if (World)
+	//{
+	//	DrawDebugString(World,
+	//		Hit.HitLocation + FVector{ 0,0,100 },
+	//		FString::FromInt(Hit.DamageTaken),
+	//		nullptr,
+	//		Hit.bHitArmour ? FColor::Blue : FColor::White,
+	//		0.5);
+	//}
 }
 
 /// Input
@@ -116,7 +168,7 @@ void AHeroController::BeginPlay()
 	const auto LP = GetLocalPlayer();
 	if (LP && IsLocalController())
 	{
-		LogMsgWithRole("LP Get");
+		//LogMsgWithRole("LP Get");
 		LP->AspectRatioAxisConstraint = EAspectRatioAxisConstraint::AspectRatio_MaintainYFOV;
 	}
 }
@@ -137,6 +189,8 @@ void AHeroController::SetupInputComponent()
 
 bool AHeroController::InputAxis(FKey Key, float Delta, float DeltaTime, int32 NumSamples, bool bGamepad)
 {
+	//UE_LOG(LogTemp, Warning, TEXT("Key:%s Delta:%f DeltaTime:%f"), *Key.ToString(), Delta, DeltaTime);
+
 	bool ret = Super::InputAxis(Key, Delta, DeltaTime, NumSamples, bGamepad);
 	if (IsLocalController()) { SetUseMouseaim(!bGamepad); }
 	return ret;

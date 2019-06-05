@@ -4,11 +4,15 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/GameStateBase.h"
+#include "KillfeedEntryData.h"
 
 #include "DeathmatchGameState.generated.h"
 
 
 class UScoreboardEntryData;
+class UKillfeedEntryData;
+
+DECLARE_DYNAMIC_MULTICAST_DELEGATE(FKillfeedChanged);
 
 UCLASS()
 class MEATREALM_API ADeathmatchGameState : public AGameStateBase
@@ -16,8 +20,20 @@ class MEATREALM_API ADeathmatchGameState : public AGameStateBase
 	GENERATED_BODY()
 
 public:
+	virtual void PostInitializeComponents() override;
+	virtual bool ReplicateSubobjects(UActorChannel* Channel, FOutBunch* Bunch, FReplicationFlags* RepFlags) override;
+
 	UFUNCTION(BlueprintCallable)
-	TArray<UScoreboardEntryData*> GetScoreboard();
+		TArray<UScoreboardEntryData*> GetScoreboard();
+
+	UPROPERTY(BlueprintAssignable, Category = "Event Dispatchers")
+		FKillfeedChanged OnKillfeedChanged;
+
+
+	void StartARemoveTimer();
+	void FinishOldestTimer();
+
+	void AddKillfeedData(const FString& Victor, const FString& Verb, const FString& Dead);
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly)
 		int FragLimit = 15;
@@ -25,5 +41,24 @@ public:
 	// In Minutes
 	UPROPERTY(EditAnywhere, BlueprintReadOnly)
 		float TimeLimit = 10;
+
+	// How long (in seconds) a killfeed item is on screen
+	UPROPERTY(EditAnywhere, BlueprintReadOnly)
+	float KillfeedItemDuration = 3;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, ReplicatedUsing=OnRep_KillfeedDataChanged)
+		TArray<UKillfeedEntryData*> KillfeedData;
+	UFUNCTION()
+		void OnRep_KillfeedDataChanged() const;
+
+private:
+	bool IsClientControllingServerOwnedActor() const;
+
+
+	TArray<FTimerHandle> Timers{};
+
+	void LogMsgWithRole(FString message) const;
+	FString GetEnumText(ENetRole role) const;
+	FString GetRoleText() const;
 };
 

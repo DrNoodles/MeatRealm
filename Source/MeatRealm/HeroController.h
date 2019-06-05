@@ -5,10 +5,14 @@
 #include "CoreMinimal.h"
 #include "GameFramework/PlayerController.h"
 #include "Blueprint/UserWidget.h"
+#include "DeathmatchGameMode.h"
+#include "HeroCharacter.h" // TODO Make this a forward decl - Need to pull FMRHitResult out of the file
 
 #include "HeroController.generated.h"
 
 class AHeroCharacter;
+
+DECLARE_DYNAMIC_MULTICAST_DELEGATE(FPlayerSpawned);
 
 UCLASS()
 class MEATREALM_API AHeroController : public APlayerController
@@ -18,6 +22,7 @@ class MEATREALM_API AHeroController : public APlayerController
 public:
 
 	AHeroController();
+	void CleanupPlayerState() override;
 
 	UPROPERTY(EditDefaultsOnly, Category = "Widgets")
 		TSubclassOf<class UUserWidget> HudClass;
@@ -30,16 +35,29 @@ public:
 	void OnUnPossess() override;
 
 	AHeroCharacter* GetHeroCharacter() const;
-	void ShowHud(bool bMakeVisible);
+	void CreateHud();
+	void DestroyHud();
 
 	// Debug helpers
 	void LogMsgWithRole(FString message);
 	FString GetEnumText(ENetRole role);
 	FString GetRoleText();
-	void HealthDepleted(uint32 InstigatorHeroControllerId) const;
+	void DamageTaken(const FMRHitResult& Hit) const;
+	void SimulateHitGiven(const FMRHitResult& Hit);
+	
+	UFUNCTION(Client, Reliable)
+	void ClientRPC_PlayHit(const FMRHitResult& Hit);
 
-	DECLARE_EVENT_TwoParams(AHeroController, FHealthDepleted, uint32, uint32)
-	FHealthDepleted& OnHealthDepleted() { return HealthDepletedEvent; }
+	UPROPERTY(BlueprintAssignable, Category = "Event Dispatchers")
+		FPlayerSpawned OnPlayerSpawned;
+
+	//DECLARE_EVENT_TwoParams(AHeroController, FHealthDepleted, uint32, uint32)
+	//FHealthDepleted& OnHealthDepleted() { return HealthDepletedEvent; }
+
+	// receiverId, instigatorId, healthRemaining, damageTaken, isArmour
+	DECLARE_MULTICAST_DELEGATE_OneParam(FTakenDamage, FMRHitResult)
+	FTakenDamage& OnTakenDamage() { return TakenDamageEvent; }
+
 
 protected:
 	virtual void PreInitializeComponents() override;
@@ -50,8 +68,9 @@ protected:
 	virtual bool InputKey(FKey Key, EInputEvent EventType, float AmountDepressed, bool bGamepad) override;
 
 private:
-	
-	FHealthDepleted HealthDepletedEvent;
+
+	FTakenDamage TakenDamageEvent;
+	//FHealthDepleted HealthDepletedEvent;
 
 	/// Input
 	void Input_MoveUp(float Value);
