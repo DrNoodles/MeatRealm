@@ -7,6 +7,7 @@
 #include "Blueprint/UserWidget.h"
 #include "DeathmatchGameMode.h"
 #include "HeroCharacter.h" // TODO Make this a forward decl - Need to pull FMRHitResult out of the file
+#include "DamageNumber.h"
 
 #include "HeroController.generated.h"
 
@@ -26,6 +27,9 @@ public:
 
 	UPROPERTY(EditDefaultsOnly, Category = "Widgets")
 		TSubclassOf<class UUserWidget> HudClass;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Widgets")
+		TSubclassOf<class ADamageNumber> DamageNumberClass;
 
 	UUserWidget* HudInstance;
 	

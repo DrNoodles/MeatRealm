@@ -5,7 +5,7 @@
 #include "HeroCharacter.h"
 #include "MRLocalPlayer.h"
 #include "Engine/Public/DrawDebugHelpers.h"
-
+#include "Kismet/GameplayStatics.h"
 
 AHeroController::AHeroController()
 {
@@ -118,12 +118,34 @@ void AHeroController::SimulateHitGiven(const FMRHitResult& Hit)
 	auto World = GetWorld();
 	if (World)
 	{
-		DrawDebugString(World, 
-			Hit.HitLocation + FVector{ 0,0,100 },
+		/*DrawDebugString(World, 
+			Hit.HitLocation + FVector{ 0,0,0 },
 			FString::FromInt(Hit.DamageTaken), 
 			nullptr,
 			Hit.bHitArmour ? FColor::Blue : FColor::White,
-			0.5);
+			0.5);*/
+
+		if (DamageNumberClass == nullptr)
+		{
+			UE_LOG(LogTemp, Error, TEXT("HeroController: Must set DamageNumberClass in derived BP to display it."))
+			return;
+		}
+	
+		if (!HasAuthority()) // TODO Only do this on client!
+		{
+			const FVector Location = Hit.HitLocation;
+
+			auto DamageNumber = GetWorld()->SpawnActorDeferred<ADamageNumber>(
+				DamageNumberClass,
+				FTransform{ Location }, 
+				nullptr, nullptr, 
+				ESpawnActorCollisionHandlingMethod::AlwaysSpawn);
+
+			DamageNumber->SetDamage(Hit.DamageTaken);
+			DamageNumber->SetHitArmour(Hit.bHitArmour);
+
+			UGameplayStatics::FinishSpawningActor(DamageNumber, FTransform{ Location });
+		}
 	}
 }
 
