@@ -118,14 +118,13 @@ void AHeroController::SimulateHitGiven(const FMRHitResult& Hit)
 	auto World = GetWorld();
 	if (World)
 	{
-		DrawDebugString(World, 
+		/*DrawDebugString(World, 
 			Hit.HitLocation + FVector{ 0,0,0 },
 			FString::FromInt(Hit.DamageTaken), 
 			nullptr,
 			Hit.bHitArmour ? FColor::Blue : FColor::White,
-			0.5);
+			0.5);*/
 
-		
 		if (DamageNumberClass == nullptr)
 		{
 			UE_LOG(LogTemp, Error, TEXT("HeroController: Must set DamageNumberClass in derived BP to display it."))
@@ -138,6 +137,8 @@ void AHeroController::SimulateHitGiven(const FMRHitResult& Hit)
 				DamageNumberClass, 
 				FTransform{ Hit.HitLocation },
 				FActorSpawnParameters{});
+			DamageNumber->SetDamage(Hit.DamageTaken);
+			DamageNumber->SetHitArmour(Hit.bHitArmour);
 		}
 	}
 }

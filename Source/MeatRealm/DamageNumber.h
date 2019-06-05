@@ -16,11 +16,13 @@ class MEATREALM_API ADamageNumber : public AActor
 	
 public:	
 	ADamageNumber();
-
-protected:
-	//virtual void BeginPlay() override;
+	void SetDamage(int Damage) { this->Damage = Damage; }
+	void SetHitArmour(bool bHitArmour) { this->bHitArmour; }
 
 private:
 	UPROPERTY(VisibleAnywhere)
 	UWidgetComponent* WidgetComp = nullptr;
+
+	int Damage = 0;
+	bool bHitArmour = false;
 };
