@@ -122,7 +122,7 @@ void ADeathmatchGameState::AddKillfeedData(const FString& Victor, const FString&
 {
 	if (!HasAuthority()) return;
 
-	//LogMsgWithRole("ADeathmatchGameState::AddKillfeedData()");
+	LogMsgWithRole("ADeathmatchGameState::AddKillfeedData()");
 
 	UKillfeedEntryData* Entry = NewObject<UKillfeedEntryData>(this);
 	Entry->Winner = Victor;
@@ -145,11 +145,11 @@ void ADeathmatchGameState::AddKillfeedData(const FString& Victor, const FString&
 	}
 }
 
-void ADeathmatchGameState::OnRep_KillfeedDataChanged() const
+void ADeathmatchGameState::OnRep_KillfeedDataChanged()
 {
-	/*auto str = FString::Printf(
+	auto str = FString::Printf(
 	TEXT("ADeathmatchGameState::OnRep_KillfeedDataChanged() %d"), KillfeedData.Num());
-LogMsgWithRole(str);*/
+LogMsgWithRole(str);
 
 	OnKillfeedChanged.Broadcast();
 

@@ -48,8 +48,9 @@ public:
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, ReplicatedUsing=OnRep_KillfeedDataChanged)
 		TArray<UKillfeedEntryData*> KillfeedData;
+
 	UFUNCTION()
-		void OnRep_KillfeedDataChanged() const;
+		void OnRep_KillfeedDataChanged();
 
 private:
 	//bool IsClientControllingServerOwnedActor() const;
