@@ -97,12 +97,14 @@ void AHeroController::DestroyHud()
 }
 
 
-void AHeroController::DamageTaken(const FMRHitResult& Hit) const
+void AHeroController::DamageTaken(const FMRHitResult& Hit)
 {
 	// TODO Broadcast hit event here for BP to play a sound?
-
 	if (OnTakenDamage.IsBound())
 		OnTakenDamage.Broadcast(Hit);
+	
+	// Also play on client
+	ClientRPC_PlayDamageTaken(Hit);
 }
 
 void AHeroController::SimulateHitGiven(const FMRHitResult& Hit)
@@ -147,6 +149,12 @@ void AHeroController::SimulateHitGiven(const FMRHitResult& Hit)
 
 		UGameplayStatics::FinishSpawningActor(DamageNumber, FTransform{ Location });
 	}
+}
+
+void AHeroController::ClientRPC_PlayDamageTaken_Implementation(const FMRHitResult& Hit)
+{
+	if (OnTakenDamage.IsBound())
+		OnTakenDamage.Broadcast(Hit);
 }
 
 void AHeroController::ClientRPC_PlayHit_Implementation(const FMRHitResult& Hit)

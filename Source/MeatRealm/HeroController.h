@@ -47,11 +47,15 @@ public:
 	void LogMsgWithRole(FString message);
 	FString GetEnumText(ENetRole role);
 	FString GetRoleText();
-	void DamageTaken(const FMRHitResult& Hit) const;
+	void DamageTaken(const FMRHitResult& Hit);
 	void SimulateHitGiven(const FMRHitResult& Hit);
 	
 	UFUNCTION(Client, Reliable)
 	void ClientRPC_PlayHit(const FMRHitResult& Hit);
+
+	UFUNCTION(Client, Reliable)
+	void ClientRPC_PlayDamageTaken(const FMRHitResult& Hit);
+
 
 	UPROPERTY(BlueprintAssignable, Category = "Event Dispatchers")
 		FPlayerSpawned OnPlayerSpawned;
