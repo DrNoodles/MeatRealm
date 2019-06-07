@@ -25,12 +25,13 @@ public:
 	void Logout(AController* Exiting) override;
 	bool ShouldSpawnAtStartSpot(AController* Player) override;
 
+
+	void OnPlayerTakeDamage(FMRHitResult Hit);
 private:
 	TMap<uint32, AHeroController*> ConnectedHeroControllers;
 	TMap<uint32, FDelegateHandle> OnPlayerDieHandles;
 
-	UFUNCTION()
-	void OnPlayerTakeDamage(FMRHitResult Hit);
+	
 	bool EndGameIfFragLimitReached() const;
 	void AddKillfeedEntry(AHeroController* const Killer, AHeroController* const Dead);
 

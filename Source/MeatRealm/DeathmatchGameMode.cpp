@@ -42,7 +42,7 @@ void ADeathmatchGameMode::PostLogin(APlayerController* NewPlayer)
 	UE_LOG(LogTemp, Warning, TEXT("ConnectedHeroControllers: %d"), ConnectedHeroControllers.Num());
 
 	// Monitor for player death events
-	/*const FDelegateHandle Handle = */Hero->OnTakenDamage.AddDynamic(this, &ADeathmatchGameMode::OnPlayerTakeDamage);
+	///*const FDelegateHandle Handle = */Hero->OnTakenDamage.AddDynamic(this, &ADeathmatchGameMode::OnPlayerTakeDamage);
 	//OnPlayerDieHandles.Add(UID, Handle);
 }
 
@@ -54,7 +54,7 @@ void ADeathmatchGameMode::Logout(AController* Exiting)
 	ConnectedHeroControllers.Remove(Hero->GetUniqueID());
 	UE_LOG(LogTemp, Warning, TEXT("ConnectedHeroControllers: %d"), ConnectedHeroControllers.Num());
 
-	Hero->OnTakenDamage.RemoveDynamic(this, &ADeathmatchGameMode::OnPlayerTakeDamage);
+//Hero->OnTakenDamage.RemoveDynamic(this, &ADeathmatchGameMode::OnPlayerTakeDamage);
 	// Unbind event when player leaves!
 	//const uint32 UID = Hero->GetUniqueID();
 	//const auto Handle = OnPlayerDieHandles[UID];

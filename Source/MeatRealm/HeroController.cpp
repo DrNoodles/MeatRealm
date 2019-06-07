@@ -99,17 +99,31 @@ void AHeroController::DestroyHud()
 
 void AHeroController::TakeDamage(const FMRHitResult& Hit)
 {
+	// Encorce only callers with authority
 	if (!HasAuthority()) return;
+
 	LogMsgWithRole("AHeroController::TakeDamage");
 
-	if (OnTakenDamage.IsBound())
-		OnTakenDamage.Broadcast(Hit);
 
-	const bool bIsListenServer = GetNetMode() != NM_DedicatedServer;
-	if (!bIsListenServer)
+	// Update ame state
+	UWorld* World = GetWorld();
+	if (!World)
 	{
-		// We're a dedicated server, so call the event on the client too
+		//TODO Log error
+		return;
+	}
+	auto DM = Cast<ADeathmatchGameMode>(World->GetAuthGameMode()); 
+	if (DM) DM->OnPlayerTakeDamage(Hit);
+
+
+	// Do client side effects!
+	if (!IsLocalPlayerController())
+	{
 		ClientRPC_OnTakenDamage(Hit);
+	}
+	else
+	{
+		if (OnTakenDamage.IsBound()) OnTakenDamage.Broadcast(Hit);
 	}
 }
 
