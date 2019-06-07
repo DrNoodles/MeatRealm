@@ -7,6 +7,7 @@
 #include "Components/StaticMeshComponent.h"
 #include "DrawDebugHelpers.h"
 #include "UnrealNetwork.h"
+#include "Kismet/GameplayStatics.h"
 
 AWeapon::AWeapon()
 {
@@ -211,20 +212,23 @@ void AWeapon::Shoot()
 
 	// Spawn the projectile at the muzzle.
 
-	FActorSpawnParameters SpawnParams;
+	/*FActorSpawnParameters SpawnParams;
 	SpawnParams.Owner = GetOwner();
-	SpawnParams.Instigator = Instigator;
+	SpawnParams.Instigator = Instigator;*/
 	
-	AProjectile * Projectile = GetWorld()->SpawnActorAbsolute<AProjectile>(
+	AProjectile* Projectile = GetWorld()->SpawnActorDeferred<AProjectile>(
 		ProjectileClass,
-		MuzzleLocationComp->GetComponentTransform(), SpawnParams);
+		MuzzleLocationComp->GetComponentTransform(),
+		GetOwner(),
+		Instigator,
+		ESpawnActorCollisionHandlingMethod::AlwaysSpawn);
 
 	// Set the projectile velocity
 	if (Projectile == nullptr) return;
 
 	Projectile->SetHeroControllerId(HeroControllerId);
 
-	
+
 
 	// Perterb the shot direction by the hipfire spread.
 	const auto ShootDirection = MuzzleLocationComp->GetForwardVector();
@@ -233,6 +237,12 @@ void AWeapon::Shoot()
 	const float OffsetAngle = FMath::RandRange(-SpreadInRadians / 2, SpreadInRadians / 2);
 	const float OffsetHeadingAngle = ShootDirection.HeadingAngle() + OffsetAngle;
 	const FVector ShootDirectionWithSpread = FVector{ FMath::Cos(OffsetHeadingAngle), FMath::Sin(OffsetHeadingAngle), 0 };
+
+
+	UGameplayStatics::FinishSpawningActor(
+		Projectile, 
+		MuzzleLocationComp->GetComponentTransform());
+
 
 	// Take the shot!
 	Projectile->FireInDirection(ShootDirectionWithSpread);
