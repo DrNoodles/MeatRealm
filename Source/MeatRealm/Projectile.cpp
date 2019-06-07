@@ -15,7 +15,7 @@ AProjectile::AProjectile()
 	PrimaryActorTick.bCanEverTick = true;
 
 	SetReplicates(true);
-	//InitialLifeSpan = 10;
+	InitialLifeSpan = 5;
 
 	CollisionComp = CreateDefaultSubobject<USphereComponent>(TEXT("Collision"));
 	CollisionComp->InitSphereRadius(15.f);
