@@ -97,14 +97,20 @@ void AHeroController::DestroyHud()
 }
 
 
-void AHeroController::DamageTaken(const FMRHitResult& Hit)
+void AHeroController::TakeDamage(const FMRHitResult& Hit)
 {
-	// TODO Broadcast hit event here for BP to play a sound?
+	if (!HasAuthority()) return;
+	LogMsgWithRole("AHeroController::TakeDamage");
+
 	if (OnTakenDamage.IsBound())
 		OnTakenDamage.Broadcast(Hit);
-	
-	// Also play on client
-	ClientRPC_PlayDamageTaken(Hit);
+
+	const bool bIsListenServer = GetNetMode() != NM_DedicatedServer;
+	if (!bIsListenServer)
+	{
+		// We're a dedicated server, so call the event on the client too
+		ClientRPC_OnTakenDamage(Hit);
+	}
 }
 
 void AHeroController::SimulateHitGiven(const FMRHitResult& Hit)
@@ -154,7 +160,7 @@ void AHeroController::SimulateHitGiven(const FMRHitResult& Hit)
 		OnGivenDamage.Broadcast(Hit);
 }
 
-void AHeroController::ClientRPC_PlayDamageTaken_Implementation(const FMRHitResult& Hit)
+void AHeroController::ClientRPC_OnTakenDamage_Implementation(const FMRHitResult& Hit)
 {
 	if (OnTakenDamage.IsBound())
 		OnTakenDamage.Broadcast(Hit);
@@ -332,6 +338,8 @@ FString AHeroController::GetRoleText()
 {
 	auto Local = Role;
 	auto Remote = GetRemoteRole();
+
+	return GetEnumText(Role) + " " + GetEnumText(GetRemoteRole()) + " Ded:" + (IsRunningDedicatedServer() ? "True" : "False");
 
 
 	if (Remote == ROLE_SimulatedProxy) //&& Local == ROLE_Authority

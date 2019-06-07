@@ -510,7 +510,7 @@ void AHeroCharacter::ApplyDamage(uint32 InstigatorHeroControllerId, float Damage
 		Hit.HitLocation = Location;
 		//Hit.HitDirection
 
-		HC->DamageTaken(Hit);
+		HC->TakeDamage(Hit);
 	}
 	
 }

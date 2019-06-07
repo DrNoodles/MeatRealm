@@ -71,7 +71,9 @@ bool ADeathmatchGameMode::ShouldSpawnAtStartSpot(AController* Player)
 
 void ADeathmatchGameMode::OnPlayerTakeDamage(FMRHitResult Hit)
 {
-	//UE_LOG(LogTemp, Warning, TEXT("TakeDamage %d"), Hit.DamageTaken);
+	if (!HasAuthority()) return;
+
+	UE_LOG(LogTemp, Warning, TEXT("TakeDamage %d"), Hit.DamageTaken);
 
 	if (!ConnectedHeroControllers.Contains(Hit.ReceiverControllerId))
 	{
