@@ -52,7 +52,7 @@ public:
 		void OnRep_KillfeedDataChanged() const;
 
 private:
-	bool IsClientControllingServerOwnedActor() const;
+	//bool IsClientControllingServerOwnedActor() const;
 
 
 	TArray<FTimerHandle> Timers{};

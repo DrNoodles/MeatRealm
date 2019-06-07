@@ -112,7 +112,7 @@ void ADeathmatchGameState::FinishOldestTimer()
 	}
 	
 	// Make sure a listen server knows about this
-	if (IsClientControllingServerOwnedActor())
+	if (GetNetMode() != NM_DedicatedServer)
 	{
 		OnRep_KillfeedDataChanged();
 	}
@@ -138,8 +138,8 @@ void ADeathmatchGameState::AddKillfeedData(const FString& Victor, const FString&
 	StartARemoveTimer();
 	
 
-	// Make sure this is called on the authority in case it's a listen server
-	if (IsClientControllingServerOwnedActor())
+	// Make sure a listen server knows about this
+	if (GetNetMode() != NM_DedicatedServer)
 	{
 		OnRep_KillfeedDataChanged();
 	}
@@ -170,11 +170,11 @@ LogMsgWithRole(str);*/
 	}*/
 }
 
-bool ADeathmatchGameState::IsClientControllingServerOwnedActor() const
-{
-	return Role == ROLE_AutonomousProxy // Client on server
-		|| (HasAuthority() && !IsRunningDedicatedServer()); // listen server
-}
+//bool ADeathmatchGameState::IsClientControllingServerOwnedActor() const
+//{
+//	return Role == ROLE_AutonomousProxy // Client on server
+//		|| (HasAuthority() && !IsRunningDedicatedServer()); // listen server
+//}
 
 void ADeathmatchGameState::LogMsgWithRole(FString message) const
 {
