@@ -14,7 +14,7 @@ class AHeroController;
 
 
 // TODO Use something built in already?
-USTRUCT()
+USTRUCT(BlueprintType)
 struct MEATREALM_API FMRHitResult
 {
 	GENERATED_BODY()

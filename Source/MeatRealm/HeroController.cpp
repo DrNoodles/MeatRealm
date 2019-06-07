@@ -35,6 +35,7 @@ void AHeroController::AcknowledgePossession(APawn* P)
 	auto Char = GetHeroCharacter();
 	if (Char) Char->SetUseMouseAim(bShowMouseCursor);
 
+	//AudioListenerAttenuationComponent = Char->GetRootComponent();
 
 	if (IsLocalController() && !HudInstance) CreateHud();
 	
@@ -100,11 +101,13 @@ void AHeroController::DamageTaken(const FMRHitResult& Hit) const
 {
 	// TODO Broadcast hit event here for BP to play a sound?
 
-	TakenDamageEvent.Broadcast(Hit);
+	if (OnTakenDamage.IsBound())
+		OnTakenDamage.Broadcast(Hit);
 }
 
 void AHeroController::SimulateHitGiven(const FMRHitResult& Hit)
 {
+	// Only run on client
 	if (!IsLocalController())
 	{
 		//UE_LOG(LogTemp, Warning, TEXT("HitGiven() - NotLocal. Damage(%d)"), Hit.DamageTaken);
@@ -112,10 +115,10 @@ void AHeroController::SimulateHitGiven(const FMRHitResult& Hit)
 		return;
 	}
 
-	//UE_LOG(LogTemp, Warning, TEXT("HitGiven() - Local. Damage(%d)"), Hit.DamageTaken);
+	UE_LOG(LogTemp, Warning, TEXT("HitGiven() - Local. Damage(%d)"), Hit.DamageTaken);
 
 	// Display a hit marker in the world
-	auto World = GetWorld();
+	const auto World = GetWorld();
 	if (World)
 	{
 		/*DrawDebugString(World, 
@@ -131,21 +134,18 @@ void AHeroController::SimulateHitGiven(const FMRHitResult& Hit)
 			return;
 		}
 	
-		if (!HasAuthority()) // TODO Only do this on client!
-		{
-			const FVector Location = Hit.HitLocation;
+		const FVector Location = Hit.HitLocation;
 
-			auto DamageNumber = GetWorld()->SpawnActorDeferred<ADamageNumber>(
-				DamageNumberClass,
-				FTransform{ Location }, 
-				nullptr, nullptr, 
-				ESpawnActorCollisionHandlingMethod::AlwaysSpawn);
+		auto DamageNumber = GetWorld()->SpawnActorDeferred<ADamageNumber>(
+			DamageNumberClass,
+			FTransform{ Location }, 
+			nullptr, nullptr, 
+			ESpawnActorCollisionHandlingMethod::AlwaysSpawn);
 
-			DamageNumber->SetDamage(Hit.DamageTaken);
-			DamageNumber->SetHitArmour(Hit.bHitArmour);
+		DamageNumber->SetDamage(Hit.DamageTaken);
+		DamageNumber->SetHitArmour(Hit.bHitArmour);
 
-			UGameplayStatics::FinishSpawningActor(DamageNumber, FTransform{ Location });
-		}
+		UGameplayStatics::FinishSpawningActor(DamageNumber, FTransform{ Location });
 	}
 }
 

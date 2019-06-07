@@ -3,7 +3,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "GameFramework/GameStateBase.h"
+#include "GameFramework/GameState.h"
 #include "KillfeedEntryData.h"
 
 #include "DeathmatchGameState.generated.h"
@@ -15,7 +15,7 @@ class UKillfeedEntryData;
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FKillfeedChanged);
 
 UCLASS()
-class MEATREALM_API ADeathmatchGameState : public AGameStateBase
+class MEATREALM_API ADeathmatchGameState : public AGameState
 {
 	GENERATED_BODY()
 

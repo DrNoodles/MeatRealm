@@ -3,8 +3,8 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "GameFramework/GameModeBase.h"
-
+#include "GameFramework/GameMode.h"
+#include "HeroCharacter.h" // TODO Remove FMHitResult HeroChar from this file and kill off this ref
 #include "DeathmatchGameMode.generated.h"
 
 struct FMRHitResult;
@@ -14,7 +14,7 @@ class AHeroController;
 class AProjectile;
 
 UCLASS()
-class MEATREALM_API ADeathmatchGameMode : public AGameModeBase
+class MEATREALM_API ADeathmatchGameMode : public AGameMode
 {
 	GENERATED_BODY()
 
@@ -29,6 +29,7 @@ private:
 	TMap<uint32, AHeroController*> ConnectedHeroControllers;
 	TMap<uint32, FDelegateHandle> OnPlayerDieHandles;
 
+	UFUNCTION()
 	void OnPlayerTakeDamage(FMRHitResult Hit);
 	bool EndGameIfFragLimitReached() const;
 	void AddKillfeedEntry(AHeroController* const Killer, AHeroController* const Dead);
