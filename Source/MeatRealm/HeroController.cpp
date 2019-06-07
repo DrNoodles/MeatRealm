@@ -35,6 +35,7 @@ void AHeroController::AcknowledgePossession(APawn* P)
 	auto Char = GetHeroCharacter();
 	if (Char) Char->SetUseMouseAim(bShowMouseCursor);
 
+	//AudioListenerAttenuationComponent = Char->GetRootComponent();
 
 	if (IsLocalController() && !HudInstance) CreateHud();
 	

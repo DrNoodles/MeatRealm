@@ -118,7 +118,7 @@ void APickupBase::MakePickupAvailable(bool bIsAvailable)
 		CollisionComp->SetGenerateOverlapEvents(true);
 
 		// Announce availability
-		OnPickupSpawned.Broadcast();
+		OnSpawn.Broadcast();
 	}
 	else
 	{
@@ -128,8 +128,8 @@ void APickupBase::MakePickupAvailable(bool bIsAvailable)
 		// Hide visual
 		MeshComp->SetVisibility(false, true);
 
-		// TODO Announce taken
-		//OnTakenSpawned.Broadcast();
+		// Announce taken
+		OnTaken.Broadcast();
 	}
 }
 

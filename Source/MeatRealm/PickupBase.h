@@ -13,6 +13,7 @@ class UStaticMeshComponent;
 class UCapsuleComponent;
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FPickupSpawned);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE(FPickupTaken);
 
 UCLASS()
 class MEATREALM_API APickupBase : public AActor
@@ -42,7 +43,10 @@ protected:
 public:
 
 	UPROPERTY(BlueprintAssignable, Category = "Event Dispatchers")
-		FPickupSpawned OnPickupSpawned;
+		FPickupSpawned OnSpawn;
+
+	UPROPERTY(BlueprintAssignable, Category = "Event Dispatchers")
+		FPickupSpawned OnTaken;
 
 	// In Seconds
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
