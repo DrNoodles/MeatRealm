@@ -188,6 +188,11 @@ bool AWeapon::ServerRPC_Reload_Validate()
 	return true;
 }
 
+void AWeapon::MultiRPC_Fired_Implementation()
+{
+	if (OnShotFired.IsBound()) OnShotFired.Broadcast();
+}
+
 void AWeapon::Shoot()
 {
 	//LogMsgWithRole("Shoot");
@@ -233,6 +238,10 @@ void AWeapon::Shoot()
 	Projectile->FireInDirection(ShootDirectionWithSpread);
 
 	//UE_LOG(LogTemp, Warning, TEXT("Fired!"));
+
+	// Fire event on server
+	MultiRPC_Fired();
+	//if (OnShotFired.IsBound()) OnShotFired.Broadcast();
 }
 
 

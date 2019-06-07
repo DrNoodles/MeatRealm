@@ -13,6 +13,8 @@ class UArrowComponent;
 class USceneComponent;
 class UStaticMeshComponent;
 
+DECLARE_DYNAMIC_MULTICAST_DELEGATE(FShotFired);
+
 UCLASS()
 class MEATREALM_API AWeapon : public AActor
 {
@@ -66,6 +68,8 @@ public:
 	UPROPERTY(EditAnywhere)
 		int AmmoGivenPerPickup = 10;
 
+	UPROPERTY(BlueprintAssignable, Category = "Event Dispatchers")
+		FShotFired OnShotFired;
 
 	// Projectile class to spawn.
 	UPROPERTY(EditDefaultsOnly, Category = Weapon)
@@ -105,6 +109,9 @@ public:
 
 	UFUNCTION(Server, Reliable, WithValidation)
 		void RPC_Fire_OnServer();
+
+	UFUNCTION(NetMulticast, Reliable)
+		void MultiRPC_Fired();
 
 
 private:
