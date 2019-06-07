@@ -149,6 +149,9 @@ void AHeroController::SimulateHitGiven(const FMRHitResult& Hit)
 
 		UGameplayStatics::FinishSpawningActor(DamageNumber, FTransform{ Location });
 	}
+
+	if (OnGivenDamage.IsBound())
+		OnGivenDamage.Broadcast(Hit);
 }
 
 void AHeroController::ClientRPC_PlayDamageTaken_Implementation(const FMRHitResult& Hit)

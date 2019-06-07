@@ -15,6 +15,7 @@ class AHeroCharacter;
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FPlayerSpawned);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FTakenDamage, FMRHitResult, Hit);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FGivenDamage, FMRHitResult, Hit);
 
 UCLASS()
 class MEATREALM_API AHeroController : public APlayerController
@@ -56,7 +57,6 @@ public:
 	UFUNCTION(Client, Reliable)
 	void ClientRPC_PlayDamageTaken(const FMRHitResult& Hit);
 
-
 	UPROPERTY(BlueprintAssignable, Category = "Event Dispatchers")
 		FPlayerSpawned OnPlayerSpawned;
 
@@ -68,6 +68,9 @@ public:
 
 	UPROPERTY(BlueprintAssignable, Category = "Event Dispatchers")
 		FTakenDamage OnTakenDamage;
+
+	UPROPERTY(BlueprintAssignable, Category = "Event Dispatchers")
+		FTakenDamage OnGivenDamage;
 
 protected:
 	virtual void PreInitializeComponents() override;
