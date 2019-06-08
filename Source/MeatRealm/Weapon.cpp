@@ -206,25 +206,39 @@ void AWeapon::Shoot()
 		return;
 	};
 
-	UWorld * World = GetWorld();
-	if (World == nullptr) return;
+	for (int i = 0; i < ProjectilesPerShot; ++i)
+	{
+		if (!SpawnAProjectile())
+		{
+			UE_LOG(LogTemp, Error, TEXT("Failed to spawn projectile in Shoot()"));
+			return;
+		}
+	}
 
+
+	//UE_LOG(LogTemp, Warning, TEXT("Fired!"));
+
+	// Fire event on server
+	MultiRPC_Fired();
+	//if (OnShotFired.IsBound()) OnShotFired.Broadcast();
+}
+
+
+bool AWeapon::SpawnAProjectile()
+{
+	UWorld* World = GetWorld();
+	if (World == nullptr) { return false; }
 
 	// Spawn the projectile at the muzzle.
 
-	/*FActorSpawnParameters SpawnParams;
-	SpawnParams.Owner = GetOwner();
-	SpawnParams.Instigator = Instigator;*/
-	
-	AProjectile* Projectile = GetWorld()->SpawnActorDeferred<AProjectile>(
+	AProjectile* Projectile = World->SpawnActorDeferred<AProjectile>(
 		ProjectileClass,
 		MuzzleLocationComp->GetComponentTransform(),
 		GetOwner(),
 		Instigator,
 		ESpawnActorCollisionHandlingMethod::AlwaysSpawn);
 
-	// Set the projectile velocity
-	if (Projectile == nullptr) return;
+	if (Projectile == nullptr) { return false; }
 
 	Projectile->SetHeroControllerId(HeroControllerId);
 
@@ -240,18 +254,13 @@ void AWeapon::Shoot()
 
 
 	UGameplayStatics::FinishSpawningActor(
-		Projectile, 
+		Projectile,
 		MuzzleLocationComp->GetComponentTransform());
-
 
 	// Take the shot!
 	Projectile->FireInDirection(ShootDirectionWithSpread);
-
-	//UE_LOG(LogTemp, Warning, TEXT("Fired!"));
-
-	// Fire event on server
-	MultiRPC_Fired();
-	//if (OnShotFired.IsBound()) OnShotFired.Broadcast();
+	
+	return true;
 }
 
 
