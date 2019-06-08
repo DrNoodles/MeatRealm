@@ -199,59 +199,104 @@ void AWeapon::Shoot()
 	//LogMsgWithRole("Shoot");
 
 	if (!HasAuthority()) return;
-
 	if (ProjectileClass == nullptr)
 	{
 		UE_LOG(LogTemp, Error, TEXT("Set a Projectile Class in your Weapon Blueprint to shoot"));
 		return;
 	};
 
-	UWorld * World = GetWorld();
-	if (World == nullptr) return;
+	auto ShotPattern = CalcShotPattern();
+	for (auto Direction : ShotPattern)
+	{
+		if (!SpawnAProjectile(Direction))
+		{
+			UE_LOG(LogTemp, Error, TEXT("Failed to spawn projectile in Shoot()"));
+			return;
+		}
+	}
 
+	// Fire event on server
+	MultiRPC_Fired();
+}
+
+TArray<FVector> AWeapon::CalcShotPattern() const
+{
+	TArray<FVector> Shots;
+
+	const float BarrelAngle = MuzzleLocationComp->GetForwardVector().HeadingAngle();
+	const float SpreadInRadians = FMath::DegreesToRadians(HipfireSpread);
+
+	if (bEvenSpread && ProjectilesPerShot > 1)
+	{
+		// Shoot projectiles in an even fan with optional shot clumping.
+		for (int i = 0; i < ProjectilesPerShot; ++i)
+		{
+			// TODO factor spread clumping into the base angle and offset per projectile
+			// Currently the projectile will spawn out of range of the max spread.
+
+			const float BaseAngle = BarrelAngle - (SpreadInRadians / 2);
+			const float OffsetPerProjectile = SpreadInRadians / (ProjectilesPerShot - 1);
+			float OffsetHeadingAngle = BaseAngle + i * OffsetPerProjectile;
+			
+			// Optionally clump shots together within the fan for natural variance
+			if (bSpreadClumping)
+			{
+				OffsetHeadingAngle += FMath::RandRange(-OffsetPerProjectile / 2, OffsetPerProjectile / 2);
+			}
+		
+			const FVector ShootDirectionWithSpread = FVector{
+				FMath::Cos(OffsetHeadingAngle),
+				FMath::Sin(OffsetHeadingAngle), 0 };
+
+			Shots.Add(ShootDirectionWithSpread);
+		}
+	}
+	else
+	{
+		for (int i = 0; i < ProjectilesPerShot; ++i)
+		{
+			const float OffsetAngle = FMath::RandRange(-SpreadInRadians / 2, SpreadInRadians / 2);
+			const float OffsetHeadingAngle = BarrelAngle + OffsetAngle;
+			
+			const FVector ShootDirectionWithSpread = FVector{ 
+				FMath::Cos(OffsetHeadingAngle), 
+				FMath::Sin(OffsetHeadingAngle), 0 };
+
+			Shots.Add(ShootDirectionWithSpread);
+		}
+	}
+	
+
+	return Shots;
+}
+
+bool AWeapon::SpawnAProjectile(const FVector& Direction) const
+{
+	UWorld* World = GetWorld();
+	if (World == nullptr) { return false; }
 
 	// Spawn the projectile at the muzzle.
-
-	/*FActorSpawnParameters SpawnParams;
-	SpawnParams.Owner = GetOwner();
-	SpawnParams.Instigator = Instigator;*/
-	
-	AProjectile* Projectile = GetWorld()->SpawnActorDeferred<AProjectile>(
+	AProjectile* Projectile = World->SpawnActorDeferred<AProjectile>(
 		ProjectileClass,
 		MuzzleLocationComp->GetComponentTransform(),
 		GetOwner(),
 		Instigator,
 		ESpawnActorCollisionHandlingMethod::AlwaysSpawn);
+	if (Projectile == nullptr) { return false; }
 
-	// Set the projectile velocity
-	if (Projectile == nullptr) return;
 
+	// Configure it
 	Projectile->SetHeroControllerId(HeroControllerId);
 
 
-
-	// Perterb the shot direction by the hipfire spread.
-	const auto ShootDirection = MuzzleLocationComp->GetForwardVector();
-
-	const float SpreadInRadians = FMath::DegreesToRadians(HipfireSpread);
-	const float OffsetAngle = FMath::RandRange(-SpreadInRadians / 2, SpreadInRadians / 2);
-	const float OffsetHeadingAngle = ShootDirection.HeadingAngle() + OffsetAngle;
-	const FVector ShootDirectionWithSpread = FVector{ FMath::Cos(OffsetHeadingAngle), FMath::Sin(OffsetHeadingAngle), 0 };
-
-
+	// Fire it!
 	UGameplayStatics::FinishSpawningActor(
-		Projectile, 
+		Projectile,
 		MuzzleLocationComp->GetComponentTransform());
-
-
-	// Take the shot!
-	Projectile->FireInDirection(ShootDirectionWithSpread);
-
-	//UE_LOG(LogTemp, Warning, TEXT("Fired!"));
-
-	// Fire event on server
-	MultiRPC_Fired();
-	//if (OnShotFired.IsBound()) OnShotFired.Broadcast();
+	
+	Projectile->FireInDirection(Direction);
+	
+	return true;
 }
 
 

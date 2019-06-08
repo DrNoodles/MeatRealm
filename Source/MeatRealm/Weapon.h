@@ -52,31 +52,13 @@ public:
 		UArrowComponent* MuzzleLocationComp = nullptr;
 
 
-	UPROPERTY(BlueprintReadOnly, Category = Weapon, Replicated)
-		int AmmoInClip;
-
-	UPROPERTY(BlueprintReadOnly, Category = Weapon, Replicated)
-		int AmmoInPool;
-
-
-	UPROPERTY(EditAnywhere)
-		int ClipSize = 10;
-
-	UPROPERTY(EditAnywhere)
-		int AmmoPoolSize = 50;
-
-	UPROPERTY(EditAnywhere)
-		int AmmoGivenPerPickup = 10;
-
-	UPROPERTY(BlueprintAssignable, Category = "Event Dispatchers")
-		FShotFired OnShotFired;
 
 	// Projectile class to spawn.
 	UPROPERTY(EditDefaultsOnly, Category = Weapon)
 		TSubclassOf<class AProjectile> ProjectileClass;
 
-	UPROPERTY(EditAnywhere)
-		float ReloadTime = 3;
+
+	// Configure the gun
 
 	UPROPERTY(EditAnywhere)
 		float ShotsPerSecond = 1.0f;
@@ -84,19 +66,56 @@ public:
 	UPROPERTY(EditAnywhere)
 		bool bFullAuto = true;
 
+	UPROPERTY(EditAnywhere, BlueprintReadOnly)
+		float HipfireSpread = 20;
+
+	UPROPERTY(EditAnywhere)
+		int AmmoPoolSize = 50;
+
+	UPROPERTY(EditAnywhere)
+		int AmmoGivenPerPickup = 10;
+
 	UPROPERTY(EditAnywhere)
 		bool bUseClip = true;
 
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Replicated)
+	UPROPERTY(EditAnywhere, meta = (EditCondition = "bUseClip"))
+		int ClipSize = 10;
+
+	UPROPERTY(EditAnywhere, meta = (EditCondition = "bUseClip"))
+		float ReloadTime = 3;
+
+	// The number of projectiles fired per shot
+	UPROPERTY(EditAnywhere)
+		int ProjectilesPerShot = 1;
+
+	// When ProjectilesPerShot > 1 this ensures all projectiles are spread evenly across the HipfireSpread angle.
+	UPROPERTY(EditAnywhere)
+		bool bEvenSpread = true;
+
+	// This makes even spreading feel more natural by randomly clumping the shots within the even spread.
+	UPROPERTY(EditAnywhere, meta = (EditCondition = "bEvenSpread"))
+		bool bSpreadClumping = true;
+
+
+	// Gun status
+
+	UPROPERTY(BlueprintReadOnly, Replicated)
+		int AmmoInClip;
+
+	UPROPERTY(BlueprintReadOnly, Replicated)
+		int AmmoInPool;
+
+	UPROPERTY(BlueprintReadOnly, Replicated)
 	bool bIsReloading;
 
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
+	UPROPERTY(BlueprintReadOnly)
 	float ReloadProgress = 0.f;
 
-	UPROPERTY(EditAnywhere, BlueprintReadOnly)
-	float HipfireSpread = 20;
 
 
+
+	UPROPERTY(BlueprintAssignable, Category = "Event Dispatchers")
+		FShotFired OnShotFired;
 
 	UFUNCTION(Server, Reliable, WithValidation)
 		void ServerRPC_Reload();
@@ -117,6 +136,9 @@ public:
 private:
 	UFUNCTION()
 		void Shoot();
+
+	TArray<FVector> CalcShotPattern() const;
+	bool SpawnAProjectile(const FVector& Direction) const;
 
 	void ClientFireStart();
 	void ClientReloadStart();
