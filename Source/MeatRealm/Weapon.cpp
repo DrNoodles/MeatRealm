@@ -231,6 +231,9 @@ TArray<FVector> AWeapon::CalcShotPattern() const
 		// Shoot projectiles in an even fan with optional shot clumping.
 		for (int i = 0; i < ProjectilesPerShot; ++i)
 		{
+			// TODO factor spread clumping into the base angle and offset per projectile
+			// Currently the projectile will spawn out of range of the max spread.
+
 			const float BaseAngle = BarrelAngle - (SpreadInRadians / 2);
 			const float OffsetPerProjectile = SpreadInRadians / (ProjectilesPerShot - 1);
 			float OffsetHeadingAngle = BaseAngle + i * OffsetPerProjectile;
