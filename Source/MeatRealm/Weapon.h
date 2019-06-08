@@ -70,9 +70,6 @@ public:
 		float HipfireSpread = 20;
 
 	UPROPERTY(EditAnywhere)
-		int ProjectilesPerShot = 1;
-
-	UPROPERTY(EditAnywhere)
 		int AmmoPoolSize = 50;
 
 	UPROPERTY(EditAnywhere)
@@ -87,6 +84,17 @@ public:
 	UPROPERTY(EditAnywhere, meta = (EditCondition = "bUseClip"))
 		float ReloadTime = 3;
 
+	// The number of projectiles fired per shot
+	UPROPERTY(EditAnywhere)
+		int ProjectilesPerShot = 1;
+
+	// When ProjectilesPerShot > 1 this ensures all projectiles are spread evenly across the HipfireSpread angle.
+	UPROPERTY(EditAnywhere)
+		bool bEvenSpread = true;
+
+	// This makes even spreading feel more natural by randomly clumping the shots within the even spread.
+	UPROPERTY(EditAnywhere, meta = (EditCondition = "bEvenSpread"))
+		bool bSpreadClumping = true;
 
 
 	// Gun status
@@ -126,9 +134,11 @@ public:
 
 
 private:
-	bool SpawnAProjectile();
 	UFUNCTION()
 		void Shoot();
+
+	TArray<FVector> CalcShotPattern() const;
+	bool SpawnAProjectile(const FVector& Direction) const;
 
 	void ClientFireStart();
 	void ClientReloadStart();
