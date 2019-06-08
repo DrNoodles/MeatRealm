@@ -4,6 +4,42 @@
 #include "DeathmatchGameState.h"
 #include "HeroState.h"
 #include "ScoreboardEntryData.h"
+#include "UnrealNetwork.h"
+#include "Engine/ActorChannel.h"
+#include "Engine/World.h"
+#include "TimerManager.h"
+
+void ADeathmatchGameState::PostInitializeComponents()
+{
+	Super::PostInitializeComponents();
+
+	/*if (HasAuthority())
+	{
+		auto Entry = NewObject<UKillfeedEntryData>(this);
+		KillfeedData.Add(Entry);
+	}*/
+}
+
+void ADeathmatchGameState::GetLifetimeReplicatedProps(TArray< FLifetimeProperty >& OutLifetimeProps) const
+{
+	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
+	DOREPLIFETIME(ADeathmatchGameState, KillfeedData);
+}
+
+bool ADeathmatchGameState::ReplicateSubobjects(UActorChannel* Channel, FOutBunch* Bunch, FReplicationFlags* RepFlags)
+{
+	bool WroteSomething = Super::ReplicateSubobjects(Channel, Bunch, RepFlags);
+
+	for (auto* Item : KillfeedData)
+	{
+		if (Item != nullptr)
+		{
+			WroteSomething |= Channel->ReplicateSubobject(Item, *Bunch, *RepFlags);
+		}
+	}
+
+	return WroteSomething;
+}
 
 TArray<UScoreboardEntryData*> ADeathmatchGameState::GetScoreboard()
 {
@@ -11,6 +47,13 @@ TArray<UScoreboardEntryData*> ADeathmatchGameState::GetScoreboard()
 
 	for (APlayerState* PlayerState : PlayerArray)
 	{
+		if (PlayerState->bIsInactive)
+		{
+			UE_LOG(LogTemp, Warning, TEXT("Player %s is inactive and excluded from the scoreboard."),
+				*PlayerState->GetPlayerName());
+			continue; // Player has left the game? // TODO Check for spectators?
+		}
+
 		const auto Hero = (AHeroState*)PlayerState;
 
 		UScoreboardEntryData* Item = NewObject<UScoreboardEntryData>();
@@ -34,3 +77,146 @@ TArray<UScoreboardEntryData*> ADeathmatchGameState::GetScoreboard()
 
 	return std::move(Scoreboard);
 }
+
+void ADeathmatchGameState::StartARemoveTimer()
+{
+	// Create a timer
+	FTimerHandle Handle;
+
+	UWorld* World = GetWorld();
+	if (World)
+	{
+		World->GetTimerManager().SetTimer(
+			Handle, this, &ADeathmatchGameState::FinishOldestTimer, KillfeedItemDuration, false, -1);
+		
+		Timers.Add(Handle);
+	}
+}
+
+void ADeathmatchGameState::FinishOldestTimer()
+{
+	if (Timers.Num() == 0) 
+		UE_LOG(LogTemp, Error, TEXT("Attempted to move a timer but there aren't any!"));
+
+	if (KillfeedData.Num() == 0) 
+		UE_LOG(LogTemp, Error, TEXT("Attempted to move a timer but there aren't any!"));
+
+	auto FirstTimer = Timers[0];
+	Timers.RemoveAt(0);
+	KillfeedData.RemoveAt(0);
+
+	UWorld* World = GetWorld();
+	if (FirstTimer.IsValid() && World)
+	{
+		World->GetTimerManager().ClearTimer(FirstTimer);
+	}
+	
+	// Make sure a listen server knows about this
+	if (GetNetMode() != NM_DedicatedServer)
+	{
+		OnRep_KillfeedDataChanged();
+	}
+}
+
+void ADeathmatchGameState::AddKillfeedData(const FString& Victor, const FString& Verb, const FString& Dead)
+{
+	if (!HasAuthority()) return;
+
+	LogMsgWithRole("ADeathmatchGameState::AddKillfeedData()");
+
+	UKillfeedEntryData* Entry = NewObject<UKillfeedEntryData>(this);
+	Entry->Winner = Victor;
+	Entry->Verb = "killed";
+	Entry->Loser = Dead;
+	KillfeedData.Add(Entry);
+
+	if (KillfeedData.Num() > 4)
+	{
+		FinishOldestTimer();
+	}
+
+	StartARemoveTimer();
+	
+
+	// Make sure a listen server knows about this
+	if (GetNetMode() != NM_DedicatedServer)
+	{
+		OnRep_KillfeedDataChanged();
+	}
+}
+
+void ADeathmatchGameState::OnRep_KillfeedDataChanged()
+{
+	auto str = FString::Printf(
+	TEXT("ADeathmatchGameState::OnRep_KillfeedDataChanged() %d"), KillfeedData.Num());
+LogMsgWithRole(str);
+
+	OnKillfeedChanged.Broadcast();
+
+
+
+
+	/*UE_LOG(LogTemp, Warning, TEXT("KILLFEED"));
+	for (UKillfeedEntryData* entry : KillfeedData)
+	{
+		if (!entry)
+		{
+			UE_LOG(LogTemp, Warning, TEXT("  Entry is null"));
+			continue;
+		}
+
+		UE_LOG(LogTemp, Warning, TEXT("  Entry %d %s %s %s"), KillfeedData.Num(),
+			*entry->Winner, *entry->Verb, *entry->Loser);
+	}*/
+}
+
+//bool ADeathmatchGameState::IsClientControllingServerOwnedActor() const
+//{
+//	return Role == ROLE_AutonomousProxy // Client on server
+//		|| (HasAuthority() && !IsRunningDedicatedServer()); // listen server
+//}
+
+void ADeathmatchGameState::LogMsgWithRole(FString message) const
+{
+	FString m = GetRoleText() + ": " + message;
+	UE_LOG(LogTemp, Warning, TEXT("%s"), *m);
+}
+FString ADeathmatchGameState::GetEnumText(ENetRole role) const
+{
+	switch (role) {
+	case ROLE_None:
+		return "None";
+	case ROLE_SimulatedProxy:
+		return "Sim";
+	case ROLE_AutonomousProxy:
+		return "Auto";
+	case ROLE_Authority:
+		return "Auth";
+	case ROLE_MAX:
+		return "MAX (error?)";
+	default:
+		return "ERROR";
+	}
+}
+FString ADeathmatchGameState::GetRoleText() const
+{
+	auto Local = Role;
+	auto Remote = GetRemoteRole();
+
+
+	//if (Remote == ROLE_SimulatedProxy) //&& Local == ROLE_Authority
+	//	return "ListenServer";
+
+	//if (Local == ROLE_Authority)
+	//	return "Server";
+
+	//if (Local == ROLE_AutonomousProxy) // && Remote == ROLE_Authority
+	//	return "OwningClient";
+
+	//if (Local == ROLE_SimulatedProxy) // && Remote == ROLE_Authority
+	//	return "SimClient";
+
+	return GetEnumText(Role) + " " + GetEnumText(GetRemoteRole()) + " Ded:" + (IsRunningDedicatedServer() ? "True" : "False");
+
+}
+

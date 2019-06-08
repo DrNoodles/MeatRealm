@@ -15,7 +15,7 @@ AProjectile::AProjectile()
 	PrimaryActorTick.bCanEverTick = true;
 
 	SetReplicates(true);
-	//InitialLifeSpan = 10;
+	InitialLifeSpan = 5;
 
 	CollisionComp = CreateDefaultSubobject<USphereComponent>(TEXT("Collision"));
 	CollisionComp->InitSphereRadius(15.f);
@@ -60,6 +60,7 @@ void AProjectile::OnCompBeginOverlap(UPrimitiveComponent* OverlappedComp, AActor
 
 	// Ignore other projectiles
 	if (TheReceiver->IsA(AProjectile::StaticClass())) return;
+	if (TheReceiver->IsA(APickupBase::StaticClass())) return;
 
 	if (TheReceiver->GetClass()->ImplementsInterface(UAffectableInterface::StaticClass()))
 	{
@@ -72,7 +73,7 @@ void AProjectile::OnCompBeginOverlap(UPrimitiveComponent* OverlappedComp, AActor
 		{
 			UE_LOG(LogTemp, Error, TEXT("AffectableReceiver of damage is null!"));
 		}
-		AffectableReceiver->ApplyDamage(HeroControllerId, ShotDamage);
+		AffectableReceiver->ApplyDamage(HeroControllerId, ShotDamage, GetActorLocation());
 	}
 
 	Destroy();

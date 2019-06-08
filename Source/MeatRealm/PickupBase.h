@@ -12,6 +12,9 @@ class USceneComponent;
 class UStaticMeshComponent;
 class UCapsuleComponent;
 
+DECLARE_DYNAMIC_MULTICAST_DELEGATE(FPickupSpawned);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE(FPickupTaken);
+
 UCLASS()
 class MEATREALM_API APickupBase : public AActor
 {
@@ -38,6 +41,12 @@ protected:
 	void OnCompBeginOverlap(UPrimitiveComponent* OverlappedComp, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult);
 
 public:
+
+	UPROPERTY(BlueprintAssignable, Category = "Event Dispatchers")
+		FPickupSpawned OnSpawn;
+
+	UPROPERTY(BlueprintAssignable, Category = "Event Dispatchers")
+		FPickupSpawned OnTaken;
 
 	// In Seconds
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)

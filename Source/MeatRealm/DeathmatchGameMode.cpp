@@ -9,6 +9,7 @@
 #include "ScoreboardEntryData.h"
 #include "HeroController.h"
 #include "Projectile.h"
+#include "KillfeedEntryData.h"
 
 ADeathmatchGameMode::ADeathmatchGameMode()
 {
@@ -31,16 +32,18 @@ void ADeathmatchGameMode::PostLogin(APlayerController* NewPlayer)
 {
 	Super::PostLogin(NewPlayer);
 
-
 	const auto Hero = static_cast<AHeroController*>(NewPlayer);
+	
+	// TODO Use GameState->PlayerState->PlayerId 
+	// https://api.unrealengine.com/INT/API/Runtime/Engine/GameFramework/APlayerState/PlayerId/index.html
 	const uint32 UID = Hero->GetUniqueID();
 
-	ConnectedHeroControllers.Add(UID, Hero);
+	ConnectedHeroControllers.Add(UID, Hero); 
 	UE_LOG(LogTemp, Warning, TEXT("ConnectedHeroControllers: %d"), ConnectedHeroControllers.Num());
 
 	// Monitor for player death events
-	const FDelegateHandle Handle = Hero->OnHealthDepleted().AddUObject(this, &ADeathmatchGameMode::OnPlayerDie);
-	OnPlayerDieHandles.Add(UID, Handle);
+	///*const FDelegateHandle Handle = */Hero->OnTakenDamage.AddDynamic(this, &ADeathmatchGameMode::OnPlayerTakeDamage);
+	//OnPlayerDieHandles.Add(UID, Handle);
 }
 
 
@@ -51,10 +54,11 @@ void ADeathmatchGameMode::Logout(AController* Exiting)
 	ConnectedHeroControllers.Remove(Hero->GetUniqueID());
 	UE_LOG(LogTemp, Warning, TEXT("ConnectedHeroControllers: %d"), ConnectedHeroControllers.Num());
 
+//Hero->OnTakenDamage.RemoveDynamic(this, &ADeathmatchGameMode::OnPlayerTakeDamage);
 	// Unbind event when player leaves!
-	const uint32 UID = Hero->GetUniqueID();
-	const auto Handle = OnPlayerDieHandles[UID];
-	Hero->OnHealthDepleted().Remove(Handle);
+	//const uint32 UID = Hero->GetUniqueID();
+	//const auto Handle = OnPlayerDieHandles[UID];
+	/*Hero->OnTakenDamage().Remove(Handle);*/
 
 	Super::Logout(Exiting);
 }
@@ -65,41 +69,55 @@ bool ADeathmatchGameMode::ShouldSpawnAtStartSpot(AController* Player)
 	return false; // Always pick a random spawn
 }
 
-void ADeathmatchGameMode::OnPlayerDie(uint32 DeadControllerId, uint32 KillerControllerId)
+void ADeathmatchGameMode::OnPlayerTakeDamage(FMRHitResult Hit)
 {
-	if (!ConnectedHeroControllers.Contains(DeadControllerId))
+	if (!HasAuthority()) return;
+
+	UE_LOG(LogTemp, Warning, TEXT("TakeDamage %d"), Hit.DamageTaken);
+
+	if (!ConnectedHeroControllers.Contains(Hit.ReceiverControllerId))
 	{
-		UE_LOG(LogTemp, Error, TEXT("ADeathmatchGameMode::OnPlayerDie cant find dead controller!"));
+		UE_LOG(LogTemp, Error, TEXT("ADeathmatchGameMode::OnPlayerTakeDamage cant find receiver controller!"));
 		return;
 	}
-	if (!ConnectedHeroControllers.Contains(KillerControllerId))
+	if (!ConnectedHeroControllers.Contains(Hit.AttackerControllerId))
 	{
-		UE_LOG(LogTemp, Error, TEXT("ADeathmatchGameMode::OnPlayerDie cant find killer controller!"));
+		UE_LOG(LogTemp, Error, TEXT("ADeathmatchGameMode::OnPlayerTakeDamage cant find attacker controller!"));
 		return;
 	}
 
+	const auto AttackerController = ConnectedHeroControllers[Hit.AttackerControllerId];
+	// TODO Route hit location through OnPlayerTakeDamage. Probs time to introduce a hit struct!
+	
+	AttackerController->SimulateHitGiven(Hit);
 
-	// Award the killer a point
-	const auto KillerController = ConnectedHeroControllers[KillerControllerId];
-	if (KillerController) KillerController->GetPlayerState<AHeroState>()->Kills++;
 
-
-	// Award death point, kill then respawn character
-	const auto DeadController = ConnectedHeroControllers[DeadControllerId];
-	if (DeadController)
-	{
-		DeadController->GetPlayerState<AHeroState>()->Deaths++;
-
-		AHeroCharacter* DeadChar = DeadController->GetHeroCharacter();
-		if (DeadChar) DeadChar->Destroy();
-
-		RestartPlayer(DeadController);
-	}
+	const auto ReceivingController = ConnectedHeroControllers[Hit.ReceiverControllerId];
+	//ReceivingController->HitTaken(Hit);
 
 	
-	if (EndGameIfFragLimitReached()) return;
-}
 
+	if (Hit.HealthRemaining <= 0)
+	{
+		// Award the killer a point
+		if (AttackerController) AttackerController->GetPlayerState<AHeroState>()->Kills++;
+		
+		// Award death point, kill then respawn character
+		if (ReceivingController)
+		{
+			ReceivingController->GetPlayerState<AHeroState>()->Deaths++;
+
+			AHeroCharacter* DeadChar = ReceivingController->GetHeroCharacter();
+			if (DeadChar) DeadChar->Destroy();
+
+			RestartPlayer(ReceivingController);
+		}
+
+		AddKillfeedEntry(AttackerController, ReceivingController);
+
+		if (EndGameIfFragLimitReached()) return;
+	}
+}
 
 
 bool ADeathmatchGameMode::EndGameIfFragLimitReached() const
@@ -120,4 +138,18 @@ bool ADeathmatchGameMode::EndGameIfFragLimitReached() const
 	return false;
 }
 
+
+void ADeathmatchGameMode::AddKillfeedEntry(AHeroController* const Killer, AHeroController* const Dead)
+{
+	FString KillerName{}, DeadName{};
+
+	if (Killer) KillerName = Killer->PlayerState->GetPlayerName(); // will this crash if they've left?
+	if (Dead) DeadName = Dead->PlayerState->GetPlayerName();
+
+	auto*const GS = GetGameState<ADeathmatchGameState>();
+	if (GS)
+	{
+		GS->AddKillfeedData(KillerName, "killed", DeadName);
+	}
+}
 

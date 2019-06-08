@@ -12,34 +12,58 @@
 class AHeroState;
 class AHeroController;
 
+
+// TODO Use something built in already?
+USTRUCT(BlueprintType)
+struct MEATREALM_API FMRHitResult
+{
+	GENERATED_BODY()
+
+	UPROPERTY()
+		uint32 ReceiverControllerId;
+	UPROPERTY()
+		uint32 AttackerControllerId;
+	UPROPERTY()
+		int HealthRemaining;
+	UPROPERTY()
+		int DamageTaken;
+	UPROPERTY()
+		bool bHitArmour;
+	UPROPERTY()
+		FVector HitLocation;
+	UPROPERTY()
+		FVector HitDirection;
+};
+
+
 UCLASS()
 class MEATREALM_API AHeroCharacter : public ACharacter, public IAffectableInterface
 {
 	GENERATED_BODY()
 
-	/** Camera boom positioning the camera behind the character */
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Camera, meta = (AllowPrivateAccess = "true"))
-		class USpringArmComponent* CameraBoom;
-
-	/** Follow camera */
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Camera, meta = (AllowPrivateAccess = "true"))
-		class UCameraComponent* FollowCamera;
-	
-
 public:
+
+	UPROPERTY(EditAnywhere, Category = Camera)
+		bool bLeanCameraWithAim = true;
+
+	UPROPERTY(EditAnywhere, Category = Camera, meta = (EditCondition = "bLeanCameraWithAim"))
+		float LeanDistance = 300;
+
+	UPROPERTY(EditAnywhere, Category = Camera, meta = (EditCondition = "bLeanCameraWithAim"))
+		float LeanCushionRateGamepad = 2.5;
+
+	UPROPERTY(EditAnywhere, Category = Camera, meta = (EditCondition = "bLeanCameraWithAim"))
+		float LeanCushionRateMouse = 5;
+
+	UPROPERTY(EditAnywhere, Category = Camera, meta = (EditCondition = "bLeanCameraWithAim"))
+		int ClippingModeMouse = 1;
+
+	UPROPERTY(EditAnywhere, Category = Camera, meta = (EditCondition = "bLeanCameraWithAim"))
+		bool bUseExperimentalMouseTracking = false;
+
 
 	UPROPERTY(EditAnywhere)
 	float InteractableSearchDistance = 150.f; //cm
-
-	// Sets default values for this character's properties
-	AHeroCharacter();
-	void Restart() override;
-	void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
-
-
-	AHeroState* GetHeroState() const;
-	AHeroController* GetHeroController() const;
-
 
 	// Projectile class to spawn.
 	UPROPERTY(EditDefaultsOnly, Category = Weapon)
@@ -65,8 +89,10 @@ public:
 	UPROPERTY(BlueprintReadWrite, EditAnywhere)
 		float MaxArmour = 100.f;
 
+
+
 	UFUNCTION()
-	virtual void ApplyDamage(uint32 InstigatorHeroControllerId, float Damage) override;
+	virtual void ApplyDamage(uint32 InstigatorHeroControllerId, float Damage, FVector Location) override;
 	UFUNCTION()
 	virtual bool TryGiveHealth(float Hp) override;
 	UFUNCTION()
@@ -75,6 +101,18 @@ public:
 	virtual bool TryGiveArmour(float Delta) override;
 	UFUNCTION()
 	virtual bool TryGiveWeapon(const TSubclassOf<AWeapon>& Class) override;
+
+
+
+	// Sets default values for this character's properties
+	AHeroCharacter();
+	void Restart() override;
+	void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
+
+
+	AHeroState* GetHeroState() const;
+	AHeroController* GetHeroController() const;
+
 
 
 	/// Components
@@ -86,6 +124,9 @@ public:
 
 	UPROPERTY(BlueprintReadOnly, Replicated)
 		AWeapon* CurrentWeapon = nullptr;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
+		UStaticMeshComponent* AimPosComp = nullptr;
 
 
 	/// Input
@@ -103,26 +144,50 @@ public:
 
 
 protected:
+	static FVector2D GetGameViewportSize();
+	static FVector2D CalcLinearLeanVectorUnclipped(const FVector2D& CursorLoc, const FVector2D& ViewportSize);
+	void MoveCameraByOffsetVector(const FVector2D& Vector2D, float DeltaSeconds) const;
+	bool IsClientControllingServerOwnedActor();
 	virtual void Tick(float DeltaSeconds) override;
+	FVector2D TrackCameraWithAimMouse() const;
+	FVector2D TrackCameraWithAimGamepad() const;
+	void ExperimentalMouseAimTracking(float DT);
 
 
 private:
+
+	/** Camera boom positioning the camera behind the character */
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Camera, meta = (AllowPrivateAccess = "true"))
+		class USpringArmComponent* CameraBoom;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Camera, meta = (AllowPrivateAccess = "true"))
+		class USceneComponent* FollowCameraOffsetComp;
+
+	/** Follow camera */
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Camera, meta = (AllowPrivateAccess = "true"))
+		class UCameraComponent* FollowCamera;
+
 	bool bUseMouseAim = true;
 	float AxisMoveUp;
 	float AxisMoveRight;
 	float AxisFaceUp;
 	float AxisFaceRight;
 
-	template<class T>
-	T* ScanForInteractable();
 
 	UFUNCTION(Server, Reliable, WithValidation)
 		void ServerRPC_TryInteract();
 
+	template<class T>
+	T* ScanForInteractable();
 	FHitResult GetFirstPhysicsBodyInReach() const;
 	void GetReachLine(FVector& outStart, FVector& outEnd) const;
 
 	void LogMsgWithRole(FString message) const;
 	FString GetEnumText(ENetRole role) const;
 	FString GetRoleText() const;
+
+	FVector2D AimPos_ScreenSpace = FVector2D::ZeroVector;
+	FVector AimPos_WorldSpace = FVector::ZeroVector;
 };
+
+
