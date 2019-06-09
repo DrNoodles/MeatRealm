@@ -19,7 +19,14 @@ AProjectile::AProjectile()
 
 	CollisionComp = CreateDefaultSubobject<USphereComponent>(TEXT("Collision"));
 	CollisionComp->InitSphereRadius(15.f);
+	CollisionComp->OnComponentHit.AddDynamic(this, &AProjectile::OnCompHit);
 	CollisionComp->OnComponentBeginOverlap.AddDynamic(this, &AProjectile::OnCompBeginOverlap);
+
+	CollisionComp->SetCollisionEnabled(ECollisionEnabled::QueryOnly);
+	CollisionComp->SetCollisionObjectType(ECollisionChannel::ECC_WorldDynamic);
+	CollisionComp->SetCollisionResponseToAllChannels(ECollisionResponse::ECR_Block);
+	CollisionComp->SetCollisionResponseToChannel(ECollisionChannel::ECC_Pawn, ECollisionResponse::ECR_Overlap);
+
 	RootComponent = CollisionComp;
 
 	MeshComp = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("Mesh"));
@@ -45,11 +52,28 @@ void AProjectile::FireInDirection(const FVector& ShootDirection)
 	ProjectileMovementComp->Velocity	= ShootDirection * ProjectileMovementComp->InitialSpeed;
 }
 
+void AProjectile::OnCompHit(UPrimitiveComponent* HitComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp,
+	FVector NormalImpulse, const FHitResult& Hit)
+{
+	UE_LOG(LogTemp, Warning, TEXT("AProjectile::OnCompHit()"));
+
+	if (!HasAuthority()) return;
+
+	// If we hit a physics body, nudge it!
+	if (OtherComp && OtherComp->IsSimulatingPhysics())
+	{
+		const float ImpulseFactor = 10; // TODO Expose as EditAnywhere
+		OtherComp->AddImpulseAtLocation(ImpulseFactor * GetVelocity(), GetActorLocation());
+	}
+
+	Destroy();
+}
+
 
 void AProjectile::OnCompBeginOverlap(UPrimitiveComponent* OverlappedComp, AActor* OtherActor,
 	UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult)
 {
-	//	UE_LOG(LogTemp, Warning, TEXT("BeginOverlap... "));
+	UE_LOG(LogTemp, Warning, TEXT("AProjectile::OnCompBeginOverlap()"));
 
 	if (!HasAuthority()) return;
 
