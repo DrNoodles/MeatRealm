@@ -21,11 +21,7 @@ AProjectile::AProjectile()
 	CollisionComp->InitSphereRadius(15.f);
 	CollisionComp->OnComponentHit.AddDynamic(this, &AProjectile::OnCompHit);
 	CollisionComp->OnComponentBeginOverlap.AddDynamic(this, &AProjectile::OnCompBeginOverlap);
-
-	CollisionComp->SetCollisionEnabled(ECollisionEnabled::QueryOnly);
-	CollisionComp->SetCollisionObjectType(ECollisionChannel::ECC_WorldDynamic);
-	CollisionComp->SetCollisionResponseToAllChannels(ECollisionResponse::ECR_Block);
-	CollisionComp->SetCollisionResponseToChannel(ECollisionChannel::ECC_Pawn, ECollisionResponse::ECR_Overlap);
+	CollisionComp->SetCollisionProfileName(FName("Projectile"));
 
 	RootComponent = CollisionComp;
 
@@ -55,9 +51,19 @@ void AProjectile::FireInDirection(const FVector& ShootDirection)
 void AProjectile::OnCompHit(UPrimitiveComponent* HitComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp,
 	FVector NormalImpulse, const FHitResult& Hit)
 {
-	UE_LOG(LogTemp, Warning, TEXT("AProjectile::OnCompHit()"));
+	if (!HasAuthority()) { return; }
+	
+	//UE_LOG(LogTemp, Warning, TEXT("AProjectile::OnCompHit()"));
 
-	if (!HasAuthority()) return;
+	// Ignore certain thangs - TODO Use channels tho wholesale solve this problem
+	const auto TheReceiver = OtherActor;
+	if (TheReceiver->IsA(AProjectile::StaticClass()) ||
+		TheReceiver->IsA(APickupBase::StaticClass()))
+	{
+		UE_LOG(LogTemp, Warning, TEXT("AProjectile::OnCompHit() - WASTED HIT, OPTIMISE ME OUT WITH CHANNEL"));
+		return;
+	}
+
 
 	// If we hit a physics body, nudge it!
 	if (OtherComp && OtherComp->IsSimulatingPhysics())
@@ -73,23 +79,28 @@ void AProjectile::OnCompHit(UPrimitiveComponent* HitComponent, AActor* OtherActo
 void AProjectile::OnCompBeginOverlap(UPrimitiveComponent* OverlappedComp, AActor* OtherActor,
 	UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult)
 {
-	UE_LOG(LogTemp, Warning, TEXT("AProjectile::OnCompBeginOverlap()"));
+	//UE_LOG(LogTemp, Warning, TEXT("AProjectile::OnCompBeginOverlap()"));
 
 	if (!HasAuthority()) return;
 
 	const auto TheReceiver = OtherActor;
 
-	const auto IsNotWorthChecking = TheReceiver == nullptr || TheReceiver == this || OtherComp == nullptr;
+	const auto IsNotWorthChecking = TheReceiver == nullptr || TheReceiver == Instigator || TheReceiver == this || OtherComp == nullptr;
 	if (IsNotWorthChecking) return;
 
-	// Ignore other projectiles
-	if (TheReceiver->IsA(AProjectile::StaticClass())) return;
-	if (TheReceiver->IsA(APickupBase::StaticClass())) return;
+	//UE_LOG(LogTemp, Warning, TEXT("AProjectile::OnCompBeginOverlap() 2"));
+
+	// Ignore dynamic objects that aren't a pawn
+	if (TheReceiver->IsA(AProjectile::StaticClass()) ||
+		TheReceiver->IsA(APickupBase::StaticClass()))
+	{
+		UE_LOG(LogTemp, Warning, TEXT("AProjectile::OnCompHit() - WASTED HIT, OPTIMISE ME OUT WITH CHANNEL"));
+		return;
+	}
 
 	if (TheReceiver->GetClass()->ImplementsInterface(UAffectableInterface::StaticClass()))
 	{
-		// Dont shoot myself
-		if (TheReceiver == Instigator) return;
+		//UE_LOG(LogTemp, Warning, TEXT("AProjectile::OnCompBeginOverlap() 3"));
 
 		// Apply damage
 		auto AffectableReceiver = Cast<IAffectableInterface>(TheReceiver);
@@ -97,7 +108,10 @@ void AProjectile::OnCompBeginOverlap(UPrimitiveComponent* OverlappedComp, AActor
 		{
 			UE_LOG(LogTemp, Error, TEXT("AffectableReceiver of damage is null!"));
 		}
-		AffectableReceiver->ApplyDamage(HeroControllerId, ShotDamage, GetActorLocation());
+		
+		if (AffectableReceiver) {
+			AffectableReceiver->ApplyDamage(HeroControllerId, ShotDamage, GetActorLocation());
+		}
 	}
 
 	Destroy();
