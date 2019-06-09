@@ -60,7 +60,10 @@ void AProjectile::OnCompHit(UPrimitiveComponent* HitComponent, AActor* OtherActo
 	if (TheReceiver->IsA(AProjectile::StaticClass()) ||
 		TheReceiver->IsA(APickupBase::StaticClass()))
 	{
-		UE_LOG(LogTemp, Warning, TEXT("AProjectile::OnCompHit() - WASTED HIT, OPTIMISE ME OUT WITH CHANNEL"));
+		UE_LOG(LogTemp, Error, TEXT("AProjectile::OnCompHit() - WASTED HIT, OPTIMISE ME OUT WITH CHANNEL"));
+
+		Destroy();
+
 		return;
 	}
 
@@ -86,33 +89,21 @@ void AProjectile::OnCompBeginOverlap(UPrimitiveComponent* OverlappedComp, AActor
 	const auto TheReceiver = OtherActor;
 
 	const auto IsNotWorthChecking = TheReceiver == nullptr || TheReceiver == Instigator || TheReceiver == this || OtherComp == nullptr;
-	if (IsNotWorthChecking) return;
-
-	//UE_LOG(LogTemp, Warning, TEXT("AProjectile::OnCompBeginOverlap() 2"));
-
-	// Ignore dynamic objects that aren't a pawn
-	if (TheReceiver->IsA(AProjectile::StaticClass()) ||
-		TheReceiver->IsA(APickupBase::StaticClass()))
+	if (IsNotWorthChecking)
 	{
-		UE_LOG(LogTemp, Warning, TEXT("AProjectile::OnCompHit() - WASTED HIT, OPTIMISE ME OUT WITH CHANNEL"));
 		return;
 	}
 
-	if (TheReceiver->GetClass()->ImplementsInterface(UAffectableInterface::StaticClass()))
+	auto AffectableReceiver = Cast<IAffectableInterface>(TheReceiver);
+	if (AffectableReceiver == nullptr)
 	{
-		//UE_LOG(LogTemp, Warning, TEXT("AProjectile::OnCompBeginOverlap() 3"));
-
-		// Apply damage
-		auto AffectableReceiver = Cast<IAffectableInterface>(TheReceiver);
-		if (AffectableReceiver == nullptr)
-		{
-			UE_LOG(LogTemp, Error, TEXT("AffectableReceiver of damage is null!"));
-		}
-		
-		if (AffectableReceiver) {
-			AffectableReceiver->ApplyDamage(HeroControllerId, ShotDamage, GetActorLocation());
-		}
+		UE_LOG(LogTemp, Error, TEXT("AProjectile::OnCompBeginOverlap is overlapping with unsupported type! Optimise me!"));
 	}
-
+	else
+	{
+		// Apply damage
+		AffectableReceiver->ApplyDamage(HeroControllerId, ShotDamage, GetActorLocation());
+	}
+	
 	Destroy();
 }
