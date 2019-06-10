@@ -56,9 +56,7 @@ void AProjectile::OnCompHit(UPrimitiveComponent* HitComponent, AActor* OtherActo
 	//UE_LOG(LogTemp, Warning, TEXT("AProjectile::OnCompHit()"));
 
 	// Ignore certain thangs - TODO Use channels tho wholesale solve this problem
-	const auto TheReceiver = OtherActor;
-	if (TheReceiver->IsA(AProjectile::StaticClass()) ||
-		TheReceiver->IsA(APickupBase::StaticClass()))
+	if (OtherActor && (OtherActor->IsA(AProjectile::StaticClass()) || OtherActor->IsA(APickupBase::StaticClass())))
 	{
 		UE_LOG(LogTemp, Error, TEXT("AProjectile::OnCompHit() - WASTED HIT, OPTIMISE ME OUT WITH CHANNEL"));
 
