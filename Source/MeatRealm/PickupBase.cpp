@@ -20,6 +20,7 @@ APickupBase::APickupBase()
 	CollisionComp = CreateDefaultSubobject<UCapsuleComponent>(TEXT("CollisionComp"));
 	CollisionComp->InitCapsuleSize(50, 100);
 	CollisionComp->OnComponentBeginOverlap.AddDynamic(this, &APickupBase::OnCompBeginOverlap);
+	CollisionComp->SetCollisionProfileName(FName("Pickup"));
 	RootComponent = CollisionComp;
 
 	MeshComp = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("Mesh"));
