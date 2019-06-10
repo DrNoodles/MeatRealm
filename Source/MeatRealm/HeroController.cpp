@@ -102,7 +102,7 @@ void AHeroController::TakeDamage(const FMRHitResult& Hit)
 	// Encorce only callers with authority
 	if (!HasAuthority()) return;
 
-	LogMsgWithRole("AHeroController::TakeDamage");
+	//LogMsgWithRole("AHeroController::TakeDamage");
 
 
 	// Update ame state
@@ -137,7 +137,7 @@ void AHeroController::SimulateHitGiven(const FMRHitResult& Hit)
 		return;
 	}
 
-	UE_LOG(LogTemp, Warning, TEXT("HitGiven() - Local. Damage(%d)"), Hit.DamageTaken);
+	//UE_LOG(LogTemp, Warning, TEXT("HitGiven() - Local. Damage(%d)"), Hit.DamageTaken);
 
 	// Display a hit marker in the world
 	const auto World = GetWorld();
@@ -221,7 +221,6 @@ void AHeroController::BeginPlay()
 	const auto LP = GetLocalPlayer();
 	if (LP && IsLocalController())
 	{
-		//LogMsgWithRole("LP Get");
 		LP->AspectRatioAxisConstraint = EAspectRatioAxisConstraint::AspectRatio_MaintainYFOV;
 	}
 }
