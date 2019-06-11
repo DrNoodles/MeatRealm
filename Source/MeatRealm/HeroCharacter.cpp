@@ -170,7 +170,7 @@ bool AHeroCharacter::IsClientControllingServerOwnedActor()
 void AHeroCharacter::Tick(float DeltaSeconds)
 {
 	const auto HeroCont = GetHeroController();
-	if (HeroCont == nullptr || !IsClientControllingServerOwnedActor()) return;
+	if (HeroCont == nullptr || !IsClientControllingServerOwnedActor()) return; // TODO Kill IsClientControl...() and replace with GetNetRole() == NM_DedicatedServer ??
 
 
 
@@ -621,7 +621,7 @@ FHitResult AHeroCharacter::GetFirstPhysicsBodyInReach() const
 		OUT hitResult,
 		traceStart,
 		traceEnd,
-		FCollisionObjectQueryParams{ ECollisionChannel::ECC_WorldDynamic },//TODO Make a custom channel for interactables!
+		FCollisionObjectQueryParams{ ECollisionChannel::ECC_GameTraceChannel2 },
 		FCollisionQueryParams{ FName(""), false, GetOwner() }
 	);
 

@@ -53,9 +53,6 @@ public:
 		void OnRep_KillfeedDataChanged();
 
 private:
-	//bool IsClientControllingServerOwnedActor() const;
-
-
 	TArray<FTimerHandle> Timers{};
 
 	void LogMsgWithRole(FString message) const;
