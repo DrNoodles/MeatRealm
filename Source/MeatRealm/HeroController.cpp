@@ -35,6 +35,7 @@ void AHeroController::AcknowledgePossession(APawn* P)
 	auto Char = GetHeroCharacter();
 	if (Char) Char->SetUseMouseAim(bShowMouseCursor);
 
+	//AudioListenerAttenuationComponent = Char->GetRootComponent();
 
 	if (IsLocalController() && !HudInstance) CreateHud();
 	
@@ -96,15 +97,39 @@ void AHeroController::DestroyHud()
 }
 
 
-void AHeroController::DamageTaken(const FMRHitResult& Hit) const
+void AHeroController::TakeDamage(const FMRHitResult& Hit)
 {
-	// TODO Broadcast hit event here for BP to play a sound?
+	// Encorce only callers with authority
+	if (!HasAuthority()) return;
 
-	TakenDamageEvent.Broadcast(Hit);
+	//LogMsgWithRole("AHeroController::TakeDamage");
+
+
+	// Update ame state
+	UWorld* World = GetWorld();
+	if (!World)
+	{
+		//TODO Log error
+		return;
+	}
+	auto DM = Cast<ADeathmatchGameMode>(World->GetAuthGameMode()); 
+	if (DM) DM->OnPlayerTakeDamage(Hit);
+
+
+	// Do client side effects!
+	if (!IsLocalPlayerController())
+	{
+		ClientRPC_OnTakenDamage(Hit);
+	}
+	else
+	{
+		if (OnTakenDamage.IsBound()) OnTakenDamage.Broadcast(Hit);
+	}
 }
 
 void AHeroController::SimulateHitGiven(const FMRHitResult& Hit)
 {
+	// Only run on client
 	if (!IsLocalController())
 	{
 		//UE_LOG(LogTemp, Warning, TEXT("HitGiven() - NotLocal. Damage(%d)"), Hit.DamageTaken);
@@ -115,7 +140,7 @@ void AHeroController::SimulateHitGiven(const FMRHitResult& Hit)
 	//UE_LOG(LogTemp, Warning, TEXT("HitGiven() - Local. Damage(%d)"), Hit.DamageTaken);
 
 	// Display a hit marker in the world
-	auto World = GetWorld();
+	const auto World = GetWorld();
 	if (World)
 	{
 		/*DrawDebugString(World, 
@@ -131,22 +156,28 @@ void AHeroController::SimulateHitGiven(const FMRHitResult& Hit)
 			return;
 		}
 	
-		if (!HasAuthority()) // TODO Only do this on client!
-		{
-			const FVector Location = Hit.HitLocation;
+		const FVector Location = Hit.HitLocation;
 
-			auto DamageNumber = GetWorld()->SpawnActorDeferred<ADamageNumber>(
-				DamageNumberClass,
-				FTransform{ Location }, 
-				nullptr, nullptr, 
-				ESpawnActorCollisionHandlingMethod::AlwaysSpawn);
+		auto DamageNumber = GetWorld()->SpawnActorDeferred<ADamageNumber>(
+			DamageNumberClass,
+			FTransform{ Location }, 
+			nullptr, nullptr, 
+			ESpawnActorCollisionHandlingMethod::AlwaysSpawn);
 
-			DamageNumber->SetDamage(Hit.DamageTaken);
-			DamageNumber->SetHitArmour(Hit.bHitArmour);
+		DamageNumber->SetDamage(Hit.DamageTaken);
+		DamageNumber->SetHitArmour(Hit.bHitArmour);
 
-			UGameplayStatics::FinishSpawningActor(DamageNumber, FTransform{ Location });
-		}
+		UGameplayStatics::FinishSpawningActor(DamageNumber, FTransform{ Location });
 	}
+
+	if (OnGivenDamage.IsBound())
+		OnGivenDamage.Broadcast(Hit);
+}
+
+void AHeroController::ClientRPC_OnTakenDamage_Implementation(const FMRHitResult& Hit)
+{
+	if (OnTakenDamage.IsBound())
+		OnTakenDamage.Broadcast(Hit);
 }
 
 void AHeroController::ClientRPC_PlayHit_Implementation(const FMRHitResult& Hit)
@@ -190,7 +221,6 @@ void AHeroController::BeginPlay()
 	const auto LP = GetLocalPlayer();
 	if (LP && IsLocalController())
 	{
-		//LogMsgWithRole("LP Get");
 		LP->AspectRatioAxisConstraint = EAspectRatioAxisConstraint::AspectRatio_MaintainYFOV;
 	}
 }
@@ -321,6 +351,8 @@ FString AHeroController::GetRoleText()
 {
 	auto Local = Role;
 	auto Remote = GetRemoteRole();
+
+	return GetEnumText(Role) + " " + GetEnumText(GetRemoteRole()) + " Ded:" + (IsRunningDedicatedServer() ? "True" : "False");
 
 
 	if (Remote == ROLE_SimulatedProxy) //&& Local == ROLE_Authority

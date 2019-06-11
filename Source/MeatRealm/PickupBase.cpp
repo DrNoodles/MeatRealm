@@ -20,6 +20,7 @@ APickupBase::APickupBase()
 	CollisionComp = CreateDefaultSubobject<UCapsuleComponent>(TEXT("CollisionComp"));
 	CollisionComp->InitCapsuleSize(50, 100);
 	CollisionComp->OnComponentBeginOverlap.AddDynamic(this, &APickupBase::OnCompBeginOverlap);
+	CollisionComp->SetCollisionProfileName(FName("Pickup"));
 	RootComponent = CollisionComp;
 
 	MeshComp = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("Mesh"));
@@ -90,7 +91,6 @@ void APickupBase::ServerRPC_PickupItem_Implementation()
 	MakePickupAvailable(false); // simulate on server
 	IsAvailable = false; // replicates to clients
 
-
 	// Start respawn timer
 	GetWorld()->GetTimerManager().SetTimer(
 		RespawnTimerHandle, this, &APickupBase::Respawn, RespawnDelay, false, -1);
@@ -117,6 +117,9 @@ void APickupBase::MakePickupAvailable(bool bIsAvailable)
 	
 		// Enable Overlap
 		CollisionComp->SetGenerateOverlapEvents(true);
+
+		// Announce availability
+		OnSpawn.Broadcast();
 	}
 	else
 	{
@@ -125,6 +128,9 @@ void APickupBase::MakePickupAvailable(bool bIsAvailable)
 
 		// Hide visual
 		MeshComp->SetVisibility(false, true);
+
+		// Announce taken
+		OnTaken.Broadcast();
 	}
 }
 

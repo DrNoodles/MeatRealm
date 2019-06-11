@@ -47,6 +47,13 @@ TArray<UScoreboardEntryData*> ADeathmatchGameState::GetScoreboard()
 
 	for (APlayerState* PlayerState : PlayerArray)
 	{
+		if (PlayerState->bIsInactive)
+		{
+			UE_LOG(LogTemp, Warning, TEXT("Player %s is inactive and excluded from the scoreboard."),
+				*PlayerState->GetPlayerName());
+			continue; // Player has left the game? // TODO Check for spectators?
+		}
+
 		const auto Hero = (AHeroState*)PlayerState;
 
 		UScoreboardEntryData* Item = NewObject<UScoreboardEntryData>();
@@ -105,7 +112,7 @@ void ADeathmatchGameState::FinishOldestTimer()
 	}
 	
 	// Make sure a listen server knows about this
-	if (IsClientControllingServerOwnedActor())
+	if (GetNetMode() != NM_DedicatedServer)
 	{
 		OnRep_KillfeedDataChanged();
 	}
@@ -131,24 +138,16 @@ void ADeathmatchGameState::AddKillfeedData(const FString& Victor, const FString&
 	StartARemoveTimer();
 	
 
-	// Make sure this is called on the authority in case it's a listen server
-	if (IsClientControllingServerOwnedActor())
+	// Make sure a listen server knows about this
+	if (GetNetMode() != NM_DedicatedServer)
 	{
 		OnRep_KillfeedDataChanged();
 	}
 }
 
-void ADeathmatchGameState::OnRep_KillfeedDataChanged() const
+void ADeathmatchGameState::OnRep_KillfeedDataChanged()
 {
-	/*auto str = FString::Printf(
-	TEXT("ADeathmatchGameState::OnRep_KillfeedDataChanged() %d"), KillfeedData.Num());
-LogMsgWithRole(str);*/
-
 	OnKillfeedChanged.Broadcast();
-
-
-
-
 	/*UE_LOG(LogTemp, Warning, TEXT("KILLFEED"));
 	for (UKillfeedEntryData* entry : KillfeedData)
 	{
@@ -161,12 +160,6 @@ LogMsgWithRole(str);*/
 		UE_LOG(LogTemp, Warning, TEXT("  Entry %d %s %s %s"), KillfeedData.Num(),
 			*entry->Winner, *entry->Verb, *entry->Loser);
 	}*/
-}
-
-bool ADeathmatchGameState::IsClientControllingServerOwnedActor() const
-{
-	return Role == ROLE_AutonomousProxy // Client on server
-		|| (HasAuthority() && !IsRunningDedicatedServer()); // listen server
 }
 
 void ADeathmatchGameState::LogMsgWithRole(FString message) const
@@ -193,22 +186,6 @@ FString ADeathmatchGameState::GetEnumText(ENetRole role) const
 }
 FString ADeathmatchGameState::GetRoleText() const
 {
-	auto Local = Role;
-	auto Remote = GetRemoteRole();
-
-
-	//if (Remote == ROLE_SimulatedProxy) //&& Local == ROLE_Authority
-	//	return "ListenServer";
-
-	//if (Local == ROLE_Authority)
-	//	return "Server";
-
-	//if (Local == ROLE_AutonomousProxy) // && Remote == ROLE_Authority
-	//	return "OwningClient";
-
-	//if (Local == ROLE_SimulatedProxy) // && Remote == ROLE_Authority
-	//	return "SimClient";
-
 	return GetEnumText(Role) + " " + GetEnumText(GetRemoteRole()) + " Ded:" + (IsRunningDedicatedServer() ? "True" : "False");
 
 }

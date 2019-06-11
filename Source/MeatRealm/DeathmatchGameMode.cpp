@@ -33,14 +33,17 @@ void ADeathmatchGameMode::PostLogin(APlayerController* NewPlayer)
 	Super::PostLogin(NewPlayer);
 
 	const auto Hero = static_cast<AHeroController*>(NewPlayer);
+	
+	// TODO Use GameState->PlayerState->PlayerId 
+	// https://api.unrealengine.com/INT/API/Runtime/Engine/GameFramework/APlayerState/PlayerId/index.html
 	const uint32 UID = Hero->GetUniqueID();
 
-	ConnectedHeroControllers.Add(UID, Hero);
+	ConnectedHeroControllers.Add(UID, Hero); 
 	UE_LOG(LogTemp, Warning, TEXT("ConnectedHeroControllers: %d"), ConnectedHeroControllers.Num());
 
 	// Monitor for player death events
-	const FDelegateHandle Handle = Hero->OnTakenDamage().AddUObject(this, &ADeathmatchGameMode::OnPlayerTakeDamage);
-	OnPlayerDieHandles.Add(UID, Handle);
+	///*const FDelegateHandle Handle = */Hero->OnTakenDamage.AddDynamic(this, &ADeathmatchGameMode::OnPlayerTakeDamage);
+	//OnPlayerDieHandles.Add(UID, Handle);
 }
 
 
@@ -51,10 +54,11 @@ void ADeathmatchGameMode::Logout(AController* Exiting)
 	ConnectedHeroControllers.Remove(Hero->GetUniqueID());
 	UE_LOG(LogTemp, Warning, TEXT("ConnectedHeroControllers: %d"), ConnectedHeroControllers.Num());
 
+//Hero->OnTakenDamage.RemoveDynamic(this, &ADeathmatchGameMode::OnPlayerTakeDamage);
 	// Unbind event when player leaves!
-	const uint32 UID = Hero->GetUniqueID();
-	const auto Handle = OnPlayerDieHandles[UID];
-	Hero->OnTakenDamage().Remove(Handle);
+	//const uint32 UID = Hero->GetUniqueID();
+	//const auto Handle = OnPlayerDieHandles[UID];
+	/*Hero->OnTakenDamage().Remove(Handle);*/
 
 	Super::Logout(Exiting);
 }
@@ -67,6 +71,8 @@ bool ADeathmatchGameMode::ShouldSpawnAtStartSpot(AController* Player)
 
 void ADeathmatchGameMode::OnPlayerTakeDamage(FMRHitResult Hit)
 {
+	if (!HasAuthority()) return;
+
 	//UE_LOG(LogTemp, Warning, TEXT("TakeDamage %d"), Hit.DamageTaken);
 
 	if (!ConnectedHeroControllers.Contains(Hit.ReceiverControllerId))
@@ -89,8 +95,7 @@ void ADeathmatchGameMode::OnPlayerTakeDamage(FMRHitResult Hit)
 	const auto ReceivingController = ConnectedHeroControllers[Hit.ReceiverControllerId];
 	//ReceivingController->HitTaken(Hit);
 
-
-
+	
 
 	if (Hit.HealthRemaining <= 0)
 	{

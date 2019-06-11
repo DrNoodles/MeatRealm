@@ -14,6 +14,8 @@
 class AHeroCharacter;
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FPlayerSpawned);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FTakenDamage, FMRHitResult, Hit);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FGivenDamage, FMRHitResult, Hit);
 
 UCLASS()
 class MEATREALM_API AHeroController : public APlayerController
@@ -46,11 +48,14 @@ public:
 	void LogMsgWithRole(FString message);
 	FString GetEnumText(ENetRole role);
 	FString GetRoleText();
-	void DamageTaken(const FMRHitResult& Hit) const;
+	void TakeDamage(const FMRHitResult& Hit);
 	void SimulateHitGiven(const FMRHitResult& Hit);
 	
 	UFUNCTION(Client, Reliable)
 	void ClientRPC_PlayHit(const FMRHitResult& Hit);
+
+	UFUNCTION(Client, Reliable)
+	void ClientRPC_OnTakenDamage(const FMRHitResult& Hit);
 
 	UPROPERTY(BlueprintAssignable, Category = "Event Dispatchers")
 		FPlayerSpawned OnPlayerSpawned;
@@ -59,9 +64,13 @@ public:
 	//FHealthDepleted& OnHealthDepleted() { return HealthDepletedEvent; }
 
 	// receiverId, instigatorId, healthRemaining, damageTaken, isArmour
-	DECLARE_MULTICAST_DELEGATE_OneParam(FTakenDamage, FMRHitResult)
-	FTakenDamage& OnTakenDamage() { return TakenDamageEvent; }
+	//FTakenDamage& OnTakenDamage() { return TakenDamageEvent; }
 
+	UPROPERTY(BlueprintAssignable, Category = "Event Dispatchers")
+		FTakenDamage OnTakenDamage;
+
+	UPROPERTY(BlueprintAssignable, Category = "Event Dispatchers")
+		FTakenDamage OnGivenDamage;
 
 protected:
 	virtual void PreInitializeComponents() override;
@@ -73,7 +82,6 @@ protected:
 
 private:
 
-	FTakenDamage TakenDamageEvent;
 	//FHealthDepleted HealthDepletedEvent;
 
 	/// Input
