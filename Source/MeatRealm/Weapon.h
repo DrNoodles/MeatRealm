@@ -73,6 +73,9 @@ public:
 		int AmmoPoolSize = 50;
 
 	UPROPERTY(EditAnywhere)
+		int AmmoPoolGiven = 40;
+
+	UPROPERTY(EditAnywhere)
 		int AmmoGivenPerPickup = 10;
 
 	UPROPERTY(EditAnywhere)

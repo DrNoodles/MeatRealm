@@ -45,7 +45,7 @@ void AWeapon::BeginPlay()
 
 	bCanAction = true;
 	AmmoInClip = ClipSize;
-	AmmoInPool = AmmoPoolSize;
+	AmmoInPool = AmmoPoolGiven;
 }
 
 void AWeapon::Tick(float DeltaTime)
