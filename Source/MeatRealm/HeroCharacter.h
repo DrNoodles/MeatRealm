@@ -61,6 +61,8 @@ public:
 	UPROPERTY(EditAnywhere, Category = Camera, meta = (EditCondition = "bLeanCameraWithAim"))
 		bool bUseExperimentalMouseTracking = false;
 
+	UPROPERTY(EditAnywhere)
+	float AdsLineLength = 1000; // cm
 
 	UPROPERTY(EditAnywhere)
 	float InteractableSearchDistance = 150.f; //cm
@@ -88,7 +90,15 @@ public:
 
 	UPROPERTY(BlueprintReadWrite, EditAnywhere)
 		float MaxArmour = 100.f;
+	
+	// This is nasty - probably need to work with the official movement states
+	bool bIsAdsing = false;
 
+	UPROPERTY(EditAnywhere)
+	float AdsSpeed = 200;
+
+	UPROPERTY(EditAnywhere)
+	float WalkSpeed = 400;
 
 
 	UFUNCTION()
@@ -119,6 +129,16 @@ public:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
 		UArrowComponent* WeaponAnchor = nullptr;
 
+
+
+	void SimulateAdsMode(bool IsAdsing);
+
+	UFUNCTION(Server, Reliable, WithValidation)
+		void ServerRPC_AdsPressed();
+
+	UFUNCTION(Server, Reliable, WithValidation)
+		void ServerRPC_AdsReleased();
+
 	UFUNCTION(Server, Reliable, WithValidation)
 		void ServerRPC_SpawnWeapon(TSubclassOf<AWeapon> weaponClass);
 
@@ -133,6 +153,8 @@ public:
 
 	void Input_FirePressed() const { if (CurrentWeapon) CurrentWeapon->Input_PullTrigger(); }
 	void Input_FireReleased() const { if (CurrentWeapon) CurrentWeapon->Input_ReleaseTrigger(); }
+	void Input_AdsPressed();
+	void Input_AdsReleased();
 	void Input_Reload() const { if (CurrentWeapon) CurrentWeapon->Input_Reload(); }
 	void Input_MoveUp(float Value) {	AxisMoveUp = Value; }
 	void Input_MoveRight(float Value) { AxisMoveRight = Value; }
