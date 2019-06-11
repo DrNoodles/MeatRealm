@@ -153,7 +153,6 @@ bool AHeroCharacter::ServerRPC_AdsPressed_Validate()
 
 void AHeroCharacter::Input_AdsPressed()
 {
-	// TODO Draw a line from the gun on client - Tick?
 	if (CurrentWeapon) CurrentWeapon->Input_AdsPressed();
 	SimulateAdsMode(true);
 	ServerRPC_AdsPressed();
@@ -164,7 +163,6 @@ void AHeroCharacter::Input_AdsReleased()
 	if (CurrentWeapon) CurrentWeapon->Input_AdsReleased();
 	SimulateAdsMode(false);
 	ServerRPC_AdsReleased();
-
 }
 
 void AHeroCharacter::ServerRPC_SpawnWeapon_Implementation(TSubclassOf<AWeapon> weaponClass)
@@ -321,6 +319,16 @@ void AHeroCharacter::Tick(float DeltaSeconds)
 
 		const auto OffsetVec = LinearLeanVector * LeanDistance;
 		MoveCameraByOffsetVector(OffsetVec, DeltaSeconds);
+	}
+
+
+
+	// Draw ADS line
+	if (bIsAdsing)
+	{
+		FVector Start = WeaponAnchor->GetComponentLocation();
+		FVector End = Start + WeaponAnchor->GetComponentRotation().Vector() * AdsLineLength;
+		DrawDebugLine(GetWorld(), Start, End, FColor{ 255,0,0,187 }, false, -1., 0, 2.f);
 	}
 }
 

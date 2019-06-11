@@ -61,6 +61,8 @@ public:
 	UPROPERTY(EditAnywhere, Category = Camera, meta = (EditCondition = "bLeanCameraWithAim"))
 		bool bUseExperimentalMouseTracking = false;
 
+	UPROPERTY(EditAnywhere)
+	float AdsLineLength = 1000; // cm
 
 	UPROPERTY(EditAnywhere)
 	float InteractableSearchDistance = 150.f; //cm
@@ -91,7 +93,11 @@ public:
 	
 	// This is nasty - probably need to work with the official movement states
 	bool bIsAdsing = false;
+
+	UPROPERTY(EditAnywhere)
 	float AdsSpeed = 200;
+
+	UPROPERTY(EditAnywhere)
 	float WalkSpeed = 400;
 
 
