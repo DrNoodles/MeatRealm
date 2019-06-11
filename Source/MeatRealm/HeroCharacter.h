@@ -133,6 +133,8 @@ public:
 
 	void Input_FirePressed() const { if (CurrentWeapon) CurrentWeapon->Input_PullTrigger(); }
 	void Input_FireReleased() const { if (CurrentWeapon) CurrentWeapon->Input_ReleaseTrigger(); }
+	void Input_AdsPressed() const { if (CurrentWeapon) CurrentWeapon->Input_AdsPressed(); }
+	void Input_AdsReleased() const { if (CurrentWeapon) CurrentWeapon->Input_AdsReleased(); }
 	void Input_Reload() const { if (CurrentWeapon) CurrentWeapon->Input_Reload(); }
 	void Input_MoveUp(float Value) {	AxisMoveUp = Value; }
 	void Input_MoveRight(float Value) { AxisMoveRight = Value; }

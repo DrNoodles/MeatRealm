@@ -52,12 +52,17 @@ void AWeapon::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
 
+	bIsInAdsMode = bAdsPressed;
+
 	if (bIsReloading)
 	{
 		const auto ElapsedReloadTime = (FDateTime::Now() - ReloadStartTime).GetTotalSeconds();
 		ReloadProgress = ElapsedReloadTime / ReloadTime;
+
+	//	bIsInAdsMode = false; // don't ads while reloading
 	}
 
+	
 	if (!bCanAction) return;
 
 
@@ -189,6 +194,30 @@ bool AWeapon::ServerRPC_Reload_Validate()
 	return true;
 }
 
+
+void AWeapon::ServerRPC_AdsPressed_Implementation()
+{
+	LogMsgWithRole("AWeapon::ServerRPC_AdsPressed_Implementation()");
+	bAdsPressed = true;
+}
+
+bool AWeapon::ServerRPC_AdsPressed_Validate()
+{
+	return true;
+}
+
+void AWeapon::ServerRPC_AdsReleased_Implementation()
+{
+	LogMsgWithRole("AWeapon::ServerRPC_AdsReleased_Implementation()");
+	bAdsPressed = false;
+}
+
+bool AWeapon::ServerRPC_AdsReleased_Validate()
+{
+	return true;
+}
+
+
 void AWeapon::MultiRPC_Fired_Implementation()
 {
 	if (OnShotFired.IsBound()) OnShotFired.Broadcast();
@@ -224,7 +253,8 @@ TArray<FVector> AWeapon::CalcShotPattern() const
 	TArray<FVector> Shots;
 
 	const float BarrelAngle = MuzzleLocationComp->GetForwardVector().HeadingAngle();
-	const float SpreadInRadians = FMath::DegreesToRadians(HipfireSpread);
+	const float SpreadInRadians = FMath::DegreesToRadians(bIsInAdsMode ? AdsSpread :
+HipfireSpread);
 
 	if (bEvenSpread && ProjectilesPerShot > 1)
 	{
@@ -316,6 +346,16 @@ void AWeapon::Input_ReleaseTrigger()
 void AWeapon::Input_Reload()
 {
 	ServerRPC_Reload();
+}
+
+void AWeapon::Input_AdsPressed()
+{
+	ServerRPC_AdsPressed();
+}
+
+void AWeapon::Input_AdsReleased()
+{
+	ServerRPC_AdsReleased();
 }
 
 bool AWeapon::TryGiveAmmo()

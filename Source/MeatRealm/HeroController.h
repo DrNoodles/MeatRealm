@@ -91,6 +91,8 @@ private:
 	void Input_FaceRight(float Value);
 	void Input_FirePressed();
 	void Input_FireReleased();
+	void Input_AdsPressed();
+	void Input_AdsReleased();
 	void Input_Reload();
 	void Input_Interact();
 	void SetUseMouseaim(bool bUseMouseAim);

@@ -32,6 +32,8 @@ public:
 	void Input_PullTrigger();
 	void Input_ReleaseTrigger();
 	void Input_Reload();
+	void Input_AdsPressed();
+	void Input_AdsReleased();
 	bool TryGiveAmmo();
 	uint32 HeroControllerId;
 	void SetHeroControllerId(uint32 HeroControllerUid) { this->HeroControllerId = HeroControllerUid; }
@@ -65,6 +67,9 @@ public:
 
 	UPROPERTY(EditAnywhere)
 		bool bFullAuto = true;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly)
+		float AdsSpread = 1;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly)
 		float HipfireSpread = 20;
@@ -132,6 +137,12 @@ public:
 	UFUNCTION(Server, Reliable, WithValidation)
 		void RPC_Fire_OnServer();
 
+	UFUNCTION(Server, Reliable, WithValidation)
+		void ServerRPC_AdsPressed();
+
+	UFUNCTION(Server, Reliable, WithValidation)
+		void ServerRPC_AdsReleased();
+
 	UFUNCTION(NetMulticast, Reliable)
 		void MultiRPC_Fired();
 
@@ -156,6 +167,8 @@ private:
 
 	bool bCanAction;
 	bool bTriggerPulled;
+	bool bAdsPressed;
+	bool bIsInAdsMode = false;
 	bool bHasActionedThisTriggerPull;
 	bool bReloadQueued;
 

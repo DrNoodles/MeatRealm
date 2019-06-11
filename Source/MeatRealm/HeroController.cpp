@@ -235,6 +235,8 @@ void AHeroController::SetupInputComponent()
 	I->BindAxis("FaceRight", this, &AHeroController::Input_FaceRight);
 	I->BindAction("FireWeapon", IE_Pressed, this, &AHeroController::Input_FirePressed);
 	I->BindAction("FireWeapon", IE_Released, this, &AHeroController::Input_FireReleased);
+	I->BindAction("AdsWeapon", IE_Pressed, this, &AHeroController::Input_AdsPressed);
+	I->BindAction("AdsWeapon", IE_Released, this, &AHeroController::Input_AdsReleased);
 	I->BindAction("Reload", IE_Released, this, &AHeroController::Input_Reload);
 	I->BindAction("Interact", IE_Pressed, this, &AHeroController::Input_Interact);
 }
@@ -289,6 +291,18 @@ void AHeroController::Input_FireReleased()
 {
 	auto Char = GetHeroCharacter();
 	if (Char) Char->Input_FireReleased();
+}
+
+void AHeroController::Input_AdsPressed()
+{
+	auto Char = GetHeroCharacter();
+	if (Char) Char->Input_AdsPressed();
+}
+
+void AHeroController::Input_AdsReleased()
+{
+	auto Char = GetHeroCharacter();
+	if (Char) Char->Input_AdsReleased();
 }
 
 void AHeroController::Input_Reload()
