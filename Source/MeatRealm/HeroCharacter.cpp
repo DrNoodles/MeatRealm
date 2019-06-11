@@ -42,7 +42,7 @@ AHeroCharacter::AHeroCharacter()
 	JumpMaxCount = 0;
 
 	// Configure character movement
-	GetCharacterMovement()->MaxWalkSpeed = 450;
+	GetCharacterMovement()->MaxWalkSpeed = WalkSpeed;
 	GetCharacterMovement()->bOrientRotationToMovement = false; // Character move independently of facing
 	GetCharacterMovement()->RotationRate = FRotator(0.0f, 540.0f, 0.0f); // ...at this rotation rate
 	GetCharacterMovement()->AirControl = 0.2f;
@@ -122,6 +122,49 @@ AHeroState* AHeroCharacter::GetHeroState() const
 AHeroController* AHeroCharacter::GetHeroController() const
 {
 	return GetController<AHeroController>();
+}
+
+
+void AHeroCharacter::SimulateAdsMode(bool IsAdsing)
+{
+	bIsAdsing = IsAdsing;
+	GetCharacterMovement()->MaxWalkSpeed = IsAdsing ? AdsSpeed : WalkSpeed;
+}
+
+void AHeroCharacter::ServerRPC_AdsReleased_Implementation()
+{
+	SimulateAdsMode(false);
+}
+
+bool AHeroCharacter::ServerRPC_AdsReleased_Validate()
+{
+	return true;
+}
+
+void AHeroCharacter::ServerRPC_AdsPressed_Implementation()
+{
+	SimulateAdsMode(true);
+}
+
+bool AHeroCharacter::ServerRPC_AdsPressed_Validate()
+{
+	return true;
+}
+
+void AHeroCharacter::Input_AdsPressed()
+{
+	// TODO Draw a line from the gun on client - Tick?
+	if (CurrentWeapon) CurrentWeapon->Input_AdsPressed();
+	SimulateAdsMode(true);
+	ServerRPC_AdsPressed();
+}
+
+void AHeroCharacter::Input_AdsReleased()
+{
+	if (CurrentWeapon) CurrentWeapon->Input_AdsReleased();
+	SimulateAdsMode(false);
+	ServerRPC_AdsReleased();
+
 }
 
 void AHeroCharacter::ServerRPC_SpawnWeapon_Implementation(TSubclassOf<AWeapon> weaponClass)

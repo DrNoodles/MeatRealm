@@ -88,7 +88,11 @@ public:
 
 	UPROPERTY(BlueprintReadWrite, EditAnywhere)
 		float MaxArmour = 100.f;
-
+	
+	// This is nasty - probably need to work with the official movement states
+	bool bIsAdsing = false;
+	float AdsSpeed = 200;
+	float WalkSpeed = 400;
 
 
 	UFUNCTION()
@@ -119,6 +123,16 @@ public:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
 		UArrowComponent* WeaponAnchor = nullptr;
 
+
+
+	void SimulateAdsMode(bool IsAdsing);
+
+	UFUNCTION(Server, Reliable, WithValidation)
+		void ServerRPC_AdsPressed();
+
+	UFUNCTION(Server, Reliable, WithValidation)
+		void ServerRPC_AdsReleased();
+
 	UFUNCTION(Server, Reliable, WithValidation)
 		void ServerRPC_SpawnWeapon(TSubclassOf<AWeapon> weaponClass);
 
@@ -133,8 +147,8 @@ public:
 
 	void Input_FirePressed() const { if (CurrentWeapon) CurrentWeapon->Input_PullTrigger(); }
 	void Input_FireReleased() const { if (CurrentWeapon) CurrentWeapon->Input_ReleaseTrigger(); }
-	void Input_AdsPressed() const { if (CurrentWeapon) CurrentWeapon->Input_AdsPressed(); }
-	void Input_AdsReleased() const { if (CurrentWeapon) CurrentWeapon->Input_AdsReleased(); }
+	void Input_AdsPressed();
+	void Input_AdsReleased();
 	void Input_Reload() const { if (CurrentWeapon) CurrentWeapon->Input_Reload(); }
 	void Input_MoveUp(float Value) {	AxisMoveUp = Value; }
 	void Input_MoveRight(float Value) { AxisMoveRight = Value; }
