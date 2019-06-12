@@ -94,7 +94,7 @@ void ADeathmatchGameMode::SetPlayerDefaults(APawn* PlayerPawn)
 
 AActor* ADeathmatchGameMode::FindFurthestPlayerStart(AController* Controller)
 {
-	UE_LOG(LogTemp, Warning, TEXT("ADeathmatchGameMode::FindFurthestPlayerStart"));
+	//UE_LOG(LogTemp, Warning, TEXT("ADeathmatchGameMode::FindFurthestPlayerStart"));
 
 	UWorld* World = GetWorld();
 	APlayerStart* FurthestSpawn = nullptr;
@@ -112,7 +112,7 @@ AActor* ADeathmatchGameMode::FindFurthestPlayerStart(AController* Controller)
 			auto HChar = Cast<AHeroCharacter>(pair.Value->GetPawn());
 			if (HChar)
 			{
-				UE_LOG(LogTemp, Warning, TEXT("GotPawn"));
+				//UE_LOG(LogTemp, Warning, TEXT("GotPawn"));
 
 				float dist = FVector::Dist(PlayerStart->GetActorLocation(), HChar->GetActorLocation());
 				if (dist < ClosestEnemyDist)
