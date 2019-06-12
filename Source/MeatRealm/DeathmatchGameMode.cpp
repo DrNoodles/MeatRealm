@@ -1,6 +1,5 @@
 // Fill out your copyright notice in the Description page of Project Settings.
 
-
 #include "DeathmatchGameMode.h"
 #include "DeathmatchGameState.h"
 #include "UObject/ConstructorHelpers.h"
@@ -8,8 +7,8 @@
 #include "HeroState.h"
 #include "ScoreboardEntryData.h"
 #include "HeroController.h"
-#include "Projectile.h"
-#include "KillfeedEntryData.h"
+#include "Engine/PlayerStartPIE.h"
+#include "EngineUtils.h"
 
 ADeathmatchGameMode::ADeathmatchGameMode()
 {
@@ -25,7 +24,16 @@ ADeathmatchGameMode::ADeathmatchGameMode()
 	GameStateClass = ADeathmatchGameState::StaticClass();
 
 	bStartPlayersAsSpectators = false;
-}
+
+	PlayerTints.Add(FColor{   0,167,226 });// Sky
+	PlayerTints.Add(FColor{ 243,113, 33 });// Orange
+	PlayerTints.Add(FColor{  72,173,113 });// Emerald
+	PlayerTints.Add(FColor{ 255,207,  1 });// Yellow
+	PlayerTints.Add(FColor{ 251,173, 24 });// Light Orange
+	PlayerTints.Add(FColor{   0,186,188 });// Turquoise
+	PlayerTints.Add(FColor{ 118, 91,167 });// Purple
+	PlayerTints.Add(FColor{ 237,  1,127 });// Fuchsia
+	}
 
 
 void ADeathmatchGameMode::PostLogin(APlayerController* NewPlayer)
@@ -36,29 +44,20 @@ void ADeathmatchGameMode::PostLogin(APlayerController* NewPlayer)
 	
 	// TODO Use GameState->PlayerState->PlayerId 
 	// https://api.unrealengine.com/INT/API/Runtime/Engine/GameFramework/APlayerState/PlayerId/index.html
+	
 	const uint32 UID = Hero->GetUniqueID();
+	ConnectedHeroControllers.Add(UID, Hero);
 
-	ConnectedHeroControllers.Add(UID, Hero); 
 	UE_LOG(LogTemp, Warning, TEXT("ConnectedHeroControllers: %d"), ConnectedHeroControllers.Num());
-
-	// Monitor for player death events
-	///*const FDelegateHandle Handle = */Hero->OnTakenDamage.AddDynamic(this, &ADeathmatchGameMode::OnPlayerTakeDamage);
-	//OnPlayerDieHandles.Add(UID, Handle);
 }
 
 
 void ADeathmatchGameMode::Logout(AController* Exiting)
 {
 	const auto Hero = static_cast<AHeroController*>(Exiting);
-
 	ConnectedHeroControllers.Remove(Hero->GetUniqueID());
-	UE_LOG(LogTemp, Warning, TEXT("ConnectedHeroControllers: %d"), ConnectedHeroControllers.Num());
 
-//Hero->OnTakenDamage.RemoveDynamic(this, &ADeathmatchGameMode::OnPlayerTakeDamage);
-	// Unbind event when player leaves!
-	//const uint32 UID = Hero->GetUniqueID();
-	//const auto Handle = OnPlayerDieHandles[UID];
-	/*Hero->OnTakenDamage().Remove(Handle);*/
+	UE_LOG(LogTemp, Warning, TEXT("ConnectedHeroControllers: %d"), ConnectedHeroControllers.Num());
 
 	Super::Logout(Exiting);
 }
@@ -67,6 +66,96 @@ void ADeathmatchGameMode::Logout(AController* Exiting)
 bool ADeathmatchGameMode::ShouldSpawnAtStartSpot(AController* Player)
 {
 	return false; // Always pick a random spawn
+}
+
+void ADeathmatchGameMode::SetPlayerDefaults(APawn* PlayerPawn)
+{
+	// Colour the character
+	
+	auto HChar = Cast<AHeroCharacter>(PlayerPawn);
+	if (!HChar) return;
+
+	auto HCont = HChar->GetHeroController();
+	if (!HCont) return;
+
+	int TintNumber;
+	if (PlayerMappedTints.Contains(HCont->GetUniqueID()))
+	{
+		TintNumber = PlayerMappedTints[HCont->GetUniqueID()];
+	}
+	else
+	{
+		TintNumber = TintCount++;
+		PlayerMappedTints.Add(HCont->GetUniqueID(), TintNumber);
+	}
+
+	HChar->SetTint(PlayerTints[TintNumber]);
+}
+
+AActor* ADeathmatchGameMode::FindFurthestPlayerStart(AController* Controller)
+{
+	UE_LOG(LogTemp, Warning, TEXT("ADeathmatchGameMode::FindFurthestPlayerStart"));
+
+	UWorld* World = GetWorld();
+	APlayerStart* FurthestSpawn = nullptr;
+	float FurthestSpawnDistanceToNearestPlayer = 0;
+
+	// O(n*m) Find the spawn furthest from the players
+
+	for (TActorIterator<APlayerStart> It(World); It; ++It)
+	{
+		APlayerStart* PlayerStart = *It;
+		float ClosestEnemyDist = BIG_NUMBER;
+
+		for (const TPair<uint32, AHeroController*>& pair : ConnectedHeroControllers)
+		{
+			auto HChar = Cast<AHeroCharacter>(pair.Value->GetPawn());
+			if (HChar)
+			{
+				UE_LOG(LogTemp, Warning, TEXT("GotPawn"));
+
+				float dist = FVector::Dist(PlayerStart->GetActorLocation(), HChar->GetActorLocation());
+				if (dist < ClosestEnemyDist)
+				{
+					ClosestEnemyDist = dist;
+				}
+			}
+		}
+
+		if (ClosestEnemyDist > FurthestSpawnDistanceToNearestPlayer)
+		{
+			// Found new furthest spawn!
+			FurthestSpawn = PlayerStart;
+			FurthestSpawnDistanceToNearestPlayer = ClosestEnemyDist;
+		}
+	}
+
+	return FurthestSpawn;
+}
+
+void ADeathmatchGameMode::RestartPlayer(AController* NewPlayer)
+{
+	// This is copy of GameModeBase's implementation with a change to spawn the furthest player start
+
+	if (NewPlayer == nullptr || NewPlayer->IsPendingKillPending())
+	{
+		return;
+	}
+
+	AActor* StartSpot = FindFurthestPlayerStart(NewPlayer);
+
+	// If a start spot wasn't found,
+	if (StartSpot == nullptr)
+	{
+		// Check for a previously assigned spot
+		if (NewPlayer->StartSpot != nullptr)
+		{
+			StartSpot = NewPlayer->StartSpot.Get();
+			UE_LOG(LogGameMode, Warning, TEXT("RestartPlayer: Player start not found, using last start spot"));
+		}
+	}
+
+	RestartPlayerAtPlayerStart(NewPlayer, StartSpot);
 }
 
 void ADeathmatchGameMode::OnPlayerTakeDamage(FMRHitResult Hit)
@@ -93,8 +182,6 @@ void ADeathmatchGameMode::OnPlayerTakeDamage(FMRHitResult Hit)
 
 
 	const auto ReceivingController = ConnectedHeroControllers[Hit.ReceiverControllerId];
-	//ReceivingController->HitTaken(Hit);
-
 	
 
 	if (Hit.HealthRemaining <= 0)

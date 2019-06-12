@@ -23,7 +23,6 @@ class MEATREALM_API AHeroController : public APlayerController
 	GENERATED_BODY()
 
 public:
-
 	AHeroController();
 	void CleanupPlayerState() override;
 
@@ -35,7 +34,6 @@ public:
 
 	UUserWidget* HudInstance;
 	
-
 	void OnPossess(APawn* InPawn) override;
 	void AcknowledgePossession(APawn* P) override;
 	void OnUnPossess() override;

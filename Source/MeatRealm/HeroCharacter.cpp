@@ -22,6 +22,14 @@
 
 /// Lifecycle
 
+void AHeroCharacter::OnRep_TintChanged()
+{
+	/*LogMsgWithRole(
+		FString::Printf(TEXT("AHeroCharacter::OnRep_TintChanged() %s"), *TeamTint.ToString())
+	);*/
+	OnPlayerTintChanged.Broadcast();
+}
+
 AHeroCharacter::AHeroCharacter()
 {
 	// Set size for collision capsule
@@ -111,6 +119,7 @@ void AHeroCharacter::GetLifetimeReplicatedProps(TArray< FLifetimeProperty >& Out
 	DOREPLIFETIME(AHeroCharacter, CurrentWeapon);
 	DOREPLIFETIME(AHeroCharacter, Health);
 	DOREPLIFETIME(AHeroCharacter, Armour);
+	DOREPLIFETIME(AHeroCharacter, TeamTint);
 }
 
 
@@ -206,8 +215,6 @@ void AHeroCharacter::Tick(float DeltaSeconds)
 {
 	const auto HeroCont = GetHeroController();
 	if (HeroCont == nullptr || GetNetMode() == NM_DedicatedServer) return; 
-
-
 
 	// Handle Input (move and look)
 
