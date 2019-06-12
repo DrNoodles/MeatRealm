@@ -25,7 +25,16 @@ ADeathmatchGameMode::ADeathmatchGameMode()
 	GameStateClass = ADeathmatchGameState::StaticClass();
 
 	bStartPlayersAsSpectators = false;
-}
+
+	PlayerTints.Add(FColor{   0,167,226 });// Sky
+	PlayerTints.Add(FColor{ 243,113, 33 });// Orange
+	PlayerTints.Add(FColor{  72,173,113 });// Emerald
+	PlayerTints.Add(FColor{ 255,207,  1 });// Yellow
+	PlayerTints.Add(FColor{ 251,173, 24 });// Light Orange
+	PlayerTints.Add(FColor{   0,186,188 });// Turquoise
+	PlayerTints.Add(FColor{ 118, 91,167 });// Purple
+	PlayerTints.Add(FColor{ 237,  1,127 });// Fuchsia
+	}
 
 
 void ADeathmatchGameMode::PostLogin(APlayerController* NewPlayer)
@@ -67,6 +76,13 @@ void ADeathmatchGameMode::Logout(AController* Exiting)
 bool ADeathmatchGameMode::ShouldSpawnAtStartSpot(AController* Player)
 {
 	return false; // Always pick a random spawn
+}
+
+void ADeathmatchGameMode::SetPlayerDefaults(APawn* PlayerPawn)
+{
+	auto HChar = Cast<AHeroCharacter>(PlayerPawn);
+	auto Tint = PlayerTints[LoginCount++ % PlayerTints.Num()];
+	if (HChar) HChar->SetTint(Tint);
 }
 
 void ADeathmatchGameMode::OnPlayerTakeDamage(FMRHitResult Hit)

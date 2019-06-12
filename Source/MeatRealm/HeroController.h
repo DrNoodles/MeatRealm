@@ -23,7 +23,6 @@ class MEATREALM_API AHeroController : public APlayerController
 	GENERATED_BODY()
 
 public:
-
 	AHeroController();
 	void CleanupPlayerState() override;
 
