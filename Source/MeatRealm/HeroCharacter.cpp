@@ -202,16 +202,10 @@ bool AHeroCharacter::ServerRPC_SpawnWeapon_Validate(TSubclassOf<AWeapon> weaponC
 
 /// Methods
 
-bool AHeroCharacter::IsClientControllingServerOwnedActor()
-{
-	return Role == ROLE_AutonomousProxy // Client on server
-		|| HasAuthority() && !IsRunningDedicatedServer();
-}
-
 void AHeroCharacter::Tick(float DeltaSeconds)
 {
 	const auto HeroCont = GetHeroController();
-	if (HeroCont == nullptr || !IsClientControllingServerOwnedActor()) return; // TODO Kill IsClientControl...() and replace with GetNetRole() == NM_DedicatedServer ??
+	if (HeroCont == nullptr || GetNetMode() == NM_DedicatedServer) return; 
 
 
 
