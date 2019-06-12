@@ -12,6 +12,7 @@
 class AHeroState;
 class AHeroController;
 
+DECLARE_DYNAMIC_MULTICAST_DELEGATE(FPlayerTintChanged);
 
 // TODO Use something built in already?
 USTRUCT(BlueprintType)
@@ -112,7 +113,25 @@ public:
 	UFUNCTION()
 	virtual bool TryGiveWeapon(const TSubclassOf<AWeapon>& Class) override;
 
+	UPROPERTY(BlueprintReadOnly, ReplicatedUsing=OnRep_TintChanged)
+	FColor TeamTint = FColor::Black;
+	void SetTint(FColor bCond)
+	{
+		TeamTint = bCond;
 
+		// Listen server
+		if (HasAuthority() && GetNetMode() != NM_DedicatedServer)
+		{
+			OnRep_TintChanged();
+		}
+	}
+	FColor GetTint() const { return TeamTint; }
+
+	UFUNCTION()
+		void OnRep_TintChanged();
+
+	UPROPERTY(BlueprintAssignable, Category = "Event Dispatchers")
+		FPlayerTintChanged OnPlayerTintChanged;
 
 	// Sets default values for this character's properties
 	AHeroCharacter();
@@ -169,7 +188,6 @@ protected:
 	static FVector2D GetGameViewportSize();
 	static FVector2D CalcLinearLeanVectorUnclipped(const FVector2D& CursorLoc, const FVector2D& ViewportSize);
 	void MoveCameraByOffsetVector(const FVector2D& Vector2D, float DeltaSeconds) const;
-	bool IsClientControllingServerOwnedActor();
 	virtual void Tick(float DeltaSeconds) override;
 	FVector2D TrackCameraWithAimMouse() const;
 	FVector2D TrackCameraWithAimGamepad() const;
