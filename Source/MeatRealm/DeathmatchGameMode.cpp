@@ -8,8 +8,8 @@
 #include "HeroState.h"
 #include "ScoreboardEntryData.h"
 #include "HeroController.h"
-#include "Projectile.h"
-#include "KillfeedEntryData.h"
+#include "Engine/PlayerStartPIE.h"
+#include "EngineUtils.h"
 
 ADeathmatchGameMode::ADeathmatchGameMode()
 {
@@ -45,29 +45,20 @@ void ADeathmatchGameMode::PostLogin(APlayerController* NewPlayer)
 	
 	// TODO Use GameState->PlayerState->PlayerId 
 	// https://api.unrealengine.com/INT/API/Runtime/Engine/GameFramework/APlayerState/PlayerId/index.html
+	
 	const uint32 UID = Hero->GetUniqueID();
+	ConnectedHeroControllers.Add(UID, Hero);
 
-	ConnectedHeroControllers.Add(UID, Hero); 
 	UE_LOG(LogTemp, Warning, TEXT("ConnectedHeroControllers: %d"), ConnectedHeroControllers.Num());
-
-	// Monitor for player death events
-	///*const FDelegateHandle Handle = */Hero->OnTakenDamage.AddDynamic(this, &ADeathmatchGameMode::OnPlayerTakeDamage);
-	//OnPlayerDieHandles.Add(UID, Handle);
 }
 
 
 void ADeathmatchGameMode::Logout(AController* Exiting)
 {
 	const auto Hero = static_cast<AHeroController*>(Exiting);
-
 	ConnectedHeroControllers.Remove(Hero->GetUniqueID());
-	UE_LOG(LogTemp, Warning, TEXT("ConnectedHeroControllers: %d"), ConnectedHeroControllers.Num());
 
-//Hero->OnTakenDamage.RemoveDynamic(this, &ADeathmatchGameMode::OnPlayerTakeDamage);
-	// Unbind event when player leaves!
-	//const uint32 UID = Hero->GetUniqueID();
-	//const auto Handle = OnPlayerDieHandles[UID];
-	/*Hero->OnTakenDamage().Remove(Handle);*/
+	UE_LOG(LogTemp, Warning, TEXT("ConnectedHeroControllers: %d"), ConnectedHeroControllers.Num());
 
 	Super::Logout(Exiting);
 }
@@ -80,9 +71,75 @@ bool ADeathmatchGameMode::ShouldSpawnAtStartSpot(AController* Player)
 
 void ADeathmatchGameMode::SetPlayerDefaults(APawn* PlayerPawn)
 {
+	// Colour the character
 	auto HChar = Cast<AHeroCharacter>(PlayerPawn);
 	auto Tint = PlayerTints[LoginCount++ % PlayerTints.Num()];
 	if (HChar) HChar->SetTint(Tint);
+}
+AActor* ADeathmatchGameMode::FindFurthestPlayerStart(AController* Controller)
+{
+	UE_LOG(LogTemp, Warning, TEXT("ADeathmatchGameMode::FindFurthestPlayerStart"));
+
+	UWorld* World = GetWorld();
+	APlayerStart* FurthestSpawn = nullptr;
+	float FurthestSpawnDistanceToNearestPlayer = 0;
+
+	// O(n*m) Find the spawn furthest from the players
+
+	for (TActorIterator<APlayerStart> It(World); It; ++It)
+	{
+		APlayerStart* PlayerStart = *It;
+		float ClosestEnemyDist = BIG_NUMBER;
+
+		for (const TPair<uint32, AHeroController*>& pair : ConnectedHeroControllers)
+		{
+			auto HChar = Cast<AHeroCharacter>(pair.Value->GetPawn());
+			if (HChar)
+			{
+				UE_LOG(LogTemp, Warning, TEXT("GotPawn"));
+
+				float dist = FVector::Dist(PlayerStart->GetActorLocation(), HChar->GetActorLocation());
+				if (dist < ClosestEnemyDist)
+				{
+					ClosestEnemyDist = dist;
+				}
+			}
+		}
+
+		if (ClosestEnemyDist > FurthestSpawnDistanceToNearestPlayer)
+		{
+			// Found new furthest spawn!
+			FurthestSpawn = PlayerStart;
+			FurthestSpawnDistanceToNearestPlayer = ClosestEnemyDist;
+		}
+	}
+
+	return FurthestSpawn;
+}
+
+void ADeathmatchGameMode::RestartPlayer(AController* NewPlayer)
+{
+	// This is copy of GameModeBase's implementation with a change to spawn the furthest player start
+
+	if (NewPlayer == nullptr || NewPlayer->IsPendingKillPending())
+	{
+		return;
+	}
+
+	AActor* StartSpot = FindFurthestPlayerStart(NewPlayer);
+
+	// If a start spot wasn't found,
+	if (StartSpot == nullptr)
+	{
+		// Check for a previously assigned spot
+		if (NewPlayer->StartSpot != nullptr)
+		{
+			StartSpot = NewPlayer->StartSpot.Get();
+			UE_LOG(LogGameMode, Warning, TEXT("RestartPlayer: Player start not found, using last start spot"));
+		}
+	}
+
+	RestartPlayerAtPlayerStart(NewPlayer, StartSpot);
 }
 
 void ADeathmatchGameMode::OnPlayerTakeDamage(FMRHitResult Hit)
