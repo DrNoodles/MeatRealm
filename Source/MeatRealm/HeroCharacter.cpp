@@ -213,8 +213,6 @@ bool AHeroCharacter::ServerRPC_SpawnWeapon_Validate(TSubclassOf<AWeapon> weaponC
 
 void AHeroCharacter::Tick(float DeltaSeconds)
 {
-	DrawDebugString(GetWorld(), GetActorLocation() + FVector{ 0,0,150 }, *TeamTint.ToString(), nullptr, FColor::Blue, DeltaSeconds * 0.8);
-
 	const auto HeroCont = GetHeroController();
 	if (HeroCont == nullptr || GetNetMode() == NM_DedicatedServer) return; 
 

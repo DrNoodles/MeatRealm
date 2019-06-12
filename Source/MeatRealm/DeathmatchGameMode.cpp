@@ -1,6 +1,5 @@
 // Fill out your copyright notice in the Description page of Project Settings.
 
-
 #include "DeathmatchGameMode.h"
 #include "DeathmatchGameState.h"
 #include "UObject/ConstructorHelpers.h"
@@ -72,10 +71,27 @@ bool ADeathmatchGameMode::ShouldSpawnAtStartSpot(AController* Player)
 void ADeathmatchGameMode::SetPlayerDefaults(APawn* PlayerPawn)
 {
 	// Colour the character
+	
 	auto HChar = Cast<AHeroCharacter>(PlayerPawn);
-	auto Tint = PlayerTints[LoginCount++ % PlayerTints.Num()];
-	if (HChar) HChar->SetTint(Tint);
+	if (!HChar) return;
+
+	auto HCont = HChar->GetHeroController();
+	if (!HCont) return;
+
+	int TintNumber;
+	if (PlayerMappedTints.Contains(HCont->GetUniqueID()))
+	{
+		TintNumber = PlayerMappedTints[HCont->GetUniqueID()];
+	}
+	else
+	{
+		TintNumber = TintCount++;
+		PlayerMappedTints.Add(HCont->GetUniqueID(), TintNumber);
+	}
+
+	HChar->SetTint(PlayerTints[TintNumber]);
 }
+
 AActor* ADeathmatchGameMode::FindFurthestPlayerStart(AController* Controller)
 {
 	UE_LOG(LogTemp, Warning, TEXT("ADeathmatchGameMode::FindFurthestPlayerStart"));
@@ -166,8 +182,6 @@ void ADeathmatchGameMode::OnPlayerTakeDamage(FMRHitResult Hit)
 
 
 	const auto ReceivingController = ConnectedHeroControllers[Hit.ReceiverControllerId];
-	//ReceivingController->HitTaken(Hit);
-
 	
 
 	if (Hit.HealthRemaining <= 0)

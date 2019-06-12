@@ -14,6 +14,7 @@ class AHeroCharacter;
 class AHeroController;
 class AProjectile;
 
+
 UCLASS()
 class MEATREALM_API ADeathmatchGameMode : public AGameMode
 {
@@ -31,11 +32,11 @@ public:
 	void OnPlayerTakeDamage(FMRHitResult Hit);
 private:
 	TMap<uint32, AHeroController*> ConnectedHeroControllers;
+	TMap<uint32, int> PlayerMappedTints;
 	TArray<FColor> PlayerTints;
-	int LoginCount = 0;
+	int TintCount = 0;
 
 	
 	bool EndGameIfFragLimitReached() const;
 	void AddKillfeedEntry(AHeroController* const Killer, AHeroController* const Dead);
-
 };

@@ -34,7 +34,6 @@ public:
 
 	UUserWidget* HudInstance;
 	
-
 	void OnPossess(APawn* InPawn) override;
 	void AcknowledgePossession(APawn* P) override;
 	void OnUnPossess() override;
