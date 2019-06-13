@@ -508,7 +508,7 @@ FVector2D AHeroCharacter::GetGameViewportSize()
 
 // Affect the character
 
-void AHeroCharacter::ApplyDamage(uint32 InstigatorHeroControllerId, float Damage, FVector Location)
+void AHeroCharacter::AuthApplyDamage(uint32 InstigatorHeroControllerId, float Damage, FVector Location)
 {
 	//This must only run on a dedicated server or listen server
 
@@ -559,7 +559,7 @@ void AHeroCharacter::ApplyDamage(uint32 InstigatorHeroControllerId, float Damage
 	
 }
 
-bool AHeroCharacter::TryGiveHealth(float Hp)
+bool AHeroCharacter::AuthTryGiveHealth(float Hp)
 {
 	//LogMsgWithRole("TryGiveHealth");
 	if (!HasAuthority()) return false;
@@ -570,7 +570,7 @@ bool AHeroCharacter::TryGiveHealth(float Hp)
 	return true;
 }
 
-bool AHeroCharacter::TryGiveAmmo()
+bool AHeroCharacter::AuthTryGiveAmmo()
 {
 	//LogMsgWithRole("AHeroCharacter::TryGiveAmmo");
 	if (!HasAuthority()) return false;
@@ -583,7 +583,7 @@ bool AHeroCharacter::TryGiveAmmo()
 	return false;
 }
 
-bool AHeroCharacter::TryGiveArmour(float Delta)
+bool AHeroCharacter::AuthTryGiveArmour(float Delta)
 {
 	//LogMsgWithRole("TryGiveArmour");
 	if (!HasAuthority()) return false;
@@ -593,7 +593,7 @@ bool AHeroCharacter::TryGiveArmour(float Delta)
 	return true;
 }
 
-bool AHeroCharacter::TryGiveWeapon(const TSubclassOf<AWeapon>& Class)
+bool AHeroCharacter::AuthTryGiveWeapon(const TSubclassOf<AWeapon>& Class)
 {
 	//LogMsgWithRole("AHeroCharacter::TryGiveWeapon");
 
@@ -606,7 +606,7 @@ bool AHeroCharacter::TryGiveWeapon(const TSubclassOf<AWeapon>& Class)
 		// If we already have the gun, treat it as an ammo pickup!
 		if (CurrentWeapon->IsA(Class))
 		{
-			return TryGiveAmmo();
+			return AuthTryGiveAmmo();
 		}
 
 		// Otherwise, destroy our current weapon to make space for the new one!

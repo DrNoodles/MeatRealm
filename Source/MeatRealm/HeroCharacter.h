@@ -103,15 +103,15 @@ public:
 
 
 	UFUNCTION()
-	virtual void ApplyDamage(uint32 InstigatorHeroControllerId, float Damage, FVector Location) override;
+	virtual void AuthApplyDamage(uint32 InstigatorHeroControllerId, float Damage, FVector Location) override;
 	UFUNCTION()
-	virtual bool TryGiveHealth(float Hp) override;
+	virtual bool AuthTryGiveHealth(float Hp) override;
 	UFUNCTION()
-	virtual bool TryGiveAmmo() override;
+	virtual bool AuthTryGiveAmmo() override;
 	UFUNCTION()
-	virtual bool TryGiveArmour(float Delta) override;
+	virtual bool AuthTryGiveArmour(float Delta) override;
 	UFUNCTION()
-	virtual bool TryGiveWeapon(const TSubclassOf<AWeapon>& Class) override;
+	virtual bool AuthTryGiveWeapon(const TSubclassOf<AWeapon>& Class) override;
 
 	UPROPERTY(BlueprintReadOnly, ReplicatedUsing=OnRep_TintChanged)
 	FColor TeamTint = FColor::Black;
@@ -185,17 +185,18 @@ public:
 	void SetUseMouseAim(bool bUseMouseAimIn) { bUseMouseAim = bUseMouseAimIn; }
 
 
-protected:
+private:
+	virtual void Tick(float DeltaSeconds) override;
+
 	static FVector2D GetGameViewportSize();
 	static FVector2D CalcLinearLeanVectorUnclipped(const FVector2D& CursorLoc, const FVector2D& ViewportSize);
 	void MoveCameraByOffsetVector(const FVector2D& Vector2D, float DeltaSeconds) const;
-	virtual void Tick(float DeltaSeconds) override;
 	FVector2D TrackCameraWithAimMouse() const;
 	FVector2D TrackCameraWithAimGamepad() const;
 	void ExperimentalMouseAimTracking(float DT);
 
 
-private:
+
 
 	/** Camera boom positioning the camera behind the character */
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Camera, meta = (AllowPrivateAccess = "true"))
