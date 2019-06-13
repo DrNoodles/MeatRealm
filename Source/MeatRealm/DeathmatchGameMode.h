@@ -22,7 +22,8 @@ class MEATREALM_API ADeathmatchGameMode : public AGameMode
 
 public:
 	ADeathmatchGameMode();
-	
+
+
 	void PostLogin(APlayerController* NewPlayer) override;
 	void Logout(AController* Exiting) override;
 	bool ShouldSpawnAtStartSpot(AController* Player) override;

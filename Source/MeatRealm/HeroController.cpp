@@ -57,6 +57,12 @@ void AHeroController::OnUnPossess()
 	Super::OnUnPossess();
 }
 
+AHeroState* AHeroController::GetHeroPlayerState() const
+{
+	const auto Char = PlayerState;
+	return Char == nullptr ? nullptr : (AHeroState*)Char;
+}
+
 AHeroCharacter* AHeroController::GetHeroCharacter() const
 {
 	const auto Char = GetCharacter();
@@ -97,7 +103,7 @@ void AHeroController::DestroyHud()
 }
 
 
-void AHeroController::TakeDamage(const FMRHitResult& Hit)
+void AHeroController::TakeDamage2(const FMRHitResult& Hit)
 {
 	// Encorce only callers with authority
 	if (!HasAuthority()) return;
