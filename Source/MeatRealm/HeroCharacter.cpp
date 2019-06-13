@@ -8,8 +8,8 @@
 #include "Components/ArrowComponent.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "GameFramework/Controller.h"
+#include "GameFramework/InputSettings.h"
 #include "GameFramework/PlayerState.h"
-
 #include "GameFramework/SpringArmComponent.h"
 #include "Engine/Public/DrawDebugHelpers.h"
 #include "Engine/Engine.h"
@@ -17,18 +17,12 @@
 #include "HeroState.h"
 #include "HeroController.h"
 #include "WeaponPickupBase.h"
-#include "GameFramework/InputSettings.h"
 #include "Kismet/GameplayStatics.h"
 
-/// Lifecycle
 
-void AHeroCharacter::OnRep_TintChanged()
-{
-	/*LogMsgWithRole(
-		FString::Printf(TEXT("AHeroCharacter::OnRep_TintChanged() %s"), *TeamTint.ToString())
-	);*/
-	OnPlayerTintChanged.Broadcast();
-}
+
+
+/// Lifecycle
 
 AHeroCharacter::AHeroCharacter()
 {
@@ -122,99 +116,10 @@ void AHeroCharacter::GetLifetimeReplicatedProps(TArray< FLifetimeProperty >& Out
 	DOREPLIFETIME(AHeroCharacter, TeamTint);
 }
 
-
-AHeroState* AHeroCharacter::GetHeroState() const
-{
-	return GetPlayerState<AHeroState>();
-}
-
-AHeroController* AHeroCharacter::GetHeroController() const
-{
-	return GetController<AHeroController>();
-}
-
-
-void AHeroCharacter::SimulateAdsMode(bool IsAdsing)
-{
-	bIsAdsing = IsAdsing;
-	GetCharacterMovement()->MaxWalkSpeed = IsAdsing ? AdsSpeed : WalkSpeed;
-}
-
-void AHeroCharacter::ServerRPC_AdsReleased_Implementation()
-{
-	SimulateAdsMode(false);
-}
-
-bool AHeroCharacter::ServerRPC_AdsReleased_Validate()
-{
-	return true;
-}
-
-void AHeroCharacter::ServerRPC_AdsPressed_Implementation()
-{
-	SimulateAdsMode(true);
-}
-
-bool AHeroCharacter::ServerRPC_AdsPressed_Validate()
-{
-	return true;
-}
-
-void AHeroCharacter::Input_AdsPressed()
-{
-	if (CurrentWeapon) CurrentWeapon->Input_AdsPressed();
-	SimulateAdsMode(true);
-	ServerRPC_AdsPressed();
-}
-
-void AHeroCharacter::Input_AdsReleased()
-{
-	if (CurrentWeapon) CurrentWeapon->Input_AdsReleased();
-	SimulateAdsMode(false);
-	ServerRPC_AdsReleased();
-}
-
-void AHeroCharacter::ServerRPC_SpawnWeapon_Implementation(TSubclassOf<AWeapon> weaponClass)
-{
-	//LogMsgWithRole("AHeroCharacter::ServerRPC_SpawnWeapon");
-
-	FActorSpawnParameters params;
-	params.Instigator = this;
-	params.Owner = this;
-
-	auto weapon = GetWorld()->SpawnActorAbsolute<AWeapon>(
-		weaponClass,
-		WeaponAnchor->GetComponentTransform(), params);
-
-	weapon->AttachToComponent(WeaponAnchor, FAttachmentTransformRules{ EAttachmentRule::KeepWorld, true });
-	weapon->SetHeroControllerId(GetHeroController()->PlayerState->PlayerId);
-
-
-	// Cleanup previous weapon
-	if (CurrentWeapon != nullptr)
-	{
-		CurrentWeapon->Destroy();
-		CurrentWeapon = nullptr;
-	}
-
-	// TODO Will this fuckup in flight projectiles
-
-	// Make sure server has a copy
-	CurrentWeapon = weapon;
-}
-
-bool AHeroCharacter::ServerRPC_SpawnWeapon_Validate(TSubclassOf<AWeapon> weaponClass)
-{
-	return true;
-}
-
-
-/// Methods
-
 void AHeroCharacter::Tick(float DeltaSeconds)
 {
 	const auto HeroCont = GetHeroController();
-	if (HeroCont == nullptr || GetNetMode() == NM_DedicatedServer) return; 
+	if (HeroCont == nullptr || GetNetMode() == NM_DedicatedServer) return;
 
 	// Handle Input (move and look)
 
@@ -240,10 +145,10 @@ void AHeroCharacter::Tick(float DeltaSeconds)
 		{
 			const FVector AnchorLoc = WeaponAnchor->GetComponentLocation();
 			const FVector Hit = FMath::LinePlaneIntersection(
-				WorldLocation, 
-				WorldLocation + (WorldDirection * 5000), 
+				WorldLocation,
+				WorldLocation + (WorldDirection * 5000),
 				AnchorLoc,
-				FVector(0,0,1));
+				FVector(0, 0, 1));
 
 			LookVec = Hit - AnchorLoc;
 		}
@@ -302,7 +207,7 @@ void AHeroCharacter::Tick(float DeltaSeconds)
 	if (bLeanCameraWithAim)
 	{
 		FVector2D LinearLeanVector;
-		
+
 		if (bUseMouseAim)
 		{
 			if (bUseExperimentalMouseTracking)
@@ -310,7 +215,7 @@ void AHeroCharacter::Tick(float DeltaSeconds)
 				ExperimentalMouseAimTracking(DeltaSeconds);
 				return;
 			}
-			
+
 			LinearLeanVector = TrackCameraWithAimMouse();
 		}
 		else
@@ -335,6 +240,92 @@ void AHeroCharacter::Tick(float DeltaSeconds)
 
 
 
+
+// Ads mode
+
+void AHeroCharacter::SimulateAdsMode(bool IsAdsing)
+{
+	bIsAdsing = IsAdsing;
+	GetCharacterMovement()->MaxWalkSpeed = IsAdsing ? AdsSpeed : WalkSpeed;
+}
+
+void AHeroCharacter::ServerRPC_AdsReleased_Implementation()
+{
+	SimulateAdsMode(false);
+}
+
+bool AHeroCharacter::ServerRPC_AdsReleased_Validate()
+{
+	return true;
+}
+
+void AHeroCharacter::ServerRPC_AdsPressed_Implementation()
+{
+	SimulateAdsMode(true);
+}
+
+bool AHeroCharacter::ServerRPC_AdsPressed_Validate()
+{
+	return true;
+}
+
+void AHeroCharacter::Input_AdsPressed()
+{
+	if (CurrentWeapon) CurrentWeapon->Input_AdsPressed();
+	SimulateAdsMode(true);
+	ServerRPC_AdsPressed();
+}
+
+void AHeroCharacter::Input_AdsReleased()
+{
+	if (CurrentWeapon) CurrentWeapon->Input_AdsReleased();
+	SimulateAdsMode(false);
+	ServerRPC_AdsReleased();
+}
+
+
+
+
+// Weapon spawning
+
+void AHeroCharacter::ServerRPC_SpawnWeapon_Implementation(TSubclassOf<AWeapon> weaponClass)
+{
+	//LogMsgWithRole("AHeroCharacter::ServerRPC_SpawnWeapon");
+
+	FActorSpawnParameters params;
+	params.Instigator = this;
+	params.Owner = this;
+
+	auto weapon = GetWorld()->SpawnActorAbsolute<AWeapon>(
+		weaponClass,
+		WeaponAnchor->GetComponentTransform(), params);
+
+	weapon->AttachToComponent(WeaponAnchor, FAttachmentTransformRules{ EAttachmentRule::KeepWorld, true });
+	weapon->SetHeroControllerId(GetHeroController()->PlayerState->PlayerId);
+
+
+	// Cleanup previous weapon
+	if (CurrentWeapon != nullptr)
+	{
+		CurrentWeapon->Destroy();
+		CurrentWeapon = nullptr;
+	}
+
+	// TODO Will this fuckup in flight projectiles
+
+	// Make sure server has a copy
+	CurrentWeapon = weapon;
+}
+
+bool AHeroCharacter::ServerRPC_SpawnWeapon_Validate(TSubclassOf<AWeapon> weaponClass)
+{
+	return true;
+}
+
+
+
+
+// Camera tracks aim
 
 void AHeroCharacter::MoveCameraByOffsetVector(const FVector2D& OffsetVec, float DeltaSeconds) const
 {
@@ -485,10 +476,6 @@ void AHeroCharacter::ExperimentalMouseAimTracking(float DT)
 //	FVector2D{ AimVec.X, AimVec.Y };
 }
 
-
-
-
-
 FVector2D AHeroCharacter::CalcLinearLeanVectorUnclipped(const FVector2D& CursorLoc, const FVector2D& ViewportSize)
 {
 	const auto Mid = ViewportSize / 2.f;
@@ -515,6 +502,11 @@ FVector2D AHeroCharacter::GetGameViewportSize()
 
 	return Result;
 }
+
+
+
+
+// Affect the character
 
 void AHeroCharacter::ApplyDamage(uint32 InstigatorHeroControllerId, float Damage, FVector Location)
 {
@@ -628,6 +620,11 @@ bool AHeroCharacter::TryGiveWeapon(const TSubclassOf<AWeapon>& Class)
 	return true;
 }
 
+
+
+
+// Interacting
+
 void AHeroCharacter::Input_Interact()
 {
 	//LogMsgWithRole("AHeroCharacter::Input_Interact()");
@@ -686,6 +683,34 @@ void AHeroCharacter::GetReachLine(OUT FVector& outStart, OUT FVector& outEnd) co
 	outStart.Z -= 60; // check about ankle height
 	outEnd = outStart + GetActorRotation().Vector() * InteractableSearchDistance;
 }
+
+
+
+
+// Other
+
+void AHeroCharacter::OnRep_TintChanged() const
+{
+	/*LogMsgWithRole(
+		FString::Printf(TEXT("AHeroCharacter::OnRep_TintChanged() %s"), *TeamTint.ToString())
+	);*/
+	OnPlayerTintChanged.Broadcast();
+}
+
+AHeroState* AHeroCharacter::GetHeroState() const
+{
+	return GetPlayerState<AHeroState>();
+}
+
+AHeroController* AHeroCharacter::GetHeroController() const
+{
+	return GetController<AHeroController>();
+}
+
+
+
+
+// Debug logging
 
 void AHeroCharacter::LogMsgWithRole(FString message) const
 {

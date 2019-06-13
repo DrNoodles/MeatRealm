@@ -125,10 +125,11 @@ public:
 			OnRep_TintChanged();
 		}
 	}
+
 	FColor GetTint() const { return TeamTint; }
 
 	UFUNCTION()
-		void OnRep_TintChanged();
+	void OnRep_TintChanged() const;
 
 	UPROPERTY(BlueprintAssignable, Category = "Event Dispatchers")
 		FPlayerTintChanged OnPlayerTintChanged;
