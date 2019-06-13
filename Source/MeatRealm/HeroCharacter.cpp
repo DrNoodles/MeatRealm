@@ -639,7 +639,7 @@ void AHeroCharacter::ServerRPC_TryInteract_Implementation()
 	if (Pickup && Pickup->CanInteract())
 	{
 		//LogMsgWithRole("AHeroCharacter::ServerRPC_TryInteract_Implementation() : Found");
-		Pickup->TryInteract(this);
+		Pickup->AuthTryInteract(this);
 	}
 }
 
