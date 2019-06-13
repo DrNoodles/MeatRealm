@@ -38,6 +38,7 @@ public:
 	void AcknowledgePossession(APawn* P) override;
 	void OnUnPossess() override;
 
+	AHeroState* GetHeroPlayerState() const;
 	AHeroCharacter* GetHeroCharacter() const;
 	void CreateHud();
 	void DestroyHud();
@@ -46,7 +47,7 @@ public:
 	void LogMsgWithRole(FString message);
 	FString GetEnumText(ENetRole role);
 	FString GetRoleText();
-	void TakeDamage(const FMRHitResult& Hit);
+	void TakeDamage2(const FMRHitResult& Hit);
 	void SimulateHitGiven(const FMRHitResult& Hit);
 	
 	UFUNCTION(Client, Reliable)
