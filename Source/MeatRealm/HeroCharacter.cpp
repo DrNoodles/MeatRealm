@@ -29,10 +29,6 @@ AHeroCharacter::AHeroCharacter()
 	// Set size for collision capsule
 	GetCapsuleComponent()->InitCapsuleSize(42.f, 96.0f);
 
-	// Set our turn rates for input
-	BaseTurnRate = 45.f;
-	BaseLookUpRate = 45.f;
-
 	// Don't rotate when the controller rotates. Let that just affect the camera.
 	bUseControllerRotationYaw = true;
 	bUseControllerRotationPitch = false;
@@ -102,7 +98,7 @@ void AHeroCharacter::Restart()
 		if (HasAuthority())
 		{
 			const auto Choice = FMath::RandRange(0, WeaponClasses.Num() - 1);
-			ServerRPC_SpawnWeapon(WeaponClasses[Choice]);
+			AuthSpawnWeapon(WeaponClasses[Choice]);
 		}
 	}
 }
@@ -288,7 +284,7 @@ void AHeroCharacter::Input_AdsReleased()
 
 // Weapon spawning
 
-void AHeroCharacter::ServerRPC_SpawnWeapon_Implementation(TSubclassOf<AWeapon> weaponClass)
+void AHeroCharacter::AuthSpawnWeapon(TSubclassOf<AWeapon> weaponClass)
 {
 	//LogMsgWithRole("AHeroCharacter::ServerRPC_SpawnWeapon");
 
@@ -315,11 +311,6 @@ void AHeroCharacter::ServerRPC_SpawnWeapon_Implementation(TSubclassOf<AWeapon> w
 
 	// Make sure server has a copy
 	CurrentWeapon = weapon;
-}
-
-bool AHeroCharacter::ServerRPC_SpawnWeapon_Validate(TSubclassOf<AWeapon> weaponClass)
-{
-	return true;
 }
 
 
@@ -595,10 +586,10 @@ bool AHeroCharacter::AuthTryGiveArmour(float Delta)
 
 bool AHeroCharacter::AuthTryGiveWeapon(const TSubclassOf<AWeapon>& Class)
 {
-	//LogMsgWithRole("AHeroCharacter::TryGiveWeapon");
+	check(HasAuthority());
+	check(Class != nullptr);
 
-	if (Class == nullptr) return false;
-	if (!HasAuthority()) return false;
+	//LogMsgWithRole("AHeroCharacter::TryGiveWeapon");
 
 	
 	if (CurrentWeapon)
@@ -615,7 +606,7 @@ bool AHeroCharacter::AuthTryGiveWeapon(const TSubclassOf<AWeapon>& Class)
 	}
 
 
-	ServerRPC_SpawnWeapon(Class);
+	AuthSpawnWeapon(Class);
 
 	return true;
 }
@@ -717,7 +708,11 @@ void AHeroCharacter::LogMsgWithRole(FString message) const
 	FString m = GetRoleText() + ": " + message;
 	UE_LOG(LogTemp, Warning, TEXT("%s"), *m);
 }
-FString AHeroCharacter::GetEnumText(ENetRole role) const
+FString AHeroCharacter::GetRoleText() const
+{
+	return GetEnumText(Role) + " " + GetEnumText(GetRemoteRole());
+}
+FString AHeroCharacter::GetEnumText(ENetRole role)
 {
 	switch (role) {
 	case ROLE_None:
@@ -733,25 +728,4 @@ FString AHeroCharacter::GetEnumText(ENetRole role) const
 	default:
 		return "ERROR";
 	}
-}
-FString AHeroCharacter::GetRoleText() const
-{
-	auto Local = Role;
-	auto Remote = GetRemoteRole();
-
-
-	//if (Remote == ROLE_SimulatedProxy) //&& Local == ROLE_Authority
-	//	return "ListenServer";
-
-	//if (Local == ROLE_Authority)
-	//	return "Server";
-
-	//if (Local == ROLE_AutonomousProxy) // && Remote == ROLE_Authority
-	//	return "OwningClient";
-
-	//if (Local == ROLE_SimulatedProxy) // && Remote == ROLE_Authority
-	//	return "SimClient";
-
-	return GetEnumText(Role) + " " + GetEnumText(GetRemoteRole()) + " Ded:" + (IsRunningDedicatedServer() ? "True" : "False");
-
 }

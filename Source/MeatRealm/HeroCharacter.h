@@ -14,6 +14,7 @@ class AHeroController;
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FPlayerTintChanged);
 
+
 // TODO Use something built in already?
 USTRUCT(BlueprintType)
 struct MEATREALM_API FMRHitResult
@@ -37,10 +38,13 @@ struct MEATREALM_API FMRHitResult
 };
 
 
+
 UCLASS()
 class MEATREALM_API AHeroCharacter : public ACharacter, public IAffectableInterface
 {
 	GENERATED_BODY()
+
+
 
 public:
 
@@ -72,49 +76,73 @@ public:
 	UPROPERTY(EditDefaultsOnly, Category = Weapon)
 		TArray<TSubclassOf<class AWeapon>> WeaponClasses;
 
-	/** Base turn rate, in deg/sec. Other scaling may affect final turn rate. */
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Camera)
-		float BaseTurnRate;
-
-	/** Base look up/down rate, in deg/sec. Other scaling may affect final rate. */
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Camera)
-		float BaseLookUpRate;
-
-	UPROPERTY(BlueprintReadOnly, VisibleAnywhere, Replicated)
-		float Health = 100.f;
-
-	UPROPERTY(BlueprintReadOnly, VisibleAnywhere, Replicated)
-		float Armour = 0.f;
-
 	UPROPERTY(BlueprintReadWrite, EditAnywhere)
 		float MaxHealth = 100.f;
 
 	UPROPERTY(BlueprintReadWrite, EditAnywhere)
 		float MaxArmour = 100.f;
-	
+
+	UPROPERTY(BlueprintReadOnly, Replicated)
+		float Health = 100.f;
+
+	UPROPERTY(BlueprintReadOnly, Replicated)
+		float Armour = 0.f;
+
+	UPROPERTY(EditAnywhere)
+		float AdsSpeed = 200;
+
+	UPROPERTY(EditAnywhere)
+		float WalkSpeed = 400;
+
+	UPROPERTY(BlueprintAssignable, Category = "Event Dispatchers")
+		FPlayerTintChanged OnPlayerTintChanged;
+
+protected:
+	UPROPERTY(BlueprintReadOnly, ReplicatedUsing = OnRep_TintChanged)
+		FColor TeamTint = FColor::Black;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
+		UStaticMeshComponent* AimPosComp = nullptr;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
+		UArrowComponent* WeaponAnchor = nullptr;
+
+	UPROPERTY(BlueprintReadOnly, Replicated)
+		AWeapon* CurrentWeapon = nullptr;
+
+private:
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Camera, meta = (AllowPrivateAccess = "true"))
+		class USpringArmComponent* CameraBoom;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Camera, meta = (AllowPrivateAccess = "true"))
+		class USceneComponent* FollowCameraOffsetComp;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Camera, meta = (AllowPrivateAccess = "true"))
+		class UCameraComponent* FollowCamera;
+
 	// This is nasty - probably need to work with the official movement states
 	bool bIsAdsing = false;
+	bool bUseMouseAim = true;
+	float AxisMoveUp;
+	float AxisMoveRight;
+	float AxisFaceUp;
+	float AxisFaceRight;
 
-	UPROPERTY(EditAnywhere)
-	float AdsSpeed = 200;
-
-	UPROPERTY(EditAnywhere)
-	float WalkSpeed = 400;
+	FVector2D AimPos_ScreenSpace = FVector2D::ZeroVector;
+	FVector AimPos_WorldSpace = FVector::ZeroVector;
 
 
-	UFUNCTION()
-	virtual void AuthApplyDamage(uint32 InstigatorHeroControllerId, float Damage, FVector Location) override;
-	UFUNCTION()
-	virtual bool AuthTryGiveHealth(float Hp) override;
-	UFUNCTION()
-	virtual bool AuthTryGiveAmmo() override;
-	UFUNCTION()
-	virtual bool AuthTryGiveArmour(float Delta) override;
-	UFUNCTION()
-	virtual bool AuthTryGiveWeapon(const TSubclassOf<AWeapon>& Class) override;
 
-	UPROPERTY(BlueprintReadOnly, ReplicatedUsing=OnRep_TintChanged)
-	FColor TeamTint = FColor::Black;
+
+
+public:
+	AHeroCharacter();
+	void Restart() override;
+	void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
+
+
+	void AuthSpawnWeapon(TSubclassOf<AWeapon> weaponClass);
+
 	void SetTint(FColor bCond)
 	{
 		TeamTint = bCond;
@@ -125,48 +153,27 @@ public:
 			OnRep_TintChanged();
 		}
 	}
-
 	FColor GetTint() const { return TeamTint; }
 
+
+	/* IAffectableInterface */
 	UFUNCTION()
-	void OnRep_TintChanged() const;
-
-	UPROPERTY(BlueprintAssignable, Category = "Event Dispatchers")
-		FPlayerTintChanged OnPlayerTintChanged;
-
-	// Sets default values for this character's properties
-	AHeroCharacter();
-	void Restart() override;
-	void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
-
-
-	AHeroState* GetHeroState() const;
-	AHeroController* GetHeroController() const;
+	void AuthApplyDamage(uint32 InstigatorHeroControllerId, float Damage, FVector Location) override;
+	UFUNCTION()
+	bool AuthTryGiveHealth(float Hp) override;
+	UFUNCTION()
+	bool AuthTryGiveAmmo() override;
+	UFUNCTION()
+	bool AuthTryGiveArmour(float Delta) override;
+	UFUNCTION()
+	bool AuthTryGiveWeapon(const TSubclassOf<AWeapon>& Class) override;
+	/* End IAffectableInterface */
 
 
 
-	/// Components
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
-		UArrowComponent* WeaponAnchor = nullptr;
+	FORCEINLINE AHeroState* GetHeroState() const;
+	FORCEINLINE AHeroController* GetHeroController() const;
 
-
-
-	void SimulateAdsMode(bool IsAdsing);
-
-	UFUNCTION(Server, Reliable, WithValidation)
-		void ServerRPC_AdsPressed();
-
-	UFUNCTION(Server, Reliable, WithValidation)
-		void ServerRPC_AdsReleased();
-
-	UFUNCTION(Server, Reliable, WithValidation)
-		void ServerRPC_SpawnWeapon(TSubclassOf<AWeapon> weaponClass);
-
-	UPROPERTY(BlueprintReadOnly, Replicated)
-		AWeapon* CurrentWeapon = nullptr;
-
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
-		UStaticMeshComponent* AimPosComp = nullptr;
 
 
 	/// Input
@@ -184,8 +191,8 @@ public:
 
 	void SetUseMouseAim(bool bUseMouseAimIn) { bUseMouseAim = bUseMouseAimIn; }
 
-
 private:
+
 	virtual void Tick(float DeltaSeconds) override;
 
 	static FVector2D GetGameViewportSize();
@@ -196,40 +203,31 @@ private:
 	void ExperimentalMouseAimTracking(float DT);
 
 
+	void SimulateAdsMode(bool IsAdsing);
 
 
-	/** Camera boom positioning the camera behind the character */
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Camera, meta = (AllowPrivateAccess = "true"))
-		class USpringArmComponent* CameraBoom;
+	UFUNCTION()
+		void OnRep_TintChanged() const;
 
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Camera, meta = (AllowPrivateAccess = "true"))
-		class USceneComponent* FollowCameraOffsetComp;
+	UFUNCTION(Server, Reliable, WithValidation)
+		void ServerRPC_AdsPressed();
 
-	/** Follow camera */
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Camera, meta = (AllowPrivateAccess = "true"))
-		class UCameraComponent* FollowCamera;
-
-	bool bUseMouseAim = true;
-	float AxisMoveUp;
-	float AxisMoveRight;
-	float AxisFaceUp;
-	float AxisFaceRight;
-
+	UFUNCTION(Server, Reliable, WithValidation)
+		void ServerRPC_AdsReleased();
 
 	UFUNCTION(Server, Reliable, WithValidation)
 		void ServerRPC_TryInteract();
 
 	template<class T>
 	T* ScanForInteractable();
+
 	FHitResult GetFirstPhysicsBodyInReach() const;
+
 	void GetReachLine(FVector& outStart, FVector& outEnd) const;
 
 	void LogMsgWithRole(FString message) const;
-	FString GetEnumText(ENetRole role) const;
 	FString GetRoleText() const;
-
-	FVector2D AimPos_ScreenSpace = FVector2D::ZeroVector;
-	FVector AimPos_WorldSpace = FVector::ZeroVector;
+	static FString GetEnumText(ENetRole role);
 };
 
 
