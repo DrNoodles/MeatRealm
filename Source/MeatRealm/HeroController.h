@@ -4,14 +4,12 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/PlayerController.h"
-#include "Blueprint/UserWidget.h"
-#include "DeathmatchGameMode.h"
-#include "HeroCharacter.h" // TODO Make this a forward decl - Need to pull FMRHitResult out of the file
-#include "DamageNumber.h"
+#include "Structs/DmgHitResult.h" // for DYNAMIC DELEGATES
 
 #include "HeroController.generated.h"
 
 class AHeroCharacter;
+class AHeroState;
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FPlayerSpawned);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FTakenDamage, FMRHitResult, Hit);
@@ -80,7 +78,6 @@ protected:
 	virtual bool InputKey(FKey Key, EInputEvent EventType, float AmountDepressed, bool bGamepad) override;
 
 private:
-
 	//FHealthDepleted HealthDepletedEvent;
 
 	/// Input

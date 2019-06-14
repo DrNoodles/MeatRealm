@@ -4,43 +4,23 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/Character.h"
-#include "Weapon.h"
 #include "Interfaces/AffectableInterface.h"
 
 #include "HeroCharacter.generated.h"
 
 class AHeroState;
 class AHeroController;
+class AWeapon;
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FPlayerTintChanged);
-
-// TODO Use something built in already?
-USTRUCT(BlueprintType)
-struct MEATREALM_API FMRHitResult
-{
-	GENERATED_BODY()
-
-	UPROPERTY()
-		uint32 ReceiverControllerId;
-	UPROPERTY()
-		uint32 AttackerControllerId;
-	UPROPERTY()
-		int HealthRemaining;
-	UPROPERTY()
-		int DamageTaken;
-	UPROPERTY()
-		bool bHitArmour;
-	UPROPERTY()
-		FVector HitLocation;
-	UPROPERTY()
-		FVector HitDirection;
-};
 
 
 UCLASS()
 class MEATREALM_API AHeroCharacter : public ACharacter, public IAffectableInterface
 {
 	GENERATED_BODY()
+
+
 
 public:
 
@@ -63,7 +43,7 @@ public:
 		bool bUseExperimentalMouseTracking = false;
 
 	UPROPERTY(EditAnywhere)
-	float AdsLineLength = 1000; // cm
+	float AdsLineLength = 1500; // cm
 
 	UPROPERTY(EditAnywhere)
 	float InteractableSearchDistance = 150.f; //cm
@@ -72,49 +52,73 @@ public:
 	UPROPERTY(EditDefaultsOnly, Category = Weapon)
 		TArray<TSubclassOf<class AWeapon>> WeaponClasses;
 
-	/** Base turn rate, in deg/sec. Other scaling may affect final turn rate. */
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Camera)
-		float BaseTurnRate;
-
-	/** Base look up/down rate, in deg/sec. Other scaling may affect final rate. */
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Camera)
-		float BaseLookUpRate;
-
-	UPROPERTY(BlueprintReadOnly, VisibleAnywhere, Replicated)
-		float Health = 100.f;
-
-	UPROPERTY(BlueprintReadOnly, VisibleAnywhere, Replicated)
-		float Armour = 0.f;
-
 	UPROPERTY(BlueprintReadWrite, EditAnywhere)
 		float MaxHealth = 100.f;
 
 	UPROPERTY(BlueprintReadWrite, EditAnywhere)
 		float MaxArmour = 100.f;
-	
+
+	UPROPERTY(BlueprintReadOnly, Replicated)
+		float Health = 100.f;
+
+	UPROPERTY(BlueprintReadOnly, Replicated)
+		float Armour = 0.f;
+
+	UPROPERTY(EditAnywhere)
+		float AdsSpeed = 200;
+
+	UPROPERTY(EditAnywhere)
+		float WalkSpeed = 400;
+
+	UPROPERTY(BlueprintAssignable, Category = "Event Dispatchers")
+		FPlayerTintChanged OnPlayerTintChanged;
+
+protected:
+	UPROPERTY(BlueprintReadOnly, ReplicatedUsing = OnRep_TintChanged)
+		FColor TeamTint = FColor::Black;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
+		UStaticMeshComponent* AimPosComp = nullptr;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
+		UArrowComponent* WeaponAnchor = nullptr;
+
+	UPROPERTY(BlueprintReadOnly, Replicated)
+		AWeapon* CurrentWeapon = nullptr;
+
+private:
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Camera, meta = (AllowPrivateAccess = "true"))
+		class USpringArmComponent* CameraBoom;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Camera, meta = (AllowPrivateAccess = "true"))
+		class USceneComponent* FollowCameraOffsetComp;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Camera, meta = (AllowPrivateAccess = "true"))
+		class UCameraComponent* FollowCamera;
+
 	// This is nasty - probably need to work with the official movement states
 	bool bIsAdsing = false;
+	bool bUseMouseAim = true;
+	float AxisMoveUp;
+	float AxisMoveRight;
+	float AxisFaceUp;
+	float AxisFaceRight;
 
-	UPROPERTY(EditAnywhere)
-	float AdsSpeed = 200;
-
-	UPROPERTY(EditAnywhere)
-	float WalkSpeed = 400;
+	FVector2D AimPos_ScreenSpace = FVector2D::ZeroVector;
+	FVector AimPos_WorldSpace = FVector::ZeroVector;
 
 
-	UFUNCTION()
-	virtual void ApplyDamage(uint32 InstigatorHeroControllerId, float Damage, FVector Location) override;
-	UFUNCTION()
-	virtual bool TryGiveHealth(float Hp) override;
-	UFUNCTION()
-	virtual bool TryGiveAmmo() override;
-	UFUNCTION()
-	virtual bool TryGiveArmour(float Delta) override;
-	UFUNCTION()
-	virtual bool TryGiveWeapon(const TSubclassOf<AWeapon>& Class) override;
 
-	UPROPERTY(BlueprintReadOnly, ReplicatedUsing=OnRep_TintChanged)
-	FColor TeamTint = FColor::Black;
+
+
+public:
+	AHeroCharacter();
+	void Restart() override;
+	void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
+
+
+	void AuthSpawnWeapon(TSubclassOf<AWeapon> weaponClass);
+
 	void SetTint(FColor bCond)
 	{
 		TeamTint = bCond;
@@ -127,54 +131,34 @@ public:
 	}
 	FColor GetTint() const { return TeamTint; }
 
+
+	/* IAffectableInterface */
 	UFUNCTION()
-		void OnRep_TintChanged();
-
-	UPROPERTY(BlueprintAssignable, Category = "Event Dispatchers")
-		FPlayerTintChanged OnPlayerTintChanged;
-
-	// Sets default values for this character's properties
-	AHeroCharacter();
-	void Restart() override;
-	void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
-
-
-	AHeroState* GetHeroState() const;
-	AHeroController* GetHeroController() const;
+	void AuthApplyDamage(uint32 InstigatorHeroControllerId, float Damage, FVector Location) override;
+	UFUNCTION()
+	bool AuthTryGiveHealth(float Hp) override;
+	UFUNCTION()
+	bool AuthTryGiveAmmo() override;
+	UFUNCTION()
+	bool AuthTryGiveArmour(float Delta) override;
+	UFUNCTION()
+	bool AuthTryGiveWeapon(const TSubclassOf<AWeapon>& Class) override;
+	/* End IAffectableInterface */
 
 
 
-	/// Components
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
-		UArrowComponent* WeaponAnchor = nullptr;
+	FORCEINLINE AHeroState* GetHeroState() const;
+	FORCEINLINE AHeroController* GetHeroController() const;
 
-
-
-	void SimulateAdsMode(bool IsAdsing);
-
-	UFUNCTION(Server, Reliable, WithValidation)
-		void ServerRPC_AdsPressed();
-
-	UFUNCTION(Server, Reliable, WithValidation)
-		void ServerRPC_AdsReleased();
-
-	UFUNCTION(Server, Reliable, WithValidation)
-		void ServerRPC_SpawnWeapon(TSubclassOf<AWeapon> weaponClass);
-
-	UPROPERTY(BlueprintReadOnly, Replicated)
-		AWeapon* CurrentWeapon = nullptr;
-
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
-		UStaticMeshComponent* AimPosComp = nullptr;
 
 
 	/// Input
 
-	void Input_FirePressed() const { if (CurrentWeapon) CurrentWeapon->Input_PullTrigger(); }
-	void Input_FireReleased() const { if (CurrentWeapon) CurrentWeapon->Input_ReleaseTrigger(); }
+	void Input_FirePressed() const;
+	void Input_FireReleased() const;
 	void Input_AdsPressed();
 	void Input_AdsReleased();
-	void Input_Reload() const { if (CurrentWeapon) CurrentWeapon->Input_Reload(); }
+	void Input_Reload() const;
 	void Input_MoveUp(float Value) {	AxisMoveUp = Value; }
 	void Input_MoveRight(float Value) { AxisMoveRight = Value; }
 	void Input_FaceUp(float Value) { AxisFaceUp = Value; }
@@ -183,51 +167,43 @@ public:
 
 	void SetUseMouseAim(bool bUseMouseAimIn) { bUseMouseAim = bUseMouseAimIn; }
 
+private:
 
-protected:
+	virtual void Tick(float DeltaSeconds) override;
+
 	static FVector2D GetGameViewportSize();
 	static FVector2D CalcLinearLeanVectorUnclipped(const FVector2D& CursorLoc, const FVector2D& ViewportSize);
 	void MoveCameraByOffsetVector(const FVector2D& Vector2D, float DeltaSeconds) const;
-	virtual void Tick(float DeltaSeconds) override;
 	FVector2D TrackCameraWithAimMouse() const;
 	FVector2D TrackCameraWithAimGamepad() const;
 	void ExperimentalMouseAimTracking(float DT);
 
 
-private:
+	void SimulateAdsMode(bool IsAdsing);
 
-	/** Camera boom positioning the camera behind the character */
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Camera, meta = (AllowPrivateAccess = "true"))
-		class USpringArmComponent* CameraBoom;
 
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Camera, meta = (AllowPrivateAccess = "true"))
-		class USceneComponent* FollowCameraOffsetComp;
+	UFUNCTION()
+		void OnRep_TintChanged() const;
 
-	/** Follow camera */
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Camera, meta = (AllowPrivateAccess = "true"))
-		class UCameraComponent* FollowCamera;
+	UFUNCTION(Server, Reliable, WithValidation)
+		void ServerRPC_AdsPressed();
 
-	bool bUseMouseAim = true;
-	float AxisMoveUp;
-	float AxisMoveRight;
-	float AxisFaceUp;
-	float AxisFaceRight;
-
+	UFUNCTION(Server, Reliable, WithValidation)
+		void ServerRPC_AdsReleased();
 
 	UFUNCTION(Server, Reliable, WithValidation)
 		void ServerRPC_TryInteract();
 
 	template<class T>
 	T* ScanForInteractable();
+
 	FHitResult GetFirstPhysicsBodyInReach() const;
+
 	void GetReachLine(FVector& outStart, FVector& outEnd) const;
 
 	void LogMsgWithRole(FString message) const;
-	FString GetEnumText(ENetRole role) const;
 	FString GetRoleText() const;
-
-	FVector2D AimPos_ScreenSpace = FVector2D::ZeroVector;
-	FVector AimPos_WorldSpace = FVector::ZeroVector;
+	static FString GetEnumText(ENetRole role);
 };
 
 

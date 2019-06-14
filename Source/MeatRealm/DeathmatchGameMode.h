@@ -4,7 +4,6 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/GameMode.h"
-#include "HeroCharacter.h" // TODO Remove FMHitResult HeroChar from this file and kill off this ref
 
 #include "DeathmatchGameMode.generated.h"
 

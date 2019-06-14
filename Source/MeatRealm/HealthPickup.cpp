@@ -7,5 +7,5 @@
 bool AHealthPickup::TryApplyAffect(IAffectableInterface* const Affectable)
 {
 	//LogMsgWithRole("TryApplyAffect()");
-	return Affectable->TryGiveHealth(HealthRestored);
+	return Affectable->AuthTryGiveHealth(HealthRestored);
 }
