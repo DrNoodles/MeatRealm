@@ -47,14 +47,13 @@ TArray<UScoreboardEntryData*> ADeathmatchGameState::GetScoreboard()
 
 	for (APlayerState* PlayerState : PlayerArray)
 	{
-		if (PlayerState->bIsInactive)
+		const auto Hero = Cast<AHeroState>(PlayerState);
+		if (Hero->HasLeftTheGame)
 		{
 			UE_LOG(LogTemp, Warning, TEXT("Player %s is inactive and excluded from the scoreboard."),
 				*PlayerState->GetPlayerName());
 			continue; // Player has left the game? // TODO Check for spectators?
 		}
-
-		const auto Hero = (AHeroState*)PlayerState;
 
 		UScoreboardEntryData* Item = NewObject<UScoreboardEntryData>();
 		Item->Name = Hero->GetPlayerName();

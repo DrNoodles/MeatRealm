@@ -33,20 +33,15 @@ ADeathmatchGameMode::ADeathmatchGameMode()
 	PlayerTints.Add(FColor{   0,186,188 });// Turquoise
 	PlayerTints.Add(FColor{ 118, 91,167 });// Purple
 	PlayerTints.Add(FColor{ 237,  1,127 });// Fuchsia
-	}
+}
 
 
 void ADeathmatchGameMode::PostLogin(APlayerController* NewPlayer)
 {
 	Super::PostLogin(NewPlayer);
-
-	const auto Hero = static_cast<AHeroController*>(NewPlayer);
 	
-	// TODO Use GameState->PlayerState->PlayerId 
-	// https://api.unrealengine.com/INT/API/Runtime/Engine/GameFramework/APlayerState/PlayerId/index.html
-	
-	const uint32 UID = Hero->GetUniqueID();
-	ConnectedHeroControllers.Add(UID, Hero);
+	const auto Hero = Cast<AHeroController>(NewPlayer);
+	ConnectedHeroControllers.Add(Hero->PlayerState->PlayerId, Hero);
 
 	UE_LOG(LogTemp, Warning, TEXT("ConnectedHeroControllers: %d"), ConnectedHeroControllers.Num());
 }
@@ -54,8 +49,10 @@ void ADeathmatchGameMode::PostLogin(APlayerController* NewPlayer)
 
 void ADeathmatchGameMode::Logout(AController* Exiting)
 {
-	const auto Hero = static_cast<AHeroController*>(Exiting);
-	ConnectedHeroControllers.Remove(Hero->GetUniqueID());
+	const auto Hero = Cast<AHeroController>(Exiting);
+
+	ConnectedHeroControllers.Remove(Hero->PlayerState->PlayerId);
+	Hero->GetHeroPlayerState()->HasLeftTheGame = true; // not using bIsInactive as it never replicates!
 
 	UE_LOG(LogTemp, Warning, TEXT("ConnectedHeroControllers: %d"), ConnectedHeroControllers.Num());
 
@@ -75,18 +72,20 @@ void ADeathmatchGameMode::SetPlayerDefaults(APawn* PlayerPawn)
 	auto HChar = Cast<AHeroCharacter>(PlayerPawn);
 	if (!HChar) return;
 
-	auto HCont = HChar->GetHeroController();
+	const auto HCont = HChar->GetHeroController();
 	if (!HCont) return;
 
 	int TintNumber;
-	if (PlayerMappedTints.Contains(HCont->GetUniqueID()))
+	const int32 PlayerId = HCont->PlayerState->PlayerId;
+
+	if (PlayerMappedTints.Contains(PlayerId))
 	{
-		TintNumber = PlayerMappedTints[HCont->GetUniqueID()];
+		TintNumber = PlayerMappedTints[PlayerId];
 	}
 	else
 	{
 		TintNumber = TintCount++;
-		PlayerMappedTints.Add(HCont->GetUniqueID(), TintNumber);
+		PlayerMappedTints.Add(PlayerId, TintNumber);
 	}
 
 	HChar->SetTint(PlayerTints[TintNumber]);

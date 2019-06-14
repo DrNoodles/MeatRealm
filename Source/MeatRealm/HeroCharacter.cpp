@@ -187,7 +187,7 @@ void AHeroCharacter::ServerRPC_SpawnWeapon_Implementation(TSubclassOf<AWeapon> w
 		WeaponAnchor->GetComponentTransform(), params);
 
 	weapon->AttachToComponent(WeaponAnchor, FAttachmentTransformRules{ EAttachmentRule::KeepWorld, true });
-	weapon->SetHeroControllerId(GetHeroController()->GetUniqueID());
+	weapon->SetHeroControllerId(GetHeroController()->PlayerState->PlayerId);
 
 
 	// Cleanup previous weapon
@@ -554,7 +554,7 @@ void AHeroCharacter::ApplyDamage(uint32 InstigatorHeroControllerId, float Damage
 	if (HC)
 	{
 		FMRHitResult Hit{};
-		Hit.ReceiverControllerId = HC->GetUniqueID();
+		Hit.ReceiverControllerId = HC->PlayerState->PlayerId;
 		Hit.AttackerControllerId = InstigatorHeroControllerId;
 		Hit.HealthRemaining = (int)Health;
 		Hit.DamageTaken = (int)Damage;
@@ -562,7 +562,7 @@ void AHeroCharacter::ApplyDamage(uint32 InstigatorHeroControllerId, float Damage
 		Hit.HitLocation = Location;
 		//Hit.HitDirection
 
-		HC->TakeDamage(Hit);
+		HC->TakeDamage2(Hit);
 	}
 	
 }
