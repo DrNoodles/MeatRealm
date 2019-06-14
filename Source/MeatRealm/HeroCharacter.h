@@ -4,39 +4,15 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/Character.h"
-#include "Weapon.h"
 #include "Interfaces/AffectableInterface.h"
 
 #include "HeroCharacter.generated.h"
 
 class AHeroState;
 class AHeroController;
+class AWeapon;
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FPlayerTintChanged);
-
-
-// TODO Use something built in already?
-USTRUCT(BlueprintType)
-struct MEATREALM_API FMRHitResult
-{
-	GENERATED_BODY()
-
-	UPROPERTY()
-		uint32 ReceiverControllerId;
-	UPROPERTY()
-		uint32 AttackerControllerId;
-	UPROPERTY()
-		int HealthRemaining;
-	UPROPERTY()
-		int DamageTaken;
-	UPROPERTY()
-		bool bHitArmour;
-	UPROPERTY()
-		FVector HitLocation;
-	UPROPERTY()
-		FVector HitDirection;
-};
-
 
 
 UCLASS()
@@ -178,11 +154,11 @@ public:
 
 	/// Input
 
-	void Input_FirePressed() const { if (CurrentWeapon) CurrentWeapon->Input_PullTrigger(); }
-	void Input_FireReleased() const { if (CurrentWeapon) CurrentWeapon->Input_ReleaseTrigger(); }
+	void Input_FirePressed() const;
+	void Input_FireReleased() const;
 	void Input_AdsPressed();
 	void Input_AdsReleased();
-	void Input_Reload() const { if (CurrentWeapon) CurrentWeapon->Input_Reload(); }
+	void Input_Reload() const;
 	void Input_MoveUp(float Value) {	AxisMoveUp = Value; }
 	void Input_MoveRight(float Value) { AxisMoveRight = Value; }
 	void Input_FaceUp(float Value) { AxisFaceUp = Value; }

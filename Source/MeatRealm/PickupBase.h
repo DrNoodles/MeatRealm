@@ -4,7 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/Actor.h"
-#include "Interfaces/AffectableInterface.h"
+#include "Interfaces/AffectableInterface.h" // Used in default impl of TryApplyAffect
 
 #include "PickupBase.generated.h"
 

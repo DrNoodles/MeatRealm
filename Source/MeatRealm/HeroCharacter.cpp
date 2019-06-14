@@ -18,6 +18,7 @@
 #include "HeroController.h"
 #include "WeaponPickupBase.h"
 #include "Kismet/GameplayStatics.h"
+#include "Weapon.h"
 
 
 
@@ -265,6 +266,17 @@ bool AHeroCharacter::ServerRPC_AdsPressed_Validate()
 	return true;
 }
 
+
+void AHeroCharacter::Input_FirePressed() const
+{
+	if (CurrentWeapon) CurrentWeapon->Input_PullTrigger();
+}
+
+void AHeroCharacter::Input_FireReleased() const
+{
+	if (CurrentWeapon) CurrentWeapon->Input_ReleaseTrigger();
+}
+
 void AHeroCharacter::Input_AdsPressed()
 {
 	if (CurrentWeapon) CurrentWeapon->Input_AdsPressed();
@@ -279,7 +291,10 @@ void AHeroCharacter::Input_AdsReleased()
 	ServerRPC_AdsReleased();
 }
 
-
+void AHeroCharacter::Input_Reload() const
+{
+	if (CurrentWeapon) CurrentWeapon->Input_Reload();
+}
 
 
 // Weapon spawning

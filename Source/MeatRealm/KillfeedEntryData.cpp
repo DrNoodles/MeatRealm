@@ -2,6 +2,7 @@
 
 
 #include "KillfeedEntryData.h"
+#include "UnrealNetwork.h"
 
 void UKillfeedEntryData::GetLifetimeReplicatedProps(TArray< FLifetimeProperty >& OutLifetimeProps) const
 {

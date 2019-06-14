@@ -7,8 +7,6 @@
 #include "Weapon.h"
 #include "AffectableInterface.generated.h"
 
-class AHeroController;
-
 // This class does not need to be modified.
 UINTERFACE(MinimalAPI)
 class UAffectableInterface : public UInterface

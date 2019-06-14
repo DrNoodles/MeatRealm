@@ -8,6 +8,7 @@
 #include "Engine/ActorChannel.h"
 #include "Engine/World.h"
 #include "TimerManager.h"
+#include "KillfeedEntryData.h"
 
 void ADeathmatchGameState::PostInitializeComponents()
 {
