@@ -43,7 +43,7 @@ public:
 		bool bUseExperimentalMouseTracking = false;
 
 	UPROPERTY(EditAnywhere)
-	float AdsLineLength = 1000; // cm
+	float AdsLineLength = 1500; // cm
 
 	UPROPERTY(EditAnywhere)
 	float InteractableSearchDistance = 150.f; //cm

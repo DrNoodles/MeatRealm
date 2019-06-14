@@ -115,8 +115,13 @@ void AHeroCharacter::GetLifetimeReplicatedProps(TArray< FLifetimeProperty >& Out
 
 void AHeroCharacter::Tick(float DeltaSeconds)
 {
+	// No need for server. We're only doing input processing and client effects here.
+	if (HasAuthority()) return;
+
 	const auto HeroCont = GetHeroController();
-	if (HeroCont == nullptr || GetNetMode() == NM_DedicatedServer) return;
+	if (HeroCont == nullptr) return;
+
+
 
 	// Handle Input (move and look)
 
@@ -227,11 +232,30 @@ void AHeroCharacter::Tick(float DeltaSeconds)
 
 
 	// Draw ADS line
+	
 	if (bIsAdsing)
 	{
 		FVector Start = WeaponAnchor->GetComponentLocation();
 		FVector End = Start + WeaponAnchor->GetComponentRotation().Vector() * AdsLineLength;
-		DrawDebugLine(GetWorld(), Start, End, FColor{ 255,0,0,187 }, false, -1., 0, 2.f);
+
+		// Trace line to first hit for end
+		FHitResult hitResult;
+		bool isHit = GetWorld()->LineTraceSingleByChannel(
+			OUT hitResult,
+			Start,
+			End,
+			ECC_Visibility,
+			FCollisionQueryParams{ FName(""), false, this }
+		);
+
+		auto Color = FColor{ 255, 0, 0 };
+		if (isHit)
+		{
+			if (false/*debug*/) Color = FColor{ 0, 0, 255 };
+			End = hitResult.ImpactPoint;
+		}
+			
+		DrawDebugLine(GetWorld(), Start, End, Color, false, -1., 0, 2.f);
 	}
 }
 
@@ -266,7 +290,6 @@ bool AHeroCharacter::ServerRPC_AdsPressed_Validate()
 	return true;
 }
 
-
 void AHeroCharacter::Input_FirePressed() const
 {
 	if (CurrentWeapon) CurrentWeapon->Input_PullTrigger();
@@ -295,6 +318,8 @@ void AHeroCharacter::Input_Reload() const
 {
 	if (CurrentWeapon) CurrentWeapon->Input_Reload();
 }
+
+
 
 
 // Weapon spawning
@@ -667,18 +692,24 @@ FHitResult AHeroCharacter::GetFirstPhysicsBodyInReach() const
 
 	FVector traceStart, traceEnd;
 	GetReachLine(OUT traceStart, OUT traceEnd);
-
-	//DrawDebugLine(GetWorld(), traceStart, traceEnd, FColor{ 255,0,0 }, false, -1., 0, 5.f);
+	
+	bool bDrawDebug = false;
+	if (bDrawDebug) DrawDebugLine(GetWorld(), traceStart, traceEnd, FColor{ 255,0,0 }, false, -1., 0, 3.f);
 
 	// Raycast along line to find intersecting physics object
 	FHitResult hitResult;
-	bool isHit = GetWorld()->LineTraceSingleByObjectType(
+	bool isHit = GetWorld()->LineTraceSingleByObjectType( // TODO Convert to 
 		OUT hitResult,
 		traceStart,
 		traceEnd,
 		FCollisionObjectQueryParams{ ECollisionChannel::ECC_GameTraceChannel2 },
 		FCollisionQueryParams{ FName(""), false, GetOwner() }
 	);
+
+	if (isHit && bDrawDebug)
+	{
+		DrawDebugLine(GetWorld(), traceStart, hitResult.ImpactPoint, FColor{ 0,0,255 }, false, -1., 0, 5.f);
+	}
 
 	return hitResult;
 }
