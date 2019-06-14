@@ -7,8 +7,6 @@
 #include "Weapon.h"
 #include "AffectableInterface.generated.h"
 
-class AHeroController;
-
 // This class does not need to be modified.
 UINTERFACE(MinimalAPI)
 class UAffectableInterface : public UInterface
@@ -25,13 +23,13 @@ class MEATREALM_API IAffectableInterface
 
 public: // NOTE This interface breaks the I in SOLID. But it'll do for now.
 	UFUNCTION()
-		virtual void ApplyDamage(uint32 InstigatorHeroControllerId, float Delta, FVector Location) = 0;
+		virtual void AuthApplyDamage(uint32 InstigatorHeroControllerId, float Delta, FVector Location) = 0;
 	UFUNCTION()
-		virtual bool TryGiveHealth(float Hp) = 0;
+		virtual bool AuthTryGiveHealth(float Hp) = 0;
 	UFUNCTION()
-		virtual bool TryGiveArmour(float Delta) = 0;
+		virtual bool AuthTryGiveArmour(float Delta) = 0;
 	UFUNCTION()
-		virtual bool TryGiveAmmo() = 0;
+		virtual bool AuthTryGiveAmmo() = 0;
 	UFUNCTION()
-		virtual bool TryGiveWeapon(const TSubclassOf<AWeapon>& Class) = 0;
+		virtual bool AuthTryGiveWeapon(const TSubclassOf<AWeapon>& Class) = 0;
 };

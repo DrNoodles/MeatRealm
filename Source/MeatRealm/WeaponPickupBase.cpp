@@ -11,5 +11,5 @@ bool AWeaponPickupBase::TryApplyAffect(IAffectableInterface* const Affectable)
 		return false;
 	}
 
-	return Affectable->TryGiveWeapon(WeaponClass);
+	return Affectable->AuthTryGiveWeapon(WeaponClass);
 }

@@ -8,6 +8,8 @@
 #include "DrawDebugHelpers.h"
 #include "UnrealNetwork.h"
 #include "Kismet/GameplayStatics.h"
+#include "TimerManager.h"
+#include "Projectile.h"
 
 AWeapon::AWeapon()
 {

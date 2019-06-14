@@ -9,6 +9,7 @@
 #include "HeroController.h"
 #include "Engine/PlayerStartPIE.h"
 #include "EngineUtils.h"
+#include "Structs/DmgHitResult.h"
 
 ADeathmatchGameMode::ADeathmatchGameMode()
 {

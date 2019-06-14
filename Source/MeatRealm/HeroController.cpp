@@ -3,13 +3,15 @@
 
 #include "HeroController.h"
 #include "HeroCharacter.h"
-#include "MRLocalPlayer.h"
 #include "Engine/Public/DrawDebugHelpers.h"
 #include "Kismet/GameplayStatics.h"
+#include "Structs/DmgHitResult.h"
+#include "Blueprint/UserWidget.h"
+#include "DeathmatchGameMode.h"
+#include "DamageNumber.h"
 
 AHeroController::AHeroController()
 {
-
 }
 
 void AHeroController::CleanupPlayerState()
@@ -118,6 +120,8 @@ void AHeroController::TakeDamage2(const FMRHitResult& Hit)
 		//TODO Log error
 		return;
 	}
+	
+	// TODO This is bad referencing a specific game mode. Introduce an interface or MrGameModeBase clas
 	auto DM = Cast<ADeathmatchGameMode>(World->GetAuthGameMode()); 
 	if (DM) DM->OnPlayerTakeDamage(Hit);
 

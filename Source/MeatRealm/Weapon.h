@@ -4,8 +4,6 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/Actor.h"
-#include "Engine/Public/TimerManager.h"
-#include "Projectile.h"
 
 #include "Weapon.generated.h"
 

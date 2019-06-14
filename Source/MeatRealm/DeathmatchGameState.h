@@ -4,7 +4,6 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/GameState.h"
-#include "KillfeedEntryData.h"
 
 #include "DeathmatchGameState.generated.h"
 

@@ -1,18 +1,19 @@
-// Fill out your copyright notice in the Description page of Project Settings.
-
-
 #include "PickupBase.h"
 #include "Components/CapsuleComponent.h"
 #include "Components/StaticMeshComponent.h"
 #include "Components/SceneComponent.h"
-#include "Engine/Public/TimerManager.h"
+#include "TimerManager.h"
 #include "UnrealNetwork.h"
 
-// Sets default values
+void APickupBase::GetLifetimeReplicatedProps(TArray< FLifetimeProperty >& OutLifetimeProps) const
+{
+	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
+	DOREPLIFETIME(APickupBase, IsAvailable);
+}
+
 APickupBase::APickupBase()
 {
 	//PrimaryActorTick.bCanEverTick = true;
-
 	SetReplicates(true);
 
 	// TODO Introduce USceneComponent so Collision as root can be moved around
@@ -28,49 +29,22 @@ APickupBase::APickupBase()
 	MeshComp->SetGenerateOverlapEvents(false);
 	MeshComp->SetCollisionProfileName(TEXT("NoCollision"));
 	MeshComp->CanCharacterStepUpOn = ECB_No;
-
 }
 
-bool APickupBase::TryInteract(IAffectableInterface* const Affectable)
+bool APickupBase::AuthTryInteract(IAffectableInterface* const Affectable)
 {
-	if (!bExplicitInteraction || Affectable == nullptr) return false;
+	check(Affectable)
+	check(HasAuthority())
+
+	if (!CanInteract()) return false;
 	return TryPickup(Affectable);
-}
-
-
-void APickupBase::GetLifetimeReplicatedProps(TArray< FLifetimeProperty >& OutLifetimeProps) const
-{
-	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
-	DOREPLIFETIME(APickupBase, IsAvailable);
-}
-
-
-bool APickupBase::TryPickup(IAffectableInterface* const Affectable)
-{
-	//LogMsgWithRole("APickupBase::TryPickup()");
-
-	if (!IsAvailable || !HasAuthority())
-	{
-		return false;
-	}
-	//LogMsgWithRole("APickupBase::TryPickup()");
-
-	if (!TryApplyAffect(Affectable))
-	{
-		//LogMsgWithRole("APickupBase::TryPickup() : Cannot TryApplyAffect()");
-		return false;
-	}
-
-	ServerRPC_PickupItem();
-	//LogMsgWithRole("APickupBase::TryPickup() : Success!");
-
-	return true;
 }
 
 void APickupBase::OnCompBeginOverlap(UPrimitiveComponent* OverlappedComp, AActor* OtherActor,
 	UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult)
 {
 	//LogMsgWithRole("APickupBase::Overlapping()");
+	if (!HasAuthority()) return;
 
 	if (bExplicitInteraction) { return; }
 
@@ -79,14 +53,30 @@ void APickupBase::OnCompBeginOverlap(UPrimitiveComponent* OverlappedComp, AActor
 
 	const auto Affectable = Cast<IAffectableInterface>(OtherActor);
 	if (Affectable == nullptr) { return; }
-	
+
 	TryPickup(Affectable);
 }
 
+void APickupBase::OnRep_IsAvailableChanged()
+{
+	//LogMsgWithRole("APickupBase::OnRep_IsAvailableChanged()");
+	MakePickupAvailable(IsAvailable);
+}
 
-void APickupBase::ServerRPC_PickupItem_Implementation()
+bool APickupBase::TryPickup(IAffectableInterface* const Affectable)
+{
+	//LogMsgWithRole("APickupBase::TryPickup()");
+	check(HasAuthority())
+	if (!IsAvailable)	return false;
+	if (!TryApplyAffect(Affectable)) return false;
+	PickupItem();
+	return true;
+}
+
+void APickupBase::PickupItem()
 {
 	//LogMsgWithRole("APickupBase::ServerRPC_PickupItem_Implementation()");
+	check(HasAuthority())
 
 	MakePickupAvailable(false); // simulate on server
 	IsAvailable = false; // replicates to clients
@@ -96,15 +86,19 @@ void APickupBase::ServerRPC_PickupItem_Implementation()
 		RespawnTimerHandle, this, &APickupBase::Respawn, RespawnDelay, false, -1);
 }
 
-bool APickupBase::ServerRPC_PickupItem_Validate()
+void APickupBase::Respawn()
 {
-	return true;
-}
+	//LogMsgWithRole("Respawn()");
+	check(HasAuthority())
 
-void APickupBase::OnRep_IsAvailableChanged()
-{
-	//LogMsgWithRole("APickupBase::OnRep_IsAvailableChanged()");
-	MakePickupAvailable(IsAvailable);
+	// Dispose pickup respawn timer
+	if (RespawnTimerHandle.IsValid()) { GetWorld()->GetTimerManager().ClearTimer(RespawnTimerHandle); }
+
+	// Simulate on server
+	MakePickupAvailable(true);
+
+	// Notify clients through replicated value
+	IsAvailable = true;
 }
 
 void APickupBase::MakePickupAvailable(bool bIsAvailable)
@@ -133,27 +127,6 @@ void APickupBase::MakePickupAvailable(bool bIsAvailable)
 		OnTaken.Broadcast();
 	}
 }
-
-void APickupBase::Respawn()
-{
-	//LogMsgWithRole("Respawn()");
-
-	// Dispose pickup respawn timer
-	if (RespawnTimerHandle.IsValid()) { GetWorld()->GetTimerManager().ClearTimer(RespawnTimerHandle); }
-
-	// Simulate on server
-	MakePickupAvailable(true);
-
-	// Notify clients through replicated value
-	IsAvailable = true;
-}
-
-
-
-
-
-
-
 
 
 void APickupBase::LogMsgWithRole(FString message)

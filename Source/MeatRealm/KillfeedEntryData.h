@@ -4,8 +4,6 @@
 
 #include "CoreMinimal.h"
 #include "UObject/NoExportTypes.h"
-#include "UnrealNetwork.h"
-#include "Engine/EngineTypes.h"
 #include "GameFramework/Info.h"
 
 #include "KillfeedEntryData.generated.h"
