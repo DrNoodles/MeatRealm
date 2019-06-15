@@ -44,6 +44,15 @@ public:
 
 	UPROPERTY(EditAnywhere)
 	float AdsLineLength = 1500; // cm
+	
+	UPROPERTY(EditAnywhere)
+	FColor AdsLineColor = FColor{ 0,0,255 };
+	
+	UPROPERTY(EditAnywhere)
+	float EnemyAdsLineLength = 200; // cm
+
+	UPROPERTY(EditAnywhere)
+	FColor EnemyAdsLineColor = FColor{255,0,0};
 
 	UPROPERTY(EditAnywhere)
 	float InteractableSearchDistance = 150.f; //cm
@@ -97,7 +106,9 @@ private:
 		class UCameraComponent* FollowCamera;
 
 	// This is nasty - probably need to work with the official movement states
+	UPROPERTY(Replicated) // Replicated so we can see enemy aim lines
 	bool bIsAdsing = false;
+
 	bool bUseMouseAim = true;
 	float AxisMoveUp;
 	float AxisMoveRight;
@@ -115,7 +126,6 @@ public:
 	AHeroCharacter();
 	void Restart() override;
 	void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
-
 
 	void AuthSpawnWeapon(TSubclassOf<AWeapon> weaponClass);
 
@@ -180,6 +190,7 @@ private:
 
 
 	void SimulateAdsMode(bool IsAdsing);
+	void DrawAdsLine(const FColor& Color, float LineLength) const;
 
 
 	UFUNCTION()
