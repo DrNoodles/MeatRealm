@@ -13,6 +13,14 @@ class UStaticMeshComponent;
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FShotFired);
 
+enum ReloadStates
+{
+	Nothing = 0,
+	Starting = 1,
+	InProgress = 2,
+	Finishing = 3,
+};
+
 UCLASS()
 class MEATREALM_API AWeapon : public AActor
 {
@@ -26,6 +34,8 @@ protected:
 
 public:
 	virtual void Tick(float DeltaTime) override;
+	void RemoteTick(float DeltaTime);
+	void AuthTick(float DeltaTime);
 
 	void Input_PullTrigger();
 	void Input_ReleaseTrigger();
@@ -111,18 +121,19 @@ public:
 	UPROPERTY(BlueprintReadOnly, Replicated)
 		int AmmoInPool;
 
-	UPROPERTY(BlueprintReadOnly, Replicated)
-	bool bIsReloading;
+	// Used for UI binding
+	UPROPERTY(BlueprintReadOnly)
+		bool bIsReloading = false;
 
+	// Used for UI binding
 	UPROPERTY(BlueprintReadOnly)
 	float ReloadProgress = 0.f;
-
-
-
 
 	UPROPERTY(BlueprintAssignable, Category = "Event Dispatchers")
 		FShotFired OnShotFired;
 
+
+private:
 	UFUNCTION(Server, Reliable, WithValidation)
 		void ServerRPC_Reload();
 
@@ -133,29 +144,23 @@ public:
 		void ServerRPC_ReleaseTrigger();
 
 	UFUNCTION(Server, Reliable, WithValidation)
-		void RPC_Fire_OnServer();
-
-	UFUNCTION(Server, Reliable, WithValidation)
 		void ServerRPC_AdsPressed();
 
 	UFUNCTION(Server, Reliable, WithValidation)
 		void ServerRPC_AdsReleased();
 
 	UFUNCTION(NetMulticast, Reliable)
-		void MultiRPC_Fired();
+		void MultiRPC_NotifyOnShotFired();
 
-
-private:
-	UFUNCTION()
-		void Shoot();
+	void SpawnProjectiles() const;
 
 	TArray<FVector> CalcShotPattern() const;
 	bool SpawnAProjectile(const FVector& Direction) const;
 
-	void ClientFireStart();
-	void ClientReloadStart();
-	void ClientReloadEnd();
-	void ClientFireEnd();
+	void AuthFireStart();
+	void AuthReloadStart();
+	void AuthReloadEnd();
+	void AuthFireEnd();
 
 	bool CanReload() const;
 	bool NeedsReload() const;
@@ -170,6 +175,11 @@ private:
 	bool bHasActionedThisTriggerPull;
 	bool bReloadQueued;
 
+
+	// 0 nothing, 1 reload starting, 2 reloading, 3 reload finishing
 	UPROPERTY(Replicated)
+		int ReloadState = 0;
+
 	FDateTime ReloadStartTime;
 };
+

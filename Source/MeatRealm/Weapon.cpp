@@ -34,8 +34,7 @@ void AWeapon::GetLifetimeReplicatedProps(TArray< FLifetimeProperty >& OutLifetim
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
 	DOREPLIFETIME(AWeapon, AmmoInClip);
 	DOREPLIFETIME(AWeapon, AmmoInPool);
-	DOREPLIFETIME(AWeapon, bIsReloading);
-	DOREPLIFETIME(AWeapon, ReloadStartTime);
+	DOREPLIFETIME(AWeapon, ReloadState);
 }
 
 
@@ -54,25 +53,58 @@ void AWeapon::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
 
-	bIsInAdsMode = bAdsPressed;
+	if (HasAuthority())
+	{
+		AuthTick(DeltaTime);
+	}
+	else
+	{
+		RemoteTick(DeltaTime);
+	}
+}
+void AWeapon::RemoteTick(float DeltaTime)
+{
+	check (!HasAuthority())
 
-	if (bIsReloading)
+	if (ReloadState == ReloadStates::Starting)
+	{
+		ReloadStartTime = FDateTime::Now();
+
+		// Update UI
+		ReloadProgress = 0;
+		bIsReloading = true;
+
+		ReloadState = ReloadStates::InProgress;
+	}
+	else if (ReloadState == ReloadStates::InProgress)
 	{
 		const auto ElapsedReloadTime = (FDateTime::Now() - ReloadStartTime).GetTotalSeconds();
+
+		// Update UI
 		ReloadProgress = ElapsedReloadTime / ReloadTime;
-
-	//	bIsInAdsMode = false; // don't ads while reloading
 	}
+	else if (ReloadState == ReloadStates::Finishing)
+	{
+		// Update UI
+		ReloadProgress = 100;
+		bIsReloading = false;
 
-	
+		ReloadState = ReloadStates::Nothing;
+	}
+}
+void AWeapon::AuthTick(float DeltaTime)
+{
+	check(HasAuthority())
+
+	bIsInAdsMode = bAdsPressed;
+
 	if (!bCanAction) return;
-
 
 
 	// Reload!
 	if (bReloadQueued && CanReload())
 	{
-		ClientReloadStart();
+		AuthReloadStart();
 		return;
 	}
 
@@ -85,32 +117,38 @@ void AWeapon::Tick(float DeltaTime)
 	{
 		if (NeedsReload() && CanReload())
 		{
-			ClientReloadStart();
+			AuthReloadStart();
 		}
 		else if (AmmoInClip > 0)
 		{
-			ClientFireStart();
+			AuthFireStart();
 		}
 	}
 }
 
-void AWeapon::ClientFireStart()
+void AWeapon::AuthFireStart()
 {
 	//LogMsgWithRole("ClientFireStart()");
+	check(HasAuthority())
 
 	bHasActionedThisTriggerPull = true;
 	bCanAction = false;
 	if (bUseClip) --AmmoInClip;
 
-	RPC_Fire_OnServer();
+	SpawnProjectiles();
+
+	// Notify listeners Fire occured
+	MultiRPC_NotifyOnShotFired();
 
 	GetWorld()->GetTimerManager().SetTimer(
-		CanActionTimerHandle, this, &AWeapon::ClientFireEnd, 1.f / ShotsPerSecond, false, -1);
+		CanActionTimerHandle, this, &AWeapon::AuthFireEnd, 1.f / ShotsPerSecond, false, -1);
 }
-void AWeapon::ClientFireEnd()
+void AWeapon::AuthFireEnd()
 {
-	bCanAction = true;
 	//LogMsgWithRole("ClientFireEnd()");
+	check(HasAuthority())
+
+	bCanAction = true;
 
 	if (CanActionTimerHandle.IsValid())
 	{
@@ -118,24 +156,28 @@ void AWeapon::ClientFireEnd()
 	}
 }
 
-void AWeapon::ClientReloadStart()
+void AWeapon::AuthReloadStart()
 {
-	if (!bUseClip) return;
 	//LogMsgWithRole("ClientReloadStart()");
-	ReloadStartTime = FDateTime::Now();
-	bIsReloading = true;
+	check(HasAuthority())
+
+	if (!bUseClip) return;
+
+	ReloadState = ReloadStates::Starting;
 	bCanAction = false;
 	bHasActionedThisTriggerPull = true;
 
 	GetWorld()->GetTimerManager().SetTimer(
-		CanActionTimerHandle, this, &AWeapon::ClientReloadEnd, ReloadTime, false, -1);
+		CanActionTimerHandle, this, &AWeapon::AuthReloadEnd, ReloadTime, false, -1);
 }
-void AWeapon::ClientReloadEnd()
+void AWeapon::AuthReloadEnd()
 {
 	//LogMsgWithRole("ClientReloadEnd()");
-	ReloadProgress = 0;
-	bIsReloading = false;
+	check(HasAuthority())
+
+	ReloadState = ReloadStates::Finishing;
 	bCanAction = true;
+	bReloadQueued = false;
 
 	// Take ammo from pool
 	const int AmmoNeeded = ClipSize - AmmoInClip;
@@ -143,7 +185,6 @@ void AWeapon::ClientReloadEnd()
 	AmmoInPool -= AmmoReceived;
 	AmmoInClip += AmmoReceived;
 	
-	bReloadQueued = false;
 
 	if (CanActionTimerHandle.IsValid())
 	{
@@ -220,16 +261,16 @@ bool AWeapon::ServerRPC_AdsReleased_Validate()
 }
 
 
-void AWeapon::MultiRPC_Fired_Implementation()
+void AWeapon::MultiRPC_NotifyOnShotFired_Implementation()
 {
 	if (OnShotFired.IsBound()) OnShotFired.Broadcast();
 }
 
-void AWeapon::Shoot()
+void AWeapon::SpawnProjectiles() const
 {
+	check(HasAuthority())
 	//LogMsgWithRole("Shoot");
 
-	if (!HasAuthority()) return;
 	if (ProjectileClass == nullptr)
 	{
 		UE_LOG(LogTemp, Error, TEXT("Set a Projectile Class in your Weapon Blueprint to shoot"));
@@ -245,9 +286,6 @@ void AWeapon::Shoot()
 			return;
 		}
 	}
-
-	// Fire event on server
-	MultiRPC_Fired();
 }
 
 TArray<FVector> AWeapon::CalcShotPattern() const
@@ -373,18 +411,6 @@ bool AWeapon::TryGiveAmmo()
 
 
 /// RPC
-
-void AWeapon::RPC_Fire_OnServer_Implementation()
-{
-	//LogMsgWithRole("RPC_Fire_OnServer_Impl");
-	Shoot();
-}
-
-bool AWeapon::RPC_Fire_OnServer_Validate()
-{
-	return true;
-}
-
 
 void AWeapon::LogMsgWithRole(FString message)
 {
