@@ -11,6 +11,7 @@
 #include "EngineUtils.h"
 #include "Structs/DmgHitResult.h"
 #include "TimerManager.h"
+#include "Engine/Engine.h"
 
 ADeathmatchGameMode::ADeathmatchGameMode()
 {
@@ -249,6 +250,15 @@ void ADeathmatchGameMode::HandleMatchHasEnded()
 		return;
 	}
 
+
+
+	// WriteDebugToScreen
+	if (GEngine)
+	{
+		GEngine->AddOnScreenDebugMessage(INDEX_NONE, 5, FColor::White, "WINNER WINNER, TURDUCKEN DINNER", true, FVector2D{ 2,2 });
+	}
+
+
 	FTimerHandle CanActionTimerHandle;
 
 	World->GetTimerManager().SetTimer(
@@ -257,6 +267,7 @@ void ADeathmatchGameMode::HandleMatchHasEnded()
 void ADeathmatchGameMode::OnRestartGame()
 {
 	//	World->ServerTravel("/Game/MeatRealm/Maps/TestMap");
+	
 	RestartGame();
 }
 
