@@ -22,13 +22,21 @@ class MEATREALM_API ADeathmatchGameMode : public AGameMode
 public:
 	ADeathmatchGameMode();
 
+	// Game Lifecycle
+	virtual bool ReadyToStartMatch_Implementation() override;
+	virtual bool ReadyToEndMatch_Implementation() override;
+	virtual void HandleMatchHasEnded() override;
+	void OnRestartGame();
+
+
+	virtual void SetPlayerDefaults(APawn* PlayerPawn) override;
+	virtual void RestartPlayer(AController* NewPlayer) override;
+
 
 	void PostLogin(APlayerController* NewPlayer) override;
 	void Logout(AController* Exiting) override;
 	bool ShouldSpawnAtStartSpot(AController* Player) override;
-	virtual void SetPlayerDefaults(APawn* PlayerPawn) override;
 	AActor* FindFurthestPlayerStart(AController* Controller);
-	virtual void RestartPlayer(AController* NewPlayer) override;
 	void OnPlayerTakeDamage(FMRHitResult Hit);
 private:
 	TMap<uint32, AHeroController*> ConnectedHeroControllers;
@@ -37,6 +45,6 @@ private:
 	int TintCount = 0;
 
 	
-	bool EndGameIfFragLimitReached() const;
+	//bool HasMetGameEndConditions() const;
 	void AddKillfeedEntry(AHeroController* const Killer, AHeroController* const Dead);
 };

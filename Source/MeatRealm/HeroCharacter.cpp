@@ -111,12 +111,25 @@ void AHeroCharacter::GetLifetimeReplicatedProps(TArray< FLifetimeProperty >& Out
 	DOREPLIFETIME(AHeroCharacter, Health);
 	DOREPLIFETIME(AHeroCharacter, Armour);
 	DOREPLIFETIME(AHeroCharacter, TeamTint);
+	DOREPLIFETIME(AHeroCharacter, bIsAdsing);
 }
 
 void AHeroCharacter::Tick(float DeltaSeconds)
 {
 	// No need for server. We're only doing input processing and client effects here.
 	if (HasAuthority()) return;
+
+
+	// Draw ADS line for enemies
+	if (Role == ROLE_SimulatedProxy && bIsAdsing)
+	{
+		DrawAdsLine(EnemyAdsLineColor, EnemyAdsLineLength);
+	}
+
+
+
+
+	// Local Client only below
 
 	const auto HeroCont = GetHeroController();
 	if (HeroCont == nullptr) return;
@@ -232,30 +245,9 @@ void AHeroCharacter::Tick(float DeltaSeconds)
 
 
 	// Draw ADS line
-	
-	if (bIsAdsing)
+	if (bIsAdsing) 
 	{
-		FVector Start = WeaponAnchor->GetComponentLocation();
-		FVector End = Start + WeaponAnchor->GetComponentRotation().Vector() * AdsLineLength;
-
-		// Trace line to first hit for end
-		FHitResult hitResult;
-		bool isHit = GetWorld()->LineTraceSingleByChannel(
-			OUT hitResult,
-			Start,
-			End,
-			ECC_Visibility,
-			FCollisionQueryParams{ FName(""), false, this }
-		);
-
-		auto Color = FColor{ 255, 0, 0 };
-		if (isHit)
-		{
-			if (false/*debug*/) Color = FColor{ 0, 0, 255 };
-			End = hitResult.ImpactPoint;
-		}
-			
-		DrawDebugLine(GetWorld(), Start, End, Color, false, -1., 0, 2.f);
+		DrawAdsLine(AdsLineColor, AdsLineLength);
 	}
 }
 
@@ -268,6 +260,26 @@ void AHeroCharacter::SimulateAdsMode(bool IsAdsing)
 {
 	bIsAdsing = IsAdsing;
 	GetCharacterMovement()->MaxWalkSpeed = IsAdsing ? AdsSpeed : WalkSpeed;
+}
+
+void AHeroCharacter::DrawAdsLine(const FColor& Color, float LineLength) const
+{
+	const FVector Start = WeaponAnchor->GetComponentLocation();
+	FVector End = Start + WeaponAnchor->GetComponentRotation().Vector() * LineLength;
+
+	// Trace line to first hit for end
+	FHitResult HitResult;
+	const bool bIsHit = GetWorld()->LineTraceSingleByChannel(
+		OUT HitResult,
+		Start,
+		End,
+		ECC_Visibility,
+		FCollisionQueryParams{ FName(""), false, this }
+	);
+
+	if (bIsHit) End = HitResult.ImpactPoint;
+
+	DrawDebugLine(GetWorld(), Start, End, Color, false, -1., 0, 2.f);
 }
 
 void AHeroCharacter::ServerRPC_AdsReleased_Implementation()
