@@ -10,6 +10,7 @@
 #include "Kismet/GameplayStatics.h"
 #include "TimerManager.h"
 #include "Projectile.h"
+#include "GameFramework/GameState.h"
 
 AWeapon::AWeapon()
 {
@@ -204,8 +205,28 @@ bool AWeapon::NeedsReload() const
 	return bUseClip && AmmoInClip < 1;
 }
 
+bool AWeapon::IsMatchInProgress()
+{
+	auto World = GetWorld();
+	if (World)
+	{
+		auto GM = World->GetAuthGameMode();
+		if (GM)
+		{
+			auto GS = GM->GetGameState<AGameState>();
+			if (GS && GS->IsMatchInProgress())
+			{
+				return true;
+			}
+		}
+	}
+	return false;
+}
+
 void AWeapon::ServerRPC_PullTrigger_Implementation()
 {
+	if (!IsMatchInProgress()) return;
+
 	bTriggerPulled = true;
 	bHasActionedThisTriggerPull = false;
 }

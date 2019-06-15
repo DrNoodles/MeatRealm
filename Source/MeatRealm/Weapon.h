@@ -164,6 +164,7 @@ private:
 
 	bool CanReload() const;
 	bool NeedsReload() const;
+	bool IsMatchInProgress();
 
 	void LogMsgWithRole(FString message);
 	FString GetRoleText();
