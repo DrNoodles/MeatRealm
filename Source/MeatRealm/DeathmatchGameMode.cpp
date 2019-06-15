@@ -10,6 +10,7 @@
 #include "Engine/PlayerStartPIE.h"
 #include "EngineUtils.h"
 #include "Structs/DmgHitResult.h"
+#include "TimerManager.h"
 
 ADeathmatchGameMode::ADeathmatchGameMode()
 {
@@ -47,7 +48,6 @@ void ADeathmatchGameMode::PostLogin(APlayerController* NewPlayer)
 	UE_LOG(LogTemp, Warning, TEXT("ConnectedHeroControllers: %d"), ConnectedHeroControllers.Num());
 }
 
-
 void ADeathmatchGameMode::Logout(AController* Exiting)
 {
 	const auto Hero = Cast<AHeroController>(Exiting);
@@ -59,7 +59,6 @@ void ADeathmatchGameMode::Logout(AController* Exiting)
 
 	Super::Logout(Exiting);
 }
-
 
 bool ADeathmatchGameMode::ShouldSpawnAtStartSpot(AController* Player)
 {
@@ -201,30 +200,65 @@ void ADeathmatchGameMode::OnPlayerTakeDamage(FMRHitResult Hit)
 		}
 
 		AddKillfeedEntry(AttackerController, ReceivingController);
-
-		if (EndGameIfFragLimitReached()) return;
 	}
 }
 
 
-bool ADeathmatchGameMode::EndGameIfFragLimitReached() const
+bool ADeathmatchGameMode::ReadyToStartMatch_Implementation()
 {
+	// If bDelayed Start is set, wait for a manual match start
+	if (bDelayedStart)
+	{
+		return false;
+	}
+
+	// By default start when we have > 0 players
+	if (GetMatchState() == MatchState::WaitingToStart)
+	{
+		if (NumPlayers + NumBots > 0)
+		{
+			return true;
+		}
+	}
+	return false;
+}
+
+
+bool ADeathmatchGameMode::ReadyToEndMatch_Implementation()
+{
+	// TODO OPTIMISE THIS! It's called on every tick and GetScoreboard is slow.
+
 	auto DMGameState = GetGameState<ADeathmatchGameState>();
 	auto Scores = DMGameState->GetScoreboard();
 	
 	const auto bFragLimitReached = Scores.Num() > 0 && Scores[0]->Kills >= DMGameState->FragLimit;
-	if (bFragLimitReached)
-	{
-		UE_LOG(LogTemp, Warning, TEXT("Hit Frag Limit!"));
-
-		const auto World = GetWorld();
-		if (World) World->ServerTravel("/Game/MeatRealm/Maps/TestMap");
-		return true;
-	}
-
-	return false;
+	return bFragLimitReached;
 }
 
+void ADeathmatchGameMode::HandleMatchHasEnded()
+{
+	// TODO Disable shooting
+	// TODO Show scoreboards on clients
+
+	// TODO Delay 5 seconds
+	UWorld* World = GetWorld();
+	if (!World)
+	{
+		UE_LOG(LogTemp, Error, TEXT("No world found in HandleMatchHasEnded?!"));
+		RestartGame();
+		return;
+	}
+
+	FTimerHandle CanActionTimerHandle;
+
+	World->GetTimerManager().SetTimer(
+		CanActionTimerHandle, this, &ADeathmatchGameMode::OnRestartGame,5, false, -1);
+}
+void ADeathmatchGameMode::OnRestartGame()
+{
+	//	World->ServerTravel("/Game/MeatRealm/Maps/TestMap");
+	RestartGame();
+}
 
 void ADeathmatchGameMode::AddKillfeedEntry(AHeroController* const Killer, AHeroController* const Dead)
 {
