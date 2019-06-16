@@ -13,13 +13,23 @@ class MEATREALM_API UMeatRealmGameInstance : public UGameInstance
 
 public:
 	UFUNCTION(Exec)
-	void Host();
+	void Host(const FString& MapName);
+
+	UFUNCTION(Server, Reliable, WithValidation)
+	void ServerChangeMap();
+
+	UFUNCTION(Exec)
+		void ListMaps();
 
 	UFUNCTION(Exec)
 	void Join(const FString& ipaddress);
 
 private:
+
 	void WriteDebugToScreen(FString message, FColor color = FColor::Blue, 
 		float time = 5.f,
-		int key = -1);
+		int key = -1) const;
+
+	static TArray<FString> GetAllMapNames();
+	static TArray<FString> GetAllMapNames2();
 };
