@@ -261,7 +261,7 @@ bool AWeapon::ServerRPC_Reload_Validate()
 
 void AWeapon::ServerRPC_AdsPressed_Implementation()
 {
-	LogMsgWithRole("AWeapon::ServerRPC_AdsPressed_Implementation()");
+	//LogMsgWithRole("AWeapon::ServerRPC_AdsPressed_Implementation()");
 	bAdsPressed = true;
 }
 
@@ -272,7 +272,7 @@ bool AWeapon::ServerRPC_AdsPressed_Validate()
 
 void AWeapon::ServerRPC_AdsReleased_Implementation()
 {
-	LogMsgWithRole("AWeapon::ServerRPC_AdsReleased_Implementation()");
+	//LogMsgWithRole("AWeapon::ServerRPC_AdsReleased_Implementation()");
 	bAdsPressed = false;
 }
 

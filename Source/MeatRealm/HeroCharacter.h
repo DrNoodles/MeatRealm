@@ -46,13 +46,13 @@ public:
 	float AdsLineLength = 1500; // cm
 	
 	UPROPERTY(EditAnywhere)
-	FColor AdsLineColor = FColor{ 0,0,255 };
+	FColor AdsLineColor = FColor{ 255,0,0 };
 	
 	UPROPERTY(EditAnywhere)
-	float EnemyAdsLineLength = 200; // cm
+	float EnemyAdsLineLength = 175; // cm
 
 	UPROPERTY(EditAnywhere)
-	FColor EnemyAdsLineColor = FColor{255,0,0};
+		FColor EnemyAdsLineColor = FColor{ 255,170,75 };
 
 	UPROPERTY(EditAnywhere)
 	float InteractableSearchDistance = 150.f; //cm
@@ -74,13 +74,20 @@ public:
 		float Armour = 0.f;
 
 	UPROPERTY(EditAnywhere)
-		float AdsSpeed = 200;
+		float AdsSpeed = 275;
 
 	UPROPERTY(EditAnywhere)
 		float WalkSpeed = 400;
 
 	UPROPERTY(BlueprintAssignable, Category = "Event Dispatchers")
 		FPlayerTintChanged OnPlayerTintChanged;
+
+	// An angle between 0 and 180 degrees. 
+	UPROPERTY(EditAnywhere)
+	int BackpedalThresholdAngle = 135;
+
+	UPROPERTY(EditAnywhere)
+	float BackpedalSpeedMultiplier = 0.6;
 
 protected:
 	UPROPERTY(BlueprintReadOnly, ReplicatedUsing = OnRep_TintChanged)
@@ -160,6 +167,7 @@ public:
 	AHeroState* GetHeroState() const;
 	AHeroController* GetHeroController() const;
 
+	static bool IsBackpedaling(const FVector& MoveDir, const FVector& AimDir, int BackpedalAngle);
 
 
 	/// Input

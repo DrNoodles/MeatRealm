@@ -143,10 +143,17 @@ void AHeroCharacter::Tick(float DeltaSeconds)
 
 	// Move character
 	const auto moveVec = FVector{ AxisMoveUp, AxisMoveRight, 0 };
+
+	// Debuf move speed if backpeddling
+	auto CurrentLookVec = GetActorRotation().Vector();
+	bool bBackpedaling = IsBackpedaling(moveVec.GetSafeNormal(), CurrentLookVec, BackpedalThresholdAngle);
+
+	auto MoveScalar = bBackpedaling ? BackpedalSpeedMultiplier : 1.0f;
+
 	if (moveVec.SizeSquared() >= deadzoneSquared)
 	{
-		AddMovementInput(FVector{ 1.f, 0.f, 0.f }, moveVec.X);
-		AddMovementInput(FVector{ 0.f, 1.f, 0.f }, moveVec.Y);
+		AddMovementInput(FVector{ MoveScalar, 0.f, 0.f }, moveVec.X);
+		AddMovementInput(FVector{ 0.f, MoveScalar, 0.f }, moveVec.Y);
 	}
 
 
@@ -756,7 +763,20 @@ AHeroController* AHeroCharacter::GetHeroController() const
 	return GetController<AHeroController>();
 }
 
+bool AHeroCharacter::IsBackpedaling(const FVector& MoveDir, const FVector& AimDir, int BackpedalAngle)
+{
+	const bool bBackpedaling = FVector::DotProduct(MoveDir, AimDir) < FMath::Cos(FMath::DegreesToRadians(BackpedalAngle));
 
+	// Debug
+	if (true && bBackpedaling)
+	{
+		const float Angle = FMath::RadiansToDegrees(FMath::Acos(FVector::DotProduct(MoveDir, AimDir)));
+		UE_LOG(LogTemp, Warning, TEXT("Backpedaling! %f"), Angle);
+	}
+		
+
+	return bBackpedaling;
+}
 
 
 // Debug logging
