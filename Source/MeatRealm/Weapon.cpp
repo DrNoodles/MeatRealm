@@ -141,6 +141,11 @@ void AWeapon::AuthFireStart()
 	// Notify listeners Fire occured
 	MultiRPC_NotifyOnShotFired();
 
+	if (AmmoInClip == 0)
+	{
+		ClientRPC_NotifyOnAmmoWarning();
+	}
+
 	GetWorld()->GetTimerManager().SetTimer(
 		CanActionTimerHandle, this, &AWeapon::AuthFireEnd, 1.f / ShotsPerSecond, false, -1);
 }
@@ -285,6 +290,12 @@ bool AWeapon::ServerRPC_AdsReleased_Validate()
 void AWeapon::MultiRPC_NotifyOnShotFired_Implementation()
 {
 	if (OnShotFired.IsBound()) OnShotFired.Broadcast();
+}
+
+void AWeapon::ClientRPC_NotifyOnAmmoWarning_Implementation()
+{
+	LogMsgWithRole("AWeapon::ClientRPC_NotifyOnAmmoWarning_Implementation()");
+	if (OnAmmoWarning.IsBound()) OnAmmoWarning.Broadcast();
 }
 
 void AWeapon::SpawnProjectiles() const

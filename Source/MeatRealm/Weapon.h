@@ -12,6 +12,7 @@ class USceneComponent;
 class UStaticMeshComponent;
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FShotFired);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE(FAmmoWarning);
 
 enum ReloadStates
 {
@@ -132,6 +133,8 @@ public:
 	UPROPERTY(BlueprintAssignable, Category = "Event Dispatchers")
 		FShotFired OnShotFired;
 
+	UPROPERTY(BlueprintAssignable, Category = "Event Dispatchers")
+		FAmmoWarning OnAmmoWarning;
 
 private:
 	UFUNCTION(Server, Reliable, WithValidation)
@@ -151,6 +154,10 @@ private:
 
 	UFUNCTION(NetMulticast, Reliable)
 		void MultiRPC_NotifyOnShotFired();
+
+	UFUNCTION(Client, Reliable)
+		void ClientRPC_NotifyOnAmmoWarning();
+
 
 	void SpawnProjectiles() const;
 
