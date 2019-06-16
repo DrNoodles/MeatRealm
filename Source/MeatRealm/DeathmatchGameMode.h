@@ -4,7 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/GameMode.h"
-#include "HeroCharacter.h" // TODO Remove FMHitResult HeroChar from this file and kill off this ref
+
 #include "DeathmatchGameMode.generated.h"
 
 struct FMRHitResult;
@@ -13,6 +13,7 @@ class AHeroCharacter;
 class AHeroController;
 class AProjectile;
 
+
 UCLASS()
 class MEATREALM_API ADeathmatchGameMode : public AGameMode
 {
@@ -20,19 +21,30 @@ class MEATREALM_API ADeathmatchGameMode : public AGameMode
 
 public:
 	ADeathmatchGameMode();
-	
+
+	// Game Lifecycle
+	virtual bool ReadyToStartMatch_Implementation() override;
+	virtual bool ReadyToEndMatch_Implementation() override;
+	virtual void HandleMatchHasEnded() override;
+	void OnRestartGame();
+
+
+	virtual void SetPlayerDefaults(APawn* PlayerPawn) override;
+	virtual void RestartPlayer(AController* NewPlayer) override;
+
+
 	void PostLogin(APlayerController* NewPlayer) override;
 	void Logout(AController* Exiting) override;
 	bool ShouldSpawnAtStartSpot(AController* Player) override;
-
-
+	AActor* FindFurthestPlayerStart(AController* Controller);
 	void OnPlayerTakeDamage(FMRHitResult Hit);
 private:
 	TMap<uint32, AHeroController*> ConnectedHeroControllers;
-	TMap<uint32, FDelegateHandle> OnPlayerDieHandles;
+	TMap<uint32, int> PlayerMappedTints;
+	TArray<FColor> PlayerTints;
+	int TintCount = 0;
 
 	
-	bool EndGameIfFragLimitReached() const;
+	//bool HasMetGameEndConditions() const;
 	void AddKillfeedEntry(AHeroController* const Killer, AHeroController* const Dead);
-
 };

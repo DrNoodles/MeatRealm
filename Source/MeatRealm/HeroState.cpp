@@ -10,4 +10,5 @@ void AHeroState::GetLifetimeReplicatedProps(TArray< FLifetimeProperty >& OutLife
 
 	DOREPLIFETIME(AHeroState, Kills);
 	DOREPLIFETIME(AHeroState, Deaths);
+	DOREPLIFETIME(AHeroState, HasLeftTheGame);
 }

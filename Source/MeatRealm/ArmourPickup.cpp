@@ -5,5 +5,5 @@
 
 bool AArmourPickup::TryApplyAffect(IAffectableInterface* const Affectable)
 {
-	return Affectable->TryGiveArmour(ArmourRestored);
+	return Affectable->AuthTryGiveArmour(ArmourRestored);
 }

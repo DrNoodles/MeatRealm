@@ -4,14 +4,12 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/PlayerController.h"
-#include "Blueprint/UserWidget.h"
-#include "DeathmatchGameMode.h"
-#include "HeroCharacter.h" // TODO Make this a forward decl - Need to pull FMRHitResult out of the file
-#include "DamageNumber.h"
+#include "Structs/DmgHitResult.h" // for DYNAMIC DELEGATES
 
 #include "HeroController.generated.h"
 
 class AHeroCharacter;
+class AHeroState;
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FPlayerSpawned);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FTakenDamage, FMRHitResult, Hit);
@@ -23,7 +21,6 @@ class MEATREALM_API AHeroController : public APlayerController
 	GENERATED_BODY()
 
 public:
-
 	AHeroController();
 	void CleanupPlayerState() override;
 
@@ -35,11 +32,11 @@ public:
 
 	UUserWidget* HudInstance;
 	
-
 	void OnPossess(APawn* InPawn) override;
 	void AcknowledgePossession(APawn* P) override;
 	void OnUnPossess() override;
 
+	AHeroState* GetHeroPlayerState() const;
 	AHeroCharacter* GetHeroCharacter() const;
 	void CreateHud();
 	void DestroyHud();
@@ -48,7 +45,7 @@ public:
 	void LogMsgWithRole(FString message);
 	FString GetEnumText(ENetRole role);
 	FString GetRoleText();
-	void TakeDamage(const FMRHitResult& Hit);
+	void TakeDamage2(const FMRHitResult& Hit);
 	void SimulateHitGiven(const FMRHitResult& Hit);
 	
 	UFUNCTION(Client, Reliable)
@@ -81,7 +78,6 @@ protected:
 	virtual bool InputKey(FKey Key, EInputEvent EventType, float AmountDepressed, bool bGamepad) override;
 
 private:
-
 	//FHealthDepleted HealthDepletedEvent;
 
 	/// Input
@@ -91,6 +87,8 @@ private:
 	void Input_FaceRight(float Value);
 	void Input_FirePressed();
 	void Input_FireReleased();
+	void Input_AdsPressed();
+	void Input_AdsReleased();
 	void Input_Reload();
 	void Input_Interact();
 	void SetUseMouseaim(bool bUseMouseAim);

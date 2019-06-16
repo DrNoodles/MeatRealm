@@ -8,8 +8,8 @@
 #include "Components/ArrowComponent.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "GameFramework/Controller.h"
+#include "GameFramework/InputSettings.h"
 #include "GameFramework/PlayerState.h"
-
 #include "GameFramework/SpringArmComponent.h"
 #include "Engine/Public/DrawDebugHelpers.h"
 #include "Engine/Engine.h"
@@ -17,8 +17,11 @@
 #include "HeroState.h"
 #include "HeroController.h"
 #include "WeaponPickupBase.h"
-#include "GameFramework/InputSettings.h"
 #include "Kismet/GameplayStatics.h"
+#include "Weapon.h"
+
+
+
 
 /// Lifecycle
 
@@ -26,10 +29,6 @@ AHeroCharacter::AHeroCharacter()
 {
 	// Set size for collision capsule
 	GetCapsuleComponent()->InitCapsuleSize(42.f, 96.0f);
-
-	// Set our turn rates for input
-	BaseTurnRate = 45.f;
-	BaseLookUpRate = 45.f;
 
 	// Don't rotate when the controller rotates. Let that just affect the camera.
 	bUseControllerRotationYaw = true;
@@ -42,7 +41,7 @@ AHeroCharacter::AHeroCharacter()
 	JumpMaxCount = 0;
 
 	// Configure character movement
-	GetCharacterMovement()->MaxWalkSpeed = 450;
+	GetCharacterMovement()->MaxWalkSpeed = WalkSpeed;
 	GetCharacterMovement()->bOrientRotationToMovement = false; // Character move independently of facing
 	GetCharacterMovement()->RotationRate = FRotator(0.0f, 540.0f, 0.0f); // ...at this rotation rate
 	GetCharacterMovement()->AirControl = 0.2f;
@@ -100,7 +99,7 @@ void AHeroCharacter::Restart()
 		if (HasAuthority())
 		{
 			const auto Choice = FMath::RandRange(0, WeaponClasses.Num() - 1);
-			ServerRPC_SpawnWeapon(WeaponClasses[Choice]);
+			AuthSpawnWeapon(WeaponClasses[Choice]);
 		}
 	}
 }
@@ -111,66 +110,29 @@ void AHeroCharacter::GetLifetimeReplicatedProps(TArray< FLifetimeProperty >& Out
 	DOREPLIFETIME(AHeroCharacter, CurrentWeapon);
 	DOREPLIFETIME(AHeroCharacter, Health);
 	DOREPLIFETIME(AHeroCharacter, Armour);
-}
-
-
-AHeroState* AHeroCharacter::GetHeroState() const
-{
-	return GetPlayerState<AHeroState>();
-}
-
-AHeroController* AHeroCharacter::GetHeroController() const
-{
-	return GetController<AHeroController>();
-}
-
-void AHeroCharacter::ServerRPC_SpawnWeapon_Implementation(TSubclassOf<AWeapon> weaponClass)
-{
-	//LogMsgWithRole("AHeroCharacter::ServerRPC_SpawnWeapon");
-
-	FActorSpawnParameters params;
-	params.Instigator = this;
-	params.Owner = this;
-
-	auto weapon = GetWorld()->SpawnActorAbsolute<AWeapon>(
-		weaponClass,
-		WeaponAnchor->GetComponentTransform(), params);
-
-	weapon->AttachToComponent(WeaponAnchor, FAttachmentTransformRules{ EAttachmentRule::KeepWorld, true });
-	weapon->SetHeroControllerId(GetHeroController()->GetUniqueID());
-
-
-	// Cleanup previous weapon
-	if (CurrentWeapon != nullptr)
-	{
-		CurrentWeapon->Destroy();
-		CurrentWeapon = nullptr;
-	}
-
-	// TODO Will this fuckup in flight projectiles
-
-	// Make sure server has a copy
-	CurrentWeapon = weapon;
-}
-
-bool AHeroCharacter::ServerRPC_SpawnWeapon_Validate(TSubclassOf<AWeapon> weaponClass)
-{
-	return true;
-}
-
-
-/// Methods
-
-bool AHeroCharacter::IsClientControllingServerOwnedActor()
-{
-	return Role == ROLE_AutonomousProxy // Client on server
-		|| HasAuthority() && !IsRunningDedicatedServer();
+	DOREPLIFETIME(AHeroCharacter, TeamTint);
+	DOREPLIFETIME(AHeroCharacter, bIsAdsing);
 }
 
 void AHeroCharacter::Tick(float DeltaSeconds)
 {
+	// No need for server. We're only doing input processing and client effects here.
+	if (HasAuthority()) return;
+
+
+	// Draw ADS line for enemies
+	if (Role == ROLE_SimulatedProxy && bIsAdsing)
+	{
+		DrawAdsLine(EnemyAdsLineColor, EnemyAdsLineLength);
+	}
+
+
+
+
+	// Local Client only below
+
 	const auto HeroCont = GetHeroController();
-	if (HeroCont == nullptr || !IsClientControllingServerOwnedActor()) return;
+	if (HeroCont == nullptr) return;
 
 
 
@@ -198,10 +160,10 @@ void AHeroCharacter::Tick(float DeltaSeconds)
 		{
 			const FVector AnchorLoc = WeaponAnchor->GetComponentLocation();
 			const FVector Hit = FMath::LinePlaneIntersection(
-				WorldLocation, 
-				WorldLocation + (WorldDirection * 5000), 
+				WorldLocation,
+				WorldLocation + (WorldDirection * 5000),
 				AnchorLoc,
-				FVector(0,0,1));
+				FVector(0, 0, 1));
 
 			LookVec = Hit - AnchorLoc;
 		}
@@ -260,7 +222,7 @@ void AHeroCharacter::Tick(float DeltaSeconds)
 	if (bLeanCameraWithAim)
 	{
 		FVector2D LinearLeanVector;
-		
+
 		if (bUseMouseAim)
 		{
 			if (bUseExperimentalMouseTracking)
@@ -268,7 +230,7 @@ void AHeroCharacter::Tick(float DeltaSeconds)
 				ExperimentalMouseAimTracking(DeltaSeconds);
 				return;
 			}
-			
+
 			LinearLeanVector = TrackCameraWithAimMouse();
 		}
 		else
@@ -279,10 +241,134 @@ void AHeroCharacter::Tick(float DeltaSeconds)
 		const auto OffsetVec = LinearLeanVector * LeanDistance;
 		MoveCameraByOffsetVector(OffsetVec, DeltaSeconds);
 	}
+
+
+
+	// Draw ADS line
+	if (bIsAdsing) 
+	{
+		DrawAdsLine(AdsLineColor, AdsLineLength);
+	}
 }
 
 
 
+
+// Ads mode
+
+void AHeroCharacter::SimulateAdsMode(bool IsAdsing)
+{
+	bIsAdsing = IsAdsing;
+	GetCharacterMovement()->MaxWalkSpeed = IsAdsing ? AdsSpeed : WalkSpeed;
+}
+
+void AHeroCharacter::DrawAdsLine(const FColor& Color, float LineLength) const
+{
+	const FVector Start = WeaponAnchor->GetComponentLocation();
+	FVector End = Start + WeaponAnchor->GetComponentRotation().Vector() * LineLength;
+
+	// Trace line to first hit for end
+	FHitResult HitResult;
+	const bool bIsHit = GetWorld()->LineTraceSingleByChannel(
+		OUT HitResult,
+		Start,
+		End,
+		ECC_Visibility,
+		FCollisionQueryParams{ FName(""), false, this }
+	);
+
+	if (bIsHit) End = HitResult.ImpactPoint;
+
+	DrawDebugLine(GetWorld(), Start, End, Color, false, -1., 0, 2.f);
+}
+
+void AHeroCharacter::ServerRPC_AdsReleased_Implementation()
+{
+	SimulateAdsMode(false);
+}
+
+bool AHeroCharacter::ServerRPC_AdsReleased_Validate()
+{
+	return true;
+}
+
+void AHeroCharacter::ServerRPC_AdsPressed_Implementation()
+{
+	SimulateAdsMode(true);
+}
+
+bool AHeroCharacter::ServerRPC_AdsPressed_Validate()
+{
+	return true;
+}
+
+void AHeroCharacter::Input_FirePressed() const
+{
+	if (CurrentWeapon) CurrentWeapon->Input_PullTrigger();
+}
+
+void AHeroCharacter::Input_FireReleased() const
+{
+	if (CurrentWeapon) CurrentWeapon->Input_ReleaseTrigger();
+}
+
+void AHeroCharacter::Input_AdsPressed()
+{
+	if (CurrentWeapon) CurrentWeapon->Input_AdsPressed();
+	SimulateAdsMode(true);
+	ServerRPC_AdsPressed();
+}
+
+void AHeroCharacter::Input_AdsReleased()
+{
+	if (CurrentWeapon) CurrentWeapon->Input_AdsReleased();
+	SimulateAdsMode(false);
+	ServerRPC_AdsReleased();
+}
+
+void AHeroCharacter::Input_Reload() const
+{
+	if (CurrentWeapon) CurrentWeapon->Input_Reload();
+}
+
+
+
+
+// Weapon spawning
+
+void AHeroCharacter::AuthSpawnWeapon(TSubclassOf<AWeapon> weaponClass)
+{
+	//LogMsgWithRole("AHeroCharacter::ServerRPC_SpawnWeapon");
+
+	FActorSpawnParameters params;
+	params.Instigator = this;
+	params.Owner = this;
+
+	auto weapon = GetWorld()->SpawnActorAbsolute<AWeapon>(
+		weaponClass,
+		WeaponAnchor->GetComponentTransform(), params);
+
+	weapon->AttachToComponent(WeaponAnchor, FAttachmentTransformRules{ EAttachmentRule::KeepWorld, true });
+	weapon->SetHeroControllerId(GetHeroController()->PlayerState->PlayerId);
+
+
+	// Cleanup previous weapon
+	if (CurrentWeapon != nullptr)
+	{
+		CurrentWeapon->Destroy();
+		CurrentWeapon = nullptr;
+	}
+
+	// TODO Will this fuckup in flight projectiles
+
+	// Make sure server has a copy
+	CurrentWeapon = weapon;
+}
+
+
+
+
+// Camera tracks aim
 
 void AHeroCharacter::MoveCameraByOffsetVector(const FVector2D& OffsetVec, float DeltaSeconds) const
 {
@@ -433,10 +519,6 @@ void AHeroCharacter::ExperimentalMouseAimTracking(float DT)
 //	FVector2D{ AimVec.X, AimVec.Y };
 }
 
-
-
-
-
 FVector2D AHeroCharacter::CalcLinearLeanVectorUnclipped(const FVector2D& CursorLoc, const FVector2D& ViewportSize)
 {
 	const auto Mid = ViewportSize / 2.f;
@@ -464,7 +546,12 @@ FVector2D AHeroCharacter::GetGameViewportSize()
 	return Result;
 }
 
-void AHeroCharacter::ApplyDamage(uint32 InstigatorHeroControllerId, float Damage, FVector Location)
+
+
+
+// Affect the character
+
+void AHeroCharacter::AuthApplyDamage(uint32 InstigatorHeroControllerId, float Damage, FVector Location)
 {
 	//This must only run on a dedicated server or listen server
 
@@ -502,7 +589,7 @@ void AHeroCharacter::ApplyDamage(uint32 InstigatorHeroControllerId, float Damage
 	if (HC)
 	{
 		FMRHitResult Hit{};
-		Hit.ReceiverControllerId = HC->GetUniqueID();
+		Hit.ReceiverControllerId = HC->PlayerState->PlayerId;
 		Hit.AttackerControllerId = InstigatorHeroControllerId;
 		Hit.HealthRemaining = (int)Health;
 		Hit.DamageTaken = (int)Damage;
@@ -510,12 +597,12 @@ void AHeroCharacter::ApplyDamage(uint32 InstigatorHeroControllerId, float Damage
 		Hit.HitLocation = Location;
 		//Hit.HitDirection
 
-		HC->TakeDamage(Hit);
+		HC->TakeDamage2(Hit);
 	}
 	
 }
 
-bool AHeroCharacter::TryGiveHealth(float Hp)
+bool AHeroCharacter::AuthTryGiveHealth(float Hp)
 {
 	//LogMsgWithRole("TryGiveHealth");
 	if (!HasAuthority()) return false;
@@ -526,7 +613,7 @@ bool AHeroCharacter::TryGiveHealth(float Hp)
 	return true;
 }
 
-bool AHeroCharacter::TryGiveAmmo()
+bool AHeroCharacter::AuthTryGiveAmmo()
 {
 	//LogMsgWithRole("AHeroCharacter::TryGiveAmmo");
 	if (!HasAuthority()) return false;
@@ -539,7 +626,7 @@ bool AHeroCharacter::TryGiveAmmo()
 	return false;
 }
 
-bool AHeroCharacter::TryGiveArmour(float Delta)
+bool AHeroCharacter::AuthTryGiveArmour(float Delta)
 {
 	//LogMsgWithRole("TryGiveArmour");
 	if (!HasAuthority()) return false;
@@ -549,12 +636,12 @@ bool AHeroCharacter::TryGiveArmour(float Delta)
 	return true;
 }
 
-bool AHeroCharacter::TryGiveWeapon(const TSubclassOf<AWeapon>& Class)
+bool AHeroCharacter::AuthTryGiveWeapon(const TSubclassOf<AWeapon>& Class)
 {
-	//LogMsgWithRole("AHeroCharacter::TryGiveWeapon");
+	check(HasAuthority());
+	check(Class != nullptr);
 
-	if (Class == nullptr) return false;
-	if (!HasAuthority()) return false;
+	//LogMsgWithRole("AHeroCharacter::TryGiveWeapon");
 
 	
 	if (CurrentWeapon)
@@ -562,7 +649,7 @@ bool AHeroCharacter::TryGiveWeapon(const TSubclassOf<AWeapon>& Class)
 		// If we already have the gun, treat it as an ammo pickup!
 		if (CurrentWeapon->IsA(Class))
 		{
-			return TryGiveAmmo();
+			return AuthTryGiveAmmo();
 		}
 
 		// Otherwise, destroy our current weapon to make space for the new one!
@@ -571,10 +658,15 @@ bool AHeroCharacter::TryGiveWeapon(const TSubclassOf<AWeapon>& Class)
 	}
 
 
-	ServerRPC_SpawnWeapon(Class);
+	AuthSpawnWeapon(Class);
 
 	return true;
 }
+
+
+
+
+// Interacting
 
 void AHeroCharacter::Input_Interact()
 {
@@ -590,7 +682,7 @@ void AHeroCharacter::ServerRPC_TryInteract_Implementation()
 	if (Pickup && Pickup->CanInteract())
 	{
 		//LogMsgWithRole("AHeroCharacter::ServerRPC_TryInteract_Implementation() : Found");
-		Pickup->TryInteract(this);
+		Pickup->AuthTryInteract(this);
 	}
 }
 
@@ -612,18 +704,24 @@ FHitResult AHeroCharacter::GetFirstPhysicsBodyInReach() const
 
 	FVector traceStart, traceEnd;
 	GetReachLine(OUT traceStart, OUT traceEnd);
-
-	//DrawDebugLine(GetWorld(), traceStart, traceEnd, FColor{ 255,0,0 }, false, -1., 0, 5.f);
+	
+	bool bDrawDebug = false;
+	if (bDrawDebug) DrawDebugLine(GetWorld(), traceStart, traceEnd, FColor{ 255,0,0 }, false, -1., 0, 3.f);
 
 	// Raycast along line to find intersecting physics object
 	FHitResult hitResult;
-	bool isHit = GetWorld()->LineTraceSingleByObjectType(
+	bool isHit = GetWorld()->LineTraceSingleByObjectType( // TODO Convert to 
 		OUT hitResult,
 		traceStart,
 		traceEnd,
-		FCollisionObjectQueryParams{ ECollisionChannel::ECC_WorldDynamic },//TODO Make a custom channel for interactables!
+		FCollisionObjectQueryParams{ ECollisionChannel::ECC_GameTraceChannel2 },
 		FCollisionQueryParams{ FName(""), false, GetOwner() }
 	);
+
+	if (isHit && bDrawDebug)
+	{
+		DrawDebugLine(GetWorld(), traceStart, hitResult.ImpactPoint, FColor{ 0,0,255 }, false, -1., 0, 5.f);
+	}
 
 	return hitResult;
 }
@@ -635,12 +733,44 @@ void AHeroCharacter::GetReachLine(OUT FVector& outStart, OUT FVector& outEnd) co
 	outEnd = outStart + GetActorRotation().Vector() * InteractableSearchDistance;
 }
 
+
+
+
+// Other
+
+void AHeroCharacter::OnRep_TintChanged() const
+{
+	/*LogMsgWithRole(
+		FString::Printf(TEXT("AHeroCharacter::OnRep_TintChanged() %s"), *TeamTint.ToString())
+	);*/
+	OnPlayerTintChanged.Broadcast();
+}
+
+AHeroState* AHeroCharacter::GetHeroState() const
+{
+	return GetPlayerState<AHeroState>();
+}
+
+AHeroController* AHeroCharacter::GetHeroController() const
+{
+	return GetController<AHeroController>();
+}
+
+
+
+
+// Debug logging
+
 void AHeroCharacter::LogMsgWithRole(FString message) const
 {
 	FString m = GetRoleText() + ": " + message;
 	UE_LOG(LogTemp, Warning, TEXT("%s"), *m);
 }
-FString AHeroCharacter::GetEnumText(ENetRole role) const
+FString AHeroCharacter::GetRoleText() const
+{
+	return GetEnumText(Role) + " " + GetEnumText(GetRemoteRole());
+}
+FString AHeroCharacter::GetEnumText(ENetRole role)
 {
 	switch (role) {
 	case ROLE_None:
@@ -656,25 +786,4 @@ FString AHeroCharacter::GetEnumText(ENetRole role) const
 	default:
 		return "ERROR";
 	}
-}
-FString AHeroCharacter::GetRoleText() const
-{
-	auto Local = Role;
-	auto Remote = GetRemoteRole();
-
-
-	//if (Remote == ROLE_SimulatedProxy) //&& Local == ROLE_Authority
-	//	return "ListenServer";
-
-	//if (Local == ROLE_Authority)
-	//	return "Server";
-
-	//if (Local == ROLE_AutonomousProxy) // && Remote == ROLE_Authority
-	//	return "OwningClient";
-
-	//if (Local == ROLE_SimulatedProxy) // && Remote == ROLE_Authority
-	//	return "SimClient";
-
-	return GetEnumText(Role) + " " + GetEnumText(GetRemoteRole()) + " Ded:" + (IsRunningDedicatedServer() ? "True" : "False");
-
 }

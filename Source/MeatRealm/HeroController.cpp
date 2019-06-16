@@ -3,13 +3,15 @@
 
 #include "HeroController.h"
 #include "HeroCharacter.h"
-#include "MRLocalPlayer.h"
 #include "Engine/Public/DrawDebugHelpers.h"
 #include "Kismet/GameplayStatics.h"
+#include "Structs/DmgHitResult.h"
+#include "Blueprint/UserWidget.h"
+#include "DeathmatchGameMode.h"
+#include "DamageNumber.h"
 
 AHeroController::AHeroController()
 {
-
 }
 
 void AHeroController::CleanupPlayerState()
@@ -57,6 +59,12 @@ void AHeroController::OnUnPossess()
 	Super::OnUnPossess();
 }
 
+AHeroState* AHeroController::GetHeroPlayerState() const
+{
+	const auto Char = PlayerState;
+	return Char == nullptr ? nullptr : (AHeroState*)Char;
+}
+
 AHeroCharacter* AHeroController::GetHeroCharacter() const
 {
 	const auto Char = GetCharacter();
@@ -97,12 +105,12 @@ void AHeroController::DestroyHud()
 }
 
 
-void AHeroController::TakeDamage(const FMRHitResult& Hit)
+void AHeroController::TakeDamage2(const FMRHitResult& Hit)
 {
 	// Encorce only callers with authority
 	if (!HasAuthority()) return;
 
-	LogMsgWithRole("AHeroController::TakeDamage");
+	//LogMsgWithRole("AHeroController::TakeDamage");
 
 
 	// Update ame state
@@ -112,6 +120,8 @@ void AHeroController::TakeDamage(const FMRHitResult& Hit)
 		//TODO Log error
 		return;
 	}
+	
+	// TODO This is bad referencing a specific game mode. Introduce an interface or MrGameModeBase clas
 	auto DM = Cast<ADeathmatchGameMode>(World->GetAuthGameMode()); 
 	if (DM) DM->OnPlayerTakeDamage(Hit);
 
@@ -137,7 +147,7 @@ void AHeroController::SimulateHitGiven(const FMRHitResult& Hit)
 		return;
 	}
 
-	UE_LOG(LogTemp, Warning, TEXT("HitGiven() - Local. Damage(%d)"), Hit.DamageTaken);
+	//UE_LOG(LogTemp, Warning, TEXT("HitGiven() - Local. Damage(%d)"), Hit.DamageTaken);
 
 	// Display a hit marker in the world
 	const auto World = GetWorld();
@@ -221,7 +231,6 @@ void AHeroController::BeginPlay()
 	const auto LP = GetLocalPlayer();
 	if (LP && IsLocalController())
 	{
-		//LogMsgWithRole("LP Get");
 		LP->AspectRatioAxisConstraint = EAspectRatioAxisConstraint::AspectRatio_MaintainYFOV;
 	}
 }
@@ -236,6 +245,8 @@ void AHeroController::SetupInputComponent()
 	I->BindAxis("FaceRight", this, &AHeroController::Input_FaceRight);
 	I->BindAction("FireWeapon", IE_Pressed, this, &AHeroController::Input_FirePressed);
 	I->BindAction("FireWeapon", IE_Released, this, &AHeroController::Input_FireReleased);
+	I->BindAction("AdsWeapon", IE_Pressed, this, &AHeroController::Input_AdsPressed);
+	I->BindAction("AdsWeapon", IE_Released, this, &AHeroController::Input_AdsReleased);
 	I->BindAction("Reload", IE_Released, this, &AHeroController::Input_Reload);
 	I->BindAction("Interact", IE_Pressed, this, &AHeroController::Input_Interact);
 }
@@ -290,6 +301,18 @@ void AHeroController::Input_FireReleased()
 {
 	auto Char = GetHeroCharacter();
 	if (Char) Char->Input_FireReleased();
+}
+
+void AHeroController::Input_AdsPressed()
+{
+	auto Char = GetHeroCharacter();
+	if (Char) Char->Input_AdsPressed();
+}
+
+void AHeroController::Input_AdsReleased()
+{
+	auto Char = GetHeroCharacter();
+	if (Char) Char->Input_AdsReleased();
 }
 
 void AHeroController::Input_Reload()
