@@ -157,8 +157,8 @@ public:
 
 
 
-	FORCEINLINE AHeroState* GetHeroState() const;
-	FORCEINLINE AHeroController* GetHeroController() const;
+	AHeroState* GetHeroState() const;
+	AHeroController* GetHeroController() const;
 
 
 
