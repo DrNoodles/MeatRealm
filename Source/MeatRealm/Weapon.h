@@ -11,6 +11,8 @@ class UArrowComponent;
 class USceneComponent;
 class UStaticMeshComponent;
 
+DECLARE_DYNAMIC_MULTICAST_DELEGATE(FReloadStarted);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE(FReloadEnded);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FShotFired);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FAmmoWarning);
 
@@ -135,6 +137,13 @@ public:
 
 	UPROPERTY(BlueprintAssignable, Category = "Event Dispatchers")
 		FAmmoWarning OnAmmoWarning;
+
+	UPROPERTY(BlueprintAssignable, Category = "Event Dispatchers")
+		FReloadStarted OnReloadStarted;
+	
+	UPROPERTY(BlueprintAssignable, Category = "Event Dispatchers")
+		FReloadEnded OnReloadEnded;
+
 
 private:
 	UFUNCTION(Server, Reliable, WithValidation)

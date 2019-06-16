@@ -74,8 +74,10 @@ void AWeapon::RemoteTick(float DeltaTime)
 		// Update UI
 		ReloadProgress = 0;
 		bIsReloading = true;
-
+		
 		ReloadState = ReloadStates::InProgress;
+
+		OnReloadStarted.Broadcast();
 	}
 	else if (ReloadState == ReloadStates::InProgress)
 	{
@@ -91,6 +93,8 @@ void AWeapon::RemoteTick(float DeltaTime)
 		bIsReloading = false;
 
 		ReloadState = ReloadStates::Nothing;
+
+		OnReloadEnded.Broadcast();
 	}
 }
 void AWeapon::AuthTick(float DeltaTime)
