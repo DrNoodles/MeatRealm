@@ -52,7 +52,7 @@ public:
 	void ClientRPC_PlayHit(const FMRHitResult& Hit);
 
 	UFUNCTION(Client, Reliable)
-	void ClientRPC_OnTakenDamage(const FMRHitResult& Hit);
+	void ClientRPC_NotifyOnTakenDamage(const FMRHitResult& Hit);
 
 	UPROPERTY(BlueprintAssignable, Category = "Event Dispatchers")
 		FPlayerSpawned OnPlayerSpawned;

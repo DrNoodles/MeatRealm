@@ -127,14 +127,7 @@ void AHeroController::TakeDamage2(const FMRHitResult& Hit)
 
 
 	// Do client side effects!
-	if (!IsLocalPlayerController())
-	{
-		ClientRPC_OnTakenDamage(Hit);
-	}
-	else
-	{
-		if (OnTakenDamage.IsBound()) OnTakenDamage.Broadcast(Hit);
-	}
+	ClientRPC_NotifyOnTakenDamage(Hit);
 }
 
 void AHeroController::SimulateHitGiven(const FMRHitResult& Hit)
@@ -184,10 +177,9 @@ void AHeroController::SimulateHitGiven(const FMRHitResult& Hit)
 		OnGivenDamage.Broadcast(Hit);
 }
 
-void AHeroController::ClientRPC_OnTakenDamage_Implementation(const FMRHitResult& Hit)
+void AHeroController::ClientRPC_NotifyOnTakenDamage_Implementation(const FMRHitResult& Hit)
 {
-	if (OnTakenDamage.IsBound())
-		OnTakenDamage.Broadcast(Hit);
+	if (OnTakenDamage.IsBound()) OnTakenDamage.Broadcast(Hit);
 }
 
 void AHeroController::ClientRPC_PlayHit_Implementation(const FMRHitResult& Hit)
@@ -207,6 +199,7 @@ void AHeroController::ClientRPC_PlayHit_Implementation(const FMRHitResult& Hit)
 	//		0.5);
 	//}
 }
+
 
 /// Input
 
