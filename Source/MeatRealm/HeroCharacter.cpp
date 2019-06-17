@@ -430,11 +430,33 @@ void AHeroCharacter::AssignWeaponToSlot(AWeapon* Weapon, EWeaponSlots Slot)
 
 void AHeroCharacter::EquipWeapon(const EWeaponSlots Slot)
 {
+	if (CurrentWeaponSlot == Slot) return;
+
+	const auto OldSlot = CurrentWeaponSlot;
 	CurrentWeaponSlot = Slot;
-	
-	// Notify UI of change?
-	// Change visibilities?
-	// Swap attatchment points (eg, new gun in hands, old gun on back)
+
+
+	// TODO Some management code here to delay for the duration of holster/draw and cancel if certain things happen
+
+
+	// Hide old weapon
+	auto OldWeapon = GetWeapon(OldSlot);
+	if (OldWeapon)
+	{
+		OldWeapon->SetActorHiddenInGame(true);
+		OldWeapon->Holster();
+	}
+
+	// Show new weapon
+	auto NewWeapon = GetWeapon(CurrentWeaponSlot);
+	if (NewWeapon)
+	{
+		NewWeapon->SetActorHiddenInGame(false);
+		NewWeapon->Draw();
+	}
+
+
+	// TODO Swap attatchment points (eg, new gun in hands, old gun on back)
 }
 
 

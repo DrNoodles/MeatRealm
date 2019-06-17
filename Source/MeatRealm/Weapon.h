@@ -46,6 +46,12 @@ public:
 	void Input_AdsPressed();
 	void Input_AdsReleased();
 	bool TryGiveAmmo();
+
+	void Draw();
+	void Holster();
+
+	FString WeaponName = "NoNameWeapon";
+
 	uint32 HeroControllerId;
 	void SetHeroControllerId(uint32 HeroControllerUid) { this->HeroControllerId = HeroControllerUid; }
 

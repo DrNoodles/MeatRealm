@@ -405,6 +405,16 @@ bool AWeapon::SpawnAProjectile(const FVector& Direction) const
 	return true;
 }
 
+void AWeapon::Draw()
+{
+	LogMsgWithRole(FString::Printf(TEXT("AWeapon::Draw() %s"), *WeaponName));
+}
+
+void AWeapon::Holster()
+{
+	LogMsgWithRole(FString::Printf(TEXT("AWeapon::Holster() %s"), *WeaponName));
+}
+
 
 
 /// INPUT
@@ -444,7 +454,6 @@ bool AWeapon::TryGiveAmmo()
 	
 	return true;
 }
-
 
 /// RPC
 
