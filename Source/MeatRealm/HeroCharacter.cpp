@@ -94,12 +94,12 @@ void AHeroCharacter::Restart()
 	Armour = 0.f;
 
 	// Randomly select a weapon
-	if (WeaponClasses.Num() > 0)
+	if (DefaultWeaponClass.Num() > 0)
 	{
 		if (HasAuthority())
 		{
-			const auto Choice = FMath::RandRange(0, WeaponClasses.Num() - 1);
-			AuthSpawnWeapon(WeaponClasses[Choice]);
+			const auto Choice = FMath::RandRange(0, DefaultWeaponClass.Num() - 1);
+			AuthSpawnWeapon(DefaultWeaponClass[Choice]);
 		}
 	}
 }
@@ -346,17 +346,30 @@ void AHeroCharacter::Input_Reload() const
 void AHeroCharacter::AuthSpawnWeapon(TSubclassOf<AWeapon> weaponClass)
 {
 	//LogMsgWithRole("AHeroCharacter::ServerRPC_SpawnWeapon");
+	check(HasAuthority())
+	if (!GetWorld()) return;
 
-	FActorSpawnParameters params;
-	params.Instigator = this;
-	params.Owner = this;
 
-	auto weapon = GetWorld()->SpawnActorAbsolute<AWeapon>(
+	// Spawn the weapon at the anchor
+	auto* Weapon = GetWorld()->SpawnActorDeferred<AWeapon>(
 		weaponClass,
-		WeaponAnchor->GetComponentTransform(), params);
+		WeaponAnchor->GetComponentTransform(),
+		this,
+		this,
+		ESpawnActorCollisionHandlingMethod::AlwaysSpawn);
+	
+	if (Weapon == nullptr) { return; }
 
-	weapon->AttachToComponent(WeaponAnchor, FAttachmentTransformRules{ EAttachmentRule::KeepWorld, true });
-	weapon->SetHeroControllerId(GetHeroController()->PlayerState->PlayerId);
+
+	// Configure it
+	Weapon->AttachToComponent(WeaponAnchor, FAttachmentTransformRules{ EAttachmentRule::KeepWorld, true });
+	Weapon->SetHeroControllerId(GetHeroController()->PlayerState->PlayerId);
+
+
+	// Finish him!
+	UGameplayStatics::FinishSpawningActor(
+		Weapon,
+		WeaponAnchor->GetComponentTransform());
 
 
 	// Cleanup previous weapon
@@ -366,10 +379,9 @@ void AHeroCharacter::AuthSpawnWeapon(TSubclassOf<AWeapon> weaponClass)
 		CurrentWeapon = nullptr;
 	}
 
-	// TODO Will this fuckup in flight projectiles
 
-	// Make sure server has a copy
-	CurrentWeapon = weapon;
+	// Make sure clients have a copy
+	CurrentWeapon = Weapon;
 }
 
 

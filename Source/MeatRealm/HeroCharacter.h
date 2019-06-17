@@ -59,7 +59,7 @@ public:
 
 	// Projectile class to spawn.
 	UPROPERTY(EditDefaultsOnly, Category = Weapon)
-		TArray<TSubclassOf<class AWeapon>> WeaponClasses;
+		TArray<TSubclassOf<class AWeapon>> DefaultWeaponClass;
 
 	UPROPERTY(BlueprintReadWrite, EditAnywhere)
 		float MaxHealth = 100.f;
@@ -134,6 +134,7 @@ public:
 	void Restart() override;
 	void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
 
+	
 	void AuthSpawnWeapon(TSubclassOf<AWeapon> weaponClass);
 
 	void SetTint(FColor bCond)
