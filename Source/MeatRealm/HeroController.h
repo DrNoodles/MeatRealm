@@ -31,7 +31,7 @@ public:
 		TSubclassOf<class ADamageNumber> DamageNumberClass;
 
 	UUserWidget* HudInstance;
-	
+
 	void OnPossess(APawn* InPawn) override;
 	void AcknowledgePossession(APawn* P) override;
 	void OnUnPossess() override;
@@ -91,5 +91,8 @@ private:
 	void Input_AdsReleased();
 	void Input_Reload();
 	void Input_Interact();
+	void Input_PrimaryWeapon();
+	void Input_SecondaryWeapon();
+
 	void SetUseMouseaim(bool bUseMouseAim);
 };

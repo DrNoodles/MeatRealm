@@ -78,10 +78,19 @@ AHeroCharacter::AHeroCharacter()
 
 void AHeroCharacter::EndPlay(const EEndPlayReason::Type EndPlayReason)
 {
-	if (ROLE_Authority == Role && CurrentWeapon != nullptr)
+	if (ROLE_Authority == Role)
 	{
-		CurrentWeapon->Destroy();
-		CurrentWeapon = nullptr;
+		CurrentWeaponSlot = EWeaponSlots::Undefined;
+		if (Slot1)
+		{
+			Slot1->Destroy();
+			Slot1 = nullptr;
+		}
+		if (Slot2)
+		{
+			Slot2->Destroy();
+			Slot2 = nullptr;
+		}
 	}
 }
 
@@ -94,12 +103,16 @@ void AHeroCharacter::Restart()
 	Armour = 0.f;
 
 	// Randomly select a weapon
-	if (WeaponClasses.Num() > 0)
+	if (DefaultWeaponClass.Num() > 0)
 	{
 		if (HasAuthority())
 		{
-			const auto Choice = FMath::RandRange(0, WeaponClasses.Num() - 1);
-			AuthSpawnWeapon(WeaponClasses[Choice]);
+			const auto Choice = FMath::RandRange(0, DefaultWeaponClass.Num() - 1);
+
+			const auto Weapon = AuthSpawnAndAttachWeapon(DefaultWeaponClass[Choice]);
+			const auto Slot = FindGoodSlot();
+			AssignWeaponToSlot(Weapon, Slot);
+			EquipWeapon(Slot);
 		}
 	}
 }
@@ -107,7 +120,9 @@ void AHeroCharacter::Restart()
 void AHeroCharacter::GetLifetimeReplicatedProps(TArray< FLifetimeProperty >& OutLifetimeProps) const
 {
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
-	DOREPLIFETIME(AHeroCharacter, CurrentWeapon);
+	DOREPLIFETIME(AHeroCharacter, CurrentWeaponSlot);
+	DOREPLIFETIME(AHeroCharacter, Slot1);
+	DOREPLIFETIME(AHeroCharacter, Slot2);
 	DOREPLIFETIME(AHeroCharacter, Health);
 	DOREPLIFETIME(AHeroCharacter, Armour);
 	DOREPLIFETIME(AHeroCharacter, TeamTint);
@@ -311,68 +326,141 @@ bool AHeroCharacter::ServerRPC_AdsPressed_Validate()
 
 void AHeroCharacter::Input_FirePressed() const
 {
-	if (CurrentWeapon) CurrentWeapon->Input_PullTrigger();
+	if (GetCurrentWeapon()) GetCurrentWeapon()->Input_PullTrigger();
 }
 
 void AHeroCharacter::Input_FireReleased() const
 {
-	if (CurrentWeapon) CurrentWeapon->Input_ReleaseTrigger();
+	if (GetCurrentWeapon()) GetCurrentWeapon()->Input_ReleaseTrigger();
 }
 
 void AHeroCharacter::Input_AdsPressed()
 {
-	if (CurrentWeapon) CurrentWeapon->Input_AdsPressed();
+	if (GetCurrentWeapon()) GetCurrentWeapon()->Input_AdsPressed();
 	SimulateAdsMode(true);
 	ServerRPC_AdsPressed();
 }
 
 void AHeroCharacter::Input_AdsReleased()
 {
-	if (CurrentWeapon) CurrentWeapon->Input_AdsReleased();
+	if (GetCurrentWeapon()) GetCurrentWeapon()->Input_AdsReleased();
 	SimulateAdsMode(false);
 	ServerRPC_AdsReleased();
 }
 
 void AHeroCharacter::Input_Reload() const
 {
-	if (CurrentWeapon) CurrentWeapon->Input_Reload();
+	if (GetCurrentWeapon()) GetCurrentWeapon()->Input_Reload();
 }
 
 
 
 
 // Weapon spawning
-
-void AHeroCharacter::AuthSpawnWeapon(TSubclassOf<AWeapon> weaponClass)
+AWeapon* AHeroCharacter::GetWeapon(EWeaponSlots Slot) const
 {
-	//LogMsgWithRole("AHeroCharacter::ServerRPC_SpawnWeapon");
-
-	FActorSpawnParameters params;
-	params.Instigator = this;
-	params.Owner = this;
-
-	auto weapon = GetWorld()->SpawnActorAbsolute<AWeapon>(
-		weaponClass,
-		WeaponAnchor->GetComponentTransform(), params);
-
-	weapon->AttachToComponent(WeaponAnchor, FAttachmentTransformRules{ EAttachmentRule::KeepWorld, true });
-	weapon->SetHeroControllerId(GetHeroController()->PlayerState->PlayerId);
-
-
-	// Cleanup previous weapon
-	if (CurrentWeapon != nullptr)
-	{
-		CurrentWeapon->Destroy();
-		CurrentWeapon = nullptr;
+	switch (Slot) 
+	{ 
+	case EWeaponSlots::Primary: return Slot1;
+	case EWeaponSlots::Secondary: return Slot2;
+	
+	case EWeaponSlots::Undefined:
+	default:
+		return nullptr; 
 	}
-
-	// TODO Will this fuckup in flight projectiles
-
-	// Make sure server has a copy
-	CurrentWeapon = weapon;
+}
+void AHeroCharacter::SetWeapon(AWeapon* Weapon, EWeaponSlots Slot)
+{
+	// This does not free up resources by design! If needed, first get the weapon before overwriting it
+	if (Slot == EWeaponSlots::Primary) Slot1 = Weapon;
+	if (Slot == EWeaponSlots::Secondary) Slot2 = Weapon;
 }
 
+AWeapon* AHeroCharacter::GetCurrentWeapon() const
+{
+	return GetWeapon(CurrentWeaponSlot);
+}
 
+AWeapon* AHeroCharacter::AuthSpawnAndAttachWeapon(TSubclassOf<AWeapon> weaponClass)
+{
+	//LogMsgWithRole("AHeroCharacter::ServerRPC_SpawnWeapon");
+	check(HasAuthority())
+	if (!GetWorld()) return nullptr;
+
+
+	// Spawn the weapon at the anchor
+	auto* Weapon = GetWorld()->SpawnActorDeferred<AWeapon>(
+		weaponClass,
+		WeaponAnchor->GetComponentTransform(),
+		this,
+		this,
+		ESpawnActorCollisionHandlingMethod::AlwaysSpawn);
+	
+	if (Weapon == nullptr) { return nullptr; }
+
+
+	// Configure it
+	Weapon->AttachToComponent(WeaponAnchor, FAttachmentTransformRules{ EAttachmentRule::KeepWorld, true });
+	Weapon->SetHeroControllerId(GetHeroController()->PlayerState->PlayerId);
+
+
+	// Finish him!
+	UGameplayStatics::FinishSpawningActor(
+		Weapon,
+		WeaponAnchor->GetComponentTransform());
+
+	return Weapon;
+}
+
+EWeaponSlots AHeroCharacter::FindGoodSlot() const
+{
+	// Find an empty slot, if none exists, 
+	if (!Slot1) return EWeaponSlots::Primary;
+	if (!Slot2) return EWeaponSlots::Secondary;
+	return CurrentWeaponSlot;
+}
+void AHeroCharacter::AssignWeaponToSlot(AWeapon* Weapon, EWeaponSlots Slot)
+{
+	auto Removed = GetWeapon(Slot);
+	SetWeapon(Weapon, Slot);
+
+	// Cleanup previous weapon // TODO Drop this on ground
+	if (Removed) Removed->Destroy();
+}
+
+void AHeroCharacter::EquipWeapon(const EWeaponSlots Slot)
+{
+	if (CurrentWeaponSlot == Slot) return;
+
+	const auto OldSlot = CurrentWeaponSlot;
+	CurrentWeaponSlot = Slot;
+
+
+	// TODO Some management code here to delay for the duration of holster/draw and cancel if certain things happen
+
+	float HolsterDuration = 0;
+
+	// Hide old weapon
+	auto OldWeapon = GetWeapon(OldSlot);
+	if (OldWeapon)
+	{
+		OldWeapon->SetActorHiddenInGame(true);
+		OldWeapon->Holster();
+		HolsterDuration = OldWeapon->HolsterDuration;
+	}
+
+
+	// Show new weapon
+	auto NewWeapon = GetWeapon(CurrentWeaponSlot);
+	if (NewWeapon)
+	{
+		NewWeapon->SetActorHiddenInGame(false);
+		NewWeapon->Draw();
+	}
+
+
+	// TODO Swap attatchment points (eg, new gun in hands, old gun on back)
+}
 
 
 // Camera tracks aim
@@ -625,9 +713,9 @@ bool AHeroCharacter::AuthTryGiveAmmo()
 	//LogMsgWithRole("AHeroCharacter::TryGiveAmmo");
 	if (!HasAuthority()) return false;
 
-	if (CurrentWeapon != nullptr)
+	if (GetCurrentWeapon() != nullptr)
 	{
-		return CurrentWeapon->TryGiveAmmo();
+		return GetCurrentWeapon()->TryGiveAmmo();
 	}
 
 	return false;
@@ -650,22 +738,16 @@ bool AHeroCharacter::AuthTryGiveWeapon(const TSubclassOf<AWeapon>& Class)
 
 	//LogMsgWithRole("AHeroCharacter::TryGiveWeapon");
 
-	
-	if (CurrentWeapon)
+	if (GetCurrentWeapon() && GetCurrentWeapon()->IsA(Class))
 	{
-		// If we already have the gun, treat it as an ammo pickup!
-		if (CurrentWeapon->IsA(Class))
-		{
-			return AuthTryGiveAmmo();
-		}
-
-		// Otherwise, destroy our current weapon to make space for the new one!
-		CurrentWeapon->Destroy();
-		CurrentWeapon = nullptr;
+		// If we already have the gun equipped, treat it as an ammo pickup!
+		return AuthTryGiveAmmo();
 	}
 
-
-	AuthSpawnWeapon(Class);
+	const auto Weapon = AuthSpawnAndAttachWeapon(Class);
+	const auto Slot = FindGoodSlot();
+	AssignWeaponToSlot(Weapon, Slot);
+	EquipWeapon(Slot);
 
 	return true;
 }
@@ -679,6 +761,17 @@ void AHeroCharacter::Input_Interact()
 {
 	//LogMsgWithRole("AHeroCharacter::Input_Interact()");
 	ServerRPC_TryInteract();
+}
+
+void AHeroCharacter::Input_PrimaryWeapon()
+{
+	ServerRPC_EquipPrimaryWeapon();
+}
+
+void AHeroCharacter::Input_SecondaryWeapon()
+{
+	ServerRPC_EquipSecondaryWeapon();
+
 }
 
 void AHeroCharacter::ServerRPC_TryInteract_Implementation()
@@ -698,12 +791,34 @@ bool AHeroCharacter::ServerRPC_TryInteract_Validate()
 	return true;
 }
 
+
+void AHeroCharacter::ServerRPC_EquipPrimaryWeapon_Implementation()
+{
+	EquipWeapon(EWeaponSlots::Primary);
+}
+
+bool AHeroCharacter::ServerRPC_EquipPrimaryWeapon_Validate()
+{
+	return true;
+}
+
+void AHeroCharacter::ServerRPC_EquipSecondaryWeapon_Implementation()
+{
+	EquipWeapon(EWeaponSlots::Secondary);
+}
+
+bool AHeroCharacter::ServerRPC_EquipSecondaryWeapon_Validate()
+{
+	return true;
+}
+
 template <class T>
 T* AHeroCharacter::ScanForInteractable()
 {
 	FHitResult Hit = GetFirstPhysicsBodyInReach();
 	return Cast<T>(Hit.GetActor());
 }
+
 
 FHitResult AHeroCharacter::GetFirstPhysicsBodyInReach() const
 {

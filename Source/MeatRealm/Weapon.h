@@ -16,14 +16,6 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE(FReloadEnded);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FShotFired);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FAmmoWarning);
 
-enum ReloadStates
-{
-	Nothing = 0,
-	Starting = 1,
-	InProgress = 2,
-	Finishing = 3,
-};
-
 UCLASS()
 class MEATREALM_API AWeapon : public AActor
 {
@@ -46,6 +38,13 @@ public:
 	void Input_AdsPressed();
 	void Input_AdsReleased();
 	bool TryGiveAmmo();
+
+	void Draw();
+	void Holster();
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly)
+	FString WeaponName = "NoNameWeapon";
+
 	uint32 HeroControllerId;
 	void SetHeroControllerId(uint32 HeroControllerUid) { this->HeroControllerId = HeroControllerUid; }
 
@@ -72,6 +71,10 @@ public:
 
 
 	// Configure the gun
+
+	// Time (seconds) to holster the weapon
+	UPROPERTY(EditAnywhere)
+		float HolsterDuration = 1;
 
 	UPROPERTY(EditAnywhere)
 		float ShotsPerSecond = 1.0f;
@@ -125,8 +128,10 @@ public:
 		int AmmoInPool;
 
 	// Used for UI binding
-	UPROPERTY(BlueprintReadOnly)
+	UPROPERTY(BlueprintReadOnly, ReplicatedUsing=OnRep_IsReloadingChanged)
 		bool bIsReloading = false;
+	UFUNCTION()
+		void OnRep_IsReloadingChanged();
 
 	// Used for UI binding
 	UPROPERTY(BlueprintReadOnly)
@@ -174,9 +179,11 @@ private:
 	bool SpawnAProjectile(const FVector& Direction) const;
 
 	void AuthFireStart();
+	void AuthFireEnd();
+	void AuthHolsterStart();
+	//void AuthHolsterEnd();
 	void AuthReloadStart();
 	void AuthReloadEnd();
-	void AuthFireEnd();
 
 	bool CanReload() const;
 	bool NeedsReload() const;
@@ -192,11 +199,9 @@ private:
 	bool bHasActionedThisTriggerPull;
 	bool bReloadQueued;
 
-
-	// 0 nothing, 1 reload starting, 2 reloading, 3 reload finishing
-	UPROPERTY(Replicated)
-		int ReloadState = 0;
-
-	FDateTime ReloadStartTime;
+	bool bHolsterQueued;
+	bool bWasReloadingOnHolster;
+	
+	FDateTime ClientReloadStartTime;
 };
 
