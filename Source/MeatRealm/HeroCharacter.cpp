@@ -747,6 +747,17 @@ void AHeroCharacter::Input_Interact()
 	ServerRPC_TryInteract();
 }
 
+void AHeroCharacter::Input_PrimaryWeapon()
+{
+	ServerRPC_EquipPrimaryWeapon();
+}
+
+void AHeroCharacter::Input_SecondaryWeapon()
+{
+	ServerRPC_EquipSecondaryWeapon();
+
+}
+
 void AHeroCharacter::ServerRPC_TryInteract_Implementation()
 {
 	//LogMsgWithRole("AHeroCharacter::ServerRPC_TryInteract_Implementation()");
@@ -764,12 +775,34 @@ bool AHeroCharacter::ServerRPC_TryInteract_Validate()
 	return true;
 }
 
+
+void AHeroCharacter::ServerRPC_EquipPrimaryWeapon_Implementation()
+{
+	EquipWeapon(EWeaponSlots::Primary);
+}
+
+bool AHeroCharacter::ServerRPC_EquipPrimaryWeapon_Validate()
+{
+	return true;
+}
+
+void AHeroCharacter::ServerRPC_EquipSecondaryWeapon_Implementation()
+{
+	EquipWeapon(EWeaponSlots::Secondary);
+}
+
+bool AHeroCharacter::ServerRPC_EquipSecondaryWeapon_Validate()
+{
+	return true;
+}
+
 template <class T>
 T* AHeroCharacter::ScanForInteractable()
 {
 	FHitResult Hit = GetFirstPhysicsBodyInReach();
 	return Cast<T>(Hit.GetActor());
 }
+
 
 FHitResult AHeroCharacter::GetFirstPhysicsBodyInReach() const
 {

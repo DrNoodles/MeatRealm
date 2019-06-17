@@ -177,6 +177,7 @@ public:
 	AHeroState* GetHeroState() const;
 	AHeroController* GetHeroController() const;
 
+
 	static bool IsBackpedaling(const FVector& MoveDir, const FVector& AimDir, int BackpedalAngle);
 
 
@@ -193,6 +194,8 @@ public:
 	void Input_FaceUp(float Value) { AxisFaceUp = Value; }
 	void Input_FaceRight(float Value) { AxisFaceRight = Value; }
 	void Input_Interact();
+	void Input_PrimaryWeapon();
+	void Input_SecondaryWeapon();
 
 	void SetUseMouseAim(bool bUseMouseAimIn) { bUseMouseAim = bUseMouseAimIn; }
 
@@ -232,6 +235,13 @@ private:
 
 	UFUNCTION(Server, Reliable, WithValidation)
 		void ServerRPC_TryInteract();
+
+	UFUNCTION(Server, Reliable, WithValidation)
+		void ServerRPC_EquipPrimaryWeapon();
+	
+	UFUNCTION(Server, Reliable, WithValidation)
+		void ServerRPC_EquipSecondaryWeapon();
+
 
 	template<class T>
 	T* ScanForInteractable();
