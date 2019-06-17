@@ -438,6 +438,7 @@ void AHeroCharacter::EquipWeapon(const EWeaponSlots Slot)
 
 	// TODO Some management code here to delay for the duration of holster/draw and cancel if certain things happen
 
+	float HolsterDuration = 0;
 
 	// Hide old weapon
 	auto OldWeapon = GetWeapon(OldSlot);
@@ -445,7 +446,9 @@ void AHeroCharacter::EquipWeapon(const EWeaponSlots Slot)
 	{
 		OldWeapon->SetActorHiddenInGame(true);
 		OldWeapon->Holster();
+		HolsterDuration = OldWeapon->HolsterDuration;
 	}
+
 
 	// Show new weapon
 	auto NewWeapon = GetWeapon(CurrentWeaponSlot);
@@ -735,19 +738,10 @@ bool AHeroCharacter::AuthTryGiveWeapon(const TSubclassOf<AWeapon>& Class)
 
 	//LogMsgWithRole("AHeroCharacter::TryGiveWeapon");
 
-	
-	if (GetCurrentWeapon())
+	if (GetCurrentWeapon() && GetCurrentWeapon()->IsA(Class))
 	{
-		// If we already have the gun, treat it as an ammo pickup!
-		if (GetCurrentWeapon()->IsA(Class))
-		{
-			return AuthTryGiveAmmo();
-		}
-
-		// TODO Rework this code with the new slot system
-		//// Otherwise, destroy our current weapon to make space for the new one!
-		//CurrentWeapon->Destroy();
-		//CurrentWeapon = nullptr;
+		// If we already have the gun equipped, treat it as an ammo pickup!
+		return AuthTryGiveAmmo();
 	}
 
 	const auto Weapon = AuthSpawnAndAttachWeapon(Class);
