@@ -50,6 +50,7 @@ public:
 	void Draw();
 	void Holster();
 
+	UPROPERTY(EditAnywhere, BlueprintReadOnly)
 	FString WeaponName = "NoNameWeapon";
 
 	uint32 HeroControllerId;
