@@ -14,12 +14,18 @@ class AWeapon;
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FPlayerTintChanged);
 
+UENUM(BlueprintType)
+enum class EWeaponSlots : uint8
+{
+	Undefined = 0,
+	Primary = 1,
+	Secondary = 2,
+};
 
 UCLASS()
 class MEATREALM_API AHeroCharacter : public ACharacter, public IAffectableInterface
 {
 	GENERATED_BODY()
-
 
 
 public:
@@ -99,8 +105,6 @@ protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
 		UArrowComponent* WeaponAnchor = nullptr;
 
-	UPROPERTY(BlueprintReadOnly, Replicated)
-		AWeapon* CurrentWeapon = nullptr;
 
 private:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Camera, meta = (AllowPrivateAccess = "true"))
@@ -126,6 +130,12 @@ private:
 	FVector AimPos_WorldSpace = FVector::ZeroVector;
 
 
+	UPROPERTY(Replicated)
+		EWeaponSlots CurrentWeaponSlot = EWeaponSlots::Undefined;
+	UPROPERTY(Replicated)
+		AWeapon* Slot1 = nullptr;
+	UPROPERTY(Replicated)
+		AWeapon* Slot2 = nullptr;
 
 
 
@@ -135,7 +145,6 @@ public:
 	void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
 
 	
-	void AuthSpawnWeapon(TSubclassOf<AWeapon> weaponClass);
 
 	void SetTint(FColor bCond)
 	{
@@ -178,6 +187,7 @@ public:
 	void Input_AdsPressed();
 	void Input_AdsReleased();
 	void Input_Reload() const;
+	AWeapon* GetWeapon(EWeaponSlots Slot) const;
 	void Input_MoveUp(float Value) {	AxisMoveUp = Value; }
 	void Input_MoveRight(float Value) { AxisMoveRight = Value; }
 	void Input_FaceUp(float Value) { AxisFaceUp = Value; }
@@ -186,9 +196,18 @@ public:
 
 	void SetUseMouseAim(bool bUseMouseAimIn) { bUseMouseAim = bUseMouseAimIn; }
 
+	UFUNCTION(BlueprintCallable)
+		AWeapon* GetCurrentWeapon() const;
 private:
 
 	virtual void Tick(float DeltaSeconds) override;
+
+	
+	void SetWeapon(AWeapon* Weapon, EWeaponSlots Slot);
+	AWeapon* AuthSpawnAndAttachWeapon(TSubclassOf<AWeapon> weaponClass);
+	EWeaponSlots FindGoodSlot() const;
+	void AssignWeaponToSlot(AWeapon* Weapon, EWeaponSlots Slot);
+	void EquipWeapon(EWeaponSlots Slot);
 
 	static FVector2D GetGameViewportSize();
 	static FVector2D CalcLinearLeanVectorUnclipped(const FVector2D& CursorLoc, const FVector2D& ViewportSize);
