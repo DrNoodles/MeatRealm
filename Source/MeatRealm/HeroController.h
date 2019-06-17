@@ -31,7 +31,7 @@ public:
 		TSubclassOf<class ADamageNumber> DamageNumberClass;
 
 	UUserWidget* HudInstance;
-	
+
 	void OnPossess(APawn* InPawn) override;
 	void AcknowledgePossession(APawn* P) override;
 	void OnUnPossess() override;
@@ -52,7 +52,7 @@ public:
 	void ClientRPC_PlayHit(const FMRHitResult& Hit);
 
 	UFUNCTION(Client, Reliable)
-	void ClientRPC_OnTakenDamage(const FMRHitResult& Hit);
+	void ClientRPC_NotifyOnTakenDamage(const FMRHitResult& Hit);
 
 	UPROPERTY(BlueprintAssignable, Category = "Event Dispatchers")
 		FPlayerSpawned OnPlayerSpawned;
@@ -91,5 +91,8 @@ private:
 	void Input_AdsReleased();
 	void Input_Reload();
 	void Input_Interact();
+	void Input_PrimaryWeapon();
+	void Input_SecondaryWeapon();
+
 	void SetUseMouseaim(bool bUseMouseAim);
 };

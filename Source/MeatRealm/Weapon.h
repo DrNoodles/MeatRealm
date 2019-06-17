@@ -11,7 +11,10 @@ class UArrowComponent;
 class USceneComponent;
 class UStaticMeshComponent;
 
+DECLARE_DYNAMIC_MULTICAST_DELEGATE(FReloadStarted);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE(FReloadEnded);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FShotFired);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE(FAmmoWarning);
 
 UCLASS()
 class MEATREALM_API AWeapon : public AActor
@@ -26,6 +29,8 @@ protected:
 
 public:
 	virtual void Tick(float DeltaTime) override;
+	void RemoteTick(float DeltaTime);
+	void AuthTick(float DeltaTime);
 
 	void Input_PullTrigger();
 	void Input_ReleaseTrigger();
@@ -33,6 +38,13 @@ public:
 	void Input_AdsPressed();
 	void Input_AdsReleased();
 	bool TryGiveAmmo();
+
+	void Draw();
+	void Holster();
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly)
+	FString WeaponName = "NoNameWeapon";
+
 	uint32 HeroControllerId;
 	void SetHeroControllerId(uint32 HeroControllerUid) { this->HeroControllerId = HeroControllerUid; }
 
@@ -59,6 +71,10 @@ public:
 
 
 	// Configure the gun
+
+	// Time (seconds) to holster the weapon
+	UPROPERTY(EditAnywhere)
+		float HolsterDuration = 1;
 
 	UPROPERTY(EditAnywhere)
 		float ShotsPerSecond = 1.0f;
@@ -111,18 +127,30 @@ public:
 	UPROPERTY(BlueprintReadOnly, Replicated)
 		int AmmoInPool;
 
-	UPROPERTY(BlueprintReadOnly, Replicated)
-	bool bIsReloading;
+	// Used for UI binding
+	UPROPERTY(BlueprintReadOnly, ReplicatedUsing=OnRep_IsReloadingChanged)
+		bool bIsReloading = false;
+	UFUNCTION()
+		void OnRep_IsReloadingChanged();
 
+	// Used for UI binding
 	UPROPERTY(BlueprintReadOnly)
 	float ReloadProgress = 0.f;
-
-
-
 
 	UPROPERTY(BlueprintAssignable, Category = "Event Dispatchers")
 		FShotFired OnShotFired;
 
+	UPROPERTY(BlueprintAssignable, Category = "Event Dispatchers")
+		FAmmoWarning OnAmmoWarning;
+
+	UPROPERTY(BlueprintAssignable, Category = "Event Dispatchers")
+		FReloadStarted OnReloadStarted;
+	
+	UPROPERTY(BlueprintAssignable, Category = "Event Dispatchers")
+		FReloadEnded OnReloadEnded;
+
+
+private:
 	UFUNCTION(Server, Reliable, WithValidation)
 		void ServerRPC_Reload();
 
@@ -133,32 +161,33 @@ public:
 		void ServerRPC_ReleaseTrigger();
 
 	UFUNCTION(Server, Reliable, WithValidation)
-		void RPC_Fire_OnServer();
-
-	UFUNCTION(Server, Reliable, WithValidation)
 		void ServerRPC_AdsPressed();
 
 	UFUNCTION(Server, Reliable, WithValidation)
 		void ServerRPC_AdsReleased();
 
 	UFUNCTION(NetMulticast, Reliable)
-		void MultiRPC_Fired();
+		void MultiRPC_NotifyOnShotFired();
+
+	UFUNCTION(Client, Reliable)
+		void ClientRPC_NotifyOnAmmoWarning();
 
 
-private:
-	UFUNCTION()
-		void Shoot();
+	void SpawnProjectiles() const;
 
 	TArray<FVector> CalcShotPattern() const;
 	bool SpawnAProjectile(const FVector& Direction) const;
 
-	void ClientFireStart();
-	void ClientReloadStart();
-	void ClientReloadEnd();
-	void ClientFireEnd();
+	void AuthFireStart();
+	void AuthFireEnd();
+	void AuthHolsterStart();
+	//void AuthHolsterEnd();
+	void AuthReloadStart();
+	void AuthReloadEnd();
 
 	bool CanReload() const;
 	bool NeedsReload() const;
+	bool IsMatchInProgress();
 
 	void LogMsgWithRole(FString message);
 	FString GetRoleText();
@@ -170,6 +199,9 @@ private:
 	bool bHasActionedThisTriggerPull;
 	bool bReloadQueued;
 
-	UPROPERTY(Replicated)
-	FDateTime ReloadStartTime;
+	bool bHolsterQueued;
+	bool bWasReloadingOnHolster;
+	
+	FDateTime ClientReloadStartTime;
 };
+

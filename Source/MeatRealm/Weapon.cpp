@@ -10,6 +10,7 @@
 #include "Kismet/GameplayStatics.h"
 #include "TimerManager.h"
 #include "Projectile.h"
+#include "GameFramework/GameState.h"
 
 AWeapon::AWeapon()
 {
@@ -35,9 +36,7 @@ void AWeapon::GetLifetimeReplicatedProps(TArray< FLifetimeProperty >& OutLifetim
 	DOREPLIFETIME(AWeapon, AmmoInClip);
 	DOREPLIFETIME(AWeapon, AmmoInPool);
 	DOREPLIFETIME(AWeapon, bIsReloading);
-	DOREPLIFETIME(AWeapon, ReloadStartTime);
 }
-
 
 void AWeapon::BeginPlay()
 {
@@ -45,34 +44,58 @@ void AWeapon::BeginPlay()
 
 	if (!HasAuthority()) return;
 
-	bCanAction = true;
 	AmmoInClip = ClipSize;
 	AmmoInPool = AmmoPoolGiven;
+
+	Draw();
 }
 
 void AWeapon::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
 
-	bIsInAdsMode = bAdsPressed;
+	if (HasAuthority())
+	{
+		AuthTick(DeltaTime);
+	}
+	else
+	{
+		RemoteTick(DeltaTime);
+	}
+}
+void AWeapon::RemoteTick(float DeltaTime)
+{
+	check (!HasAuthority())
 
 	if (bIsReloading)
 	{
-		const auto ElapsedReloadTime = (FDateTime::Now() - ReloadStartTime).GetTotalSeconds();
-		ReloadProgress = ElapsedReloadTime / ReloadTime;
+		const auto ElapsedReloadTime = (FDateTime::Now() - ClientReloadStartTime).GetTotalSeconds();
 
-	//	bIsInAdsMode = false; // don't ads while reloading
+		// Update UI
+		ReloadProgress = ElapsedReloadTime / ReloadTime;
+		UE_LOG(LogTemp, Warning, TEXT("InProgress %f"), ReloadProgress);
+	}
+}
+void AWeapon::AuthTick(float DeltaTime)
+{
+	check(HasAuthority())
+
+	bIsInAdsMode = bAdsPressed;
+
+	// If a holster is queued, wait for can action unless the action we're in is a reload
+	if (bHolsterQueued && (bCanAction || bIsReloading))
+	{
+		AuthHolsterStart();
+		return;
 	}
 
-	
 	if (!bCanAction) return;
-
 
 
 	// Reload!
 	if (bReloadQueued && CanReload())
 	{
-		ClientReloadStart();
+		AuthReloadStart();
 		return;
 	}
 
@@ -85,32 +108,43 @@ void AWeapon::Tick(float DeltaTime)
 	{
 		if (NeedsReload() && CanReload())
 		{
-			ClientReloadStart();
+			AuthReloadStart();
 		}
 		else if (AmmoInClip > 0)
 		{
-			ClientFireStart();
+			AuthFireStart();
 		}
 	}
 }
 
-void AWeapon::ClientFireStart()
+void AWeapon::AuthFireStart()
 {
 	//LogMsgWithRole("ClientFireStart()");
+	check(HasAuthority())
 
 	bHasActionedThisTriggerPull = true;
 	bCanAction = false;
 	if (bUseClip) --AmmoInClip;
 
-	RPC_Fire_OnServer();
+	SpawnProjectiles();
+
+	// Notify listeners Fire occured
+	MultiRPC_NotifyOnShotFired();
+
+	if (AmmoInClip == 0)
+	{
+		ClientRPC_NotifyOnAmmoWarning();
+	}
 
 	GetWorld()->GetTimerManager().SetTimer(
-		CanActionTimerHandle, this, &AWeapon::ClientFireEnd, 1.f / ShotsPerSecond, false, -1);
+		CanActionTimerHandle, this, &AWeapon::AuthFireEnd, 1.f / ShotsPerSecond, false, -1);
 }
-void AWeapon::ClientFireEnd()
+void AWeapon::AuthFireEnd()
 {
-	bCanAction = true;
 	//LogMsgWithRole("ClientFireEnd()");
+	check(HasAuthority())
+
+	bCanAction = true;
 
 	if (CanActionTimerHandle.IsValid())
 	{
@@ -118,24 +152,95 @@ void AWeapon::ClientFireEnd()
 	}
 }
 
-void AWeapon::ClientReloadStart()
+void AWeapon::Draw()
 {
-	if (!bUseClip) return;
+	check(HasAuthority());
+	LogMsgWithRole(FString::Printf(TEXT("AWeapon::Draw() %s"), *WeaponName));
+
+	// Clear any timer
+	if (CanActionTimerHandle.IsValid())
+	{
+		GetWorld()->GetTimerManager().ClearTimer(CanActionTimerHandle);
+	}
+
+	// Queue reload if it was mid reload on holster
+	bReloadQueued = bWasReloadingOnHolster;
+	bWasReloadingOnHolster = false;
+
+	bCanAction = true;
+}
+
+void AWeapon::Holster()
+{
+	check(HasAuthority());
+	LogMsgWithRole(FString::Printf(TEXT("AWeapon::Holster() %s"), *WeaponName));
+	bHolsterQueued = true;
+}
+
+
+void AWeapon::AuthHolsterStart()
+{
+	check(HasAuthority())
+	LogMsgWithRole("AWeapon::AuthHolsterStart()");
+	
+	bHolsterQueued = false;
+	bCanAction = false;
+	bAdsPressed = false;
+
+	// Kill any timer running
+	if (CanActionTimerHandle.IsValid())
+	{
+		GetWorld()->GetTimerManager().ClearTimer(CanActionTimerHandle);
+	}
+
+	// Pause reload
+	bWasReloadingOnHolster = bIsReloading;
+	bIsReloading = false;
+
+
+	//// Create holster timer
+	//GetWorld()->GetTimerManager().SetTimer(
+	//	CanActionTimerHandle, this, &AWeapon::AuthHolsterEnd, HolsterTime, false, -1);
+}
+//void AWeapon::AuthHolsterEnd()
+//{
+//	check(HasAuthority())
+//	LogMsgWithRole("AWeapon::AuthHolsterEnd()");
+//
+//
+//	bCanAction = false; // Keep bCanAction=false cuz the gun is sleeping ZZzzzZZZZzzz...
+//
+//	// Clear holster timer
+//	if (CanActionTimerHandle.IsValid())
+//	{
+//		GetWorld()->GetTimerManager().ClearTimer(CanActionTimerHandle);
+//	}
+//
+//	// Raise holstered event!
+//}
+
+void AWeapon::AuthReloadStart()
+{
 	//LogMsgWithRole("ClientReloadStart()");
-	ReloadStartTime = FDateTime::Now();
+	check(HasAuthority())
+
+	if (!bUseClip) return;
+
 	bIsReloading = true;
 	bCanAction = false;
 	bHasActionedThisTriggerPull = true;
 
 	GetWorld()->GetTimerManager().SetTimer(
-		CanActionTimerHandle, this, &AWeapon::ClientReloadEnd, ReloadTime, false, -1);
+		CanActionTimerHandle, this, &AWeapon::AuthReloadEnd, ReloadTime, false, -1);
 }
-void AWeapon::ClientReloadEnd()
+void AWeapon::AuthReloadEnd()
 {
 	//LogMsgWithRole("ClientReloadEnd()");
-	ReloadProgress = 0;
+	check(HasAuthority())
+
 	bIsReloading = false;
 	bCanAction = true;
+	bReloadQueued = false;
 
 	// Take ammo from pool
 	const int AmmoNeeded = ClipSize - AmmoInClip;
@@ -143,11 +248,28 @@ void AWeapon::ClientReloadEnd()
 	AmmoInPool -= AmmoReceived;
 	AmmoInClip += AmmoReceived;
 	
-	bReloadQueued = false;
-
 	if (CanActionTimerHandle.IsValid())
 	{
 		GetWorld()->GetTimerManager().ClearTimer(CanActionTimerHandle);
+	}
+}
+
+void AWeapon::OnRep_IsReloadingChanged()
+{
+	if (bIsReloading)
+	{
+		// Init reload
+		ClientReloadStartTime = FDateTime::Now();
+
+		// Update UI
+		ReloadProgress = 0;
+		OnReloadStarted.Broadcast();
+	}
+	else
+	{
+		// Finish reload
+		ReloadProgress = 100;
+		OnReloadEnded.Broadcast();
 	}
 }
 
@@ -163,8 +285,28 @@ bool AWeapon::NeedsReload() const
 	return bUseClip && AmmoInClip < 1;
 }
 
+bool AWeapon::IsMatchInProgress()
+{
+	auto World = GetWorld();
+	if (World)
+	{
+		auto GM = World->GetAuthGameMode();
+		if (GM)
+		{
+			auto GS = GM->GetGameState<AGameState>();
+			if (GS && GS->IsMatchInProgress())
+			{
+				return true;
+			}
+		}
+	}
+	return false;
+}
+
 void AWeapon::ServerRPC_PullTrigger_Implementation()
 {
+	if (!IsMatchInProgress()) return;
+
 	bTriggerPulled = true;
 	bHasActionedThisTriggerPull = false;
 }
@@ -196,10 +338,9 @@ bool AWeapon::ServerRPC_Reload_Validate()
 	return true;
 }
 
-
 void AWeapon::ServerRPC_AdsPressed_Implementation()
 {
-	LogMsgWithRole("AWeapon::ServerRPC_AdsPressed_Implementation()");
+	//LogMsgWithRole("AWeapon::ServerRPC_AdsPressed_Implementation()");
 	bAdsPressed = true;
 }
 
@@ -210,7 +351,7 @@ bool AWeapon::ServerRPC_AdsPressed_Validate()
 
 void AWeapon::ServerRPC_AdsReleased_Implementation()
 {
-	LogMsgWithRole("AWeapon::ServerRPC_AdsReleased_Implementation()");
+	//LogMsgWithRole("AWeapon::ServerRPC_AdsReleased_Implementation()");
 	bAdsPressed = false;
 }
 
@@ -219,17 +360,22 @@ bool AWeapon::ServerRPC_AdsReleased_Validate()
 	return true;
 }
 
-
-void AWeapon::MultiRPC_Fired_Implementation()
+void AWeapon::MultiRPC_NotifyOnShotFired_Implementation()
 {
 	if (OnShotFired.IsBound()) OnShotFired.Broadcast();
 }
 
-void AWeapon::Shoot()
+void AWeapon::ClientRPC_NotifyOnAmmoWarning_Implementation()
 {
+	LogMsgWithRole("AWeapon::ClientRPC_NotifyOnAmmoWarning_Implementation()");
+	if (OnAmmoWarning.IsBound()) OnAmmoWarning.Broadcast();
+}
+
+void AWeapon::SpawnProjectiles() const
+{
+	check(HasAuthority())
 	//LogMsgWithRole("Shoot");
 
-	if (!HasAuthority()) return;
 	if (ProjectileClass == nullptr)
 	{
 		UE_LOG(LogTemp, Error, TEXT("Set a Projectile Class in your Weapon Blueprint to shoot"));
@@ -245,9 +391,6 @@ void AWeapon::Shoot()
 			return;
 		}
 	}
-
-	// Fire event on server
-	MultiRPC_Fired();
 }
 
 TArray<FVector> AWeapon::CalcShotPattern() const
@@ -332,7 +475,6 @@ bool AWeapon::SpawnAProjectile(const FVector& Direction) const
 }
 
 
-
 /// INPUT
 
 void AWeapon::Input_PullTrigger()
@@ -371,20 +513,7 @@ bool AWeapon::TryGiveAmmo()
 	return true;
 }
 
-
 /// RPC
-
-void AWeapon::RPC_Fire_OnServer_Implementation()
-{
-	//LogMsgWithRole("RPC_Fire_OnServer_Impl");
-	Shoot();
-}
-
-bool AWeapon::RPC_Fire_OnServer_Validate()
-{
-	return true;
-}
-
 
 void AWeapon::LogMsgWithRole(FString message)
 {
@@ -409,23 +538,6 @@ FString GetEnumText(ENetRole role)
 }
 FString AWeapon::GetRoleText()
 {
-	//auto Local = GetOwner()->Role;
-	//auto Remote = GetOwner()->GetRemoteRole();
-
-
-	//if (Remote == ROLE_SimulatedProxy) //&& Local == ROLE_Authority
-	//	return "ListenServer";
-
-	//if (Local == ROLE_Authority)
-	//	return "Server";
-
-	//if (Local == ROLE_AutonomousProxy) // && Remote == ROLE_Authority
-	//	return "OwningClient";
-
-	//if (Local == ROLE_SimulatedProxy) // && Remote == ROLE_Authority
-	//	return "SimClient";
-
-	return GetEnumText(Role) + " " + GetEnumText(GetRemoteRole()) + " Ded:" + (IsRunningDedicatedServer() ? "True" : "False");
-
+	return GetEnumText(Role) + " " + GetEnumText(GetRemoteRole());
 }
 
