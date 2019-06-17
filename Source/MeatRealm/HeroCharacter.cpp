@@ -1,5 +1,3 @@
-// Copyright 1998-2019 Epic Games, Inc. All Rights Reserved.
-
 #include "HeroCharacter.h"
 #include "HeadMountedDisplayFunctionLibrary.h"
 #include "Camera/CameraComponent.h"
@@ -19,8 +17,6 @@
 #include "WeaponPickupBase.h"
 #include "Kismet/GameplayStatics.h"
 #include "Weapon.h"
-
-
 
 
 /// Lifecycle
@@ -70,6 +66,9 @@ AHeroCharacter::AHeroCharacter()
 
 	WeaponAnchor = CreateDefaultSubobject<UArrowComponent>(TEXT("WeaponAnchor"));
 	WeaponAnchor->SetupAttachment(RootComponent);
+
+	HolsteredweaponAnchor = CreateDefaultSubobject<UArrowComponent>(TEXT("HolsteredweaponAnchor"));
+	HolsteredweaponAnchor->SetupAttachment(RootComponent);
 
 	// Create TEMP aim pos comp to help visualise aiming target
 	AimPosComp = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("AimPosComp"));
@@ -444,8 +443,10 @@ void AHeroCharacter::EquipWeapon(const EWeaponSlots Slot)
 	auto OldWeapon = GetWeapon(OldSlot);
 	if (OldWeapon)
 	{
-		OldWeapon->SetActorHiddenInGame(true);
+		//OldWeapon->SetActorHiddenInGame(true);
 		OldWeapon->Holster();
+		OldWeapon->AttachToComponent(HolsteredweaponAnchor, 
+			FAttachmentTransformRules{ EAttachmentRule::SnapToTarget, true });
 		HolsterDuration = OldWeapon->HolsterDuration;
 	}
 
@@ -454,8 +455,10 @@ void AHeroCharacter::EquipWeapon(const EWeaponSlots Slot)
 	auto NewWeapon = GetWeapon(CurrentWeaponSlot);
 	if (NewWeapon)
 	{
-		NewWeapon->SetActorHiddenInGame(false);
+		//NewWeapon->SetActorHiddenInGame(false);
 		NewWeapon->Draw();
+		NewWeapon->AttachToComponent(WeaponAnchor,
+			FAttachmentTransformRules{ EAttachmentRule::SnapToTarget, true });
 	}
 
 

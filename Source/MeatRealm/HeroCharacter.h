@@ -105,6 +105,8 @@ protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
 		UArrowComponent* WeaponAnchor = nullptr;
 
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
+		UArrowComponent* HolsteredweaponAnchor = nullptr;
 
 private:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Camera, meta = (AllowPrivateAccess = "true"))
