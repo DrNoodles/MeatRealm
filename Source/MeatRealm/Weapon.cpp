@@ -170,17 +170,23 @@ void AWeapon::Draw()
 		GetWorld()->GetTimerManager().ClearTimer(CanActionTimerHandle);
 	}
 
+	// Reset state to defaults
+	bHolsterQueued = false;
+	bAdsPressed = false;
+	bTriggerPulled = false;
+	bHasActionedThisTriggerPull = false;
+
 	// Queue reload if it was mid reload on holster
 	bReloadQueued = bWasReloadingOnHolster;
 	bWasReloadingOnHolster = false;
 
+	// Ready to roll!
 	bCanAction = true;
-
 
 	// Read inputs already in action before weapon drawn
 	ClientRPC_RefreshCurrentInput();
 }
-void AWeapon::Holster()
+void AWeapon::QueueHolster()
 {
 	check(HasAuthority());
 	LogMsgWithRole(FString::Printf(TEXT("AWeapon::Holster() %s"), *WeaponName));

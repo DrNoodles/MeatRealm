@@ -42,7 +42,7 @@ public:
 	UFUNCTION(Client, Reliable)
 	void ClientRPC_RefreshCurrentInput();
 	void Draw();
-	void Holster();
+	void QueueHolster();
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly)
 	FString WeaponName = "NoNameWeapon";

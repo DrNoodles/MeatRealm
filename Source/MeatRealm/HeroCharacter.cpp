@@ -439,7 +439,7 @@ void AHeroCharacter::EquipWeapon(const EWeaponSlots Slot)
 	if (OldWeapon)
 	{
 		//OldWeapon->SetActorHiddenInGame(true);
-		OldWeapon->Holster();
+		OldWeapon->QueueHolster();
 		OldWeapon->AttachToComponent(HolsteredweaponAnchor, 
 			FAttachmentTransformRules{ EAttachmentRule::SnapToTarget, true });
 		HolsterDuration = OldWeapon->HolsterDuration;
@@ -764,11 +764,13 @@ void AHeroCharacter::Input_PrimaryWeapon()
 {
 	ServerRPC_EquipPrimaryWeapon();
 }
-
 void AHeroCharacter::Input_SecondaryWeapon()
 {
 	ServerRPC_EquipSecondaryWeapon();
-
+}
+void AHeroCharacter::Input_ToggleWeapon()
+{
+	ServerRPC_ToggleWeapon();
 }
 
 void AHeroCharacter::ServerRPC_TryInteract_Implementation()
@@ -808,6 +810,28 @@ bool AHeroCharacter::ServerRPC_EquipSecondaryWeapon_Validate()
 {
 	return true;
 }
+
+
+void AHeroCharacter::ServerRPC_ToggleWeapon_Implementation()
+{
+	switch (CurrentWeaponSlot)
+	{
+	case EWeaponSlots::Primary:
+		EquipWeapon(EWeaponSlots::Secondary);
+		break;
+
+	case EWeaponSlots::Undefined:
+	case EWeaponSlots::Secondary:
+	default:
+		EquipWeapon(EWeaponSlots::Primary);
+	}
+}
+
+bool AHeroCharacter::ServerRPC_ToggleWeapon_Validate()
+{
+	return true;
+}
+
 
 template <class T>
 T* AHeroCharacter::ScanForInteractable()

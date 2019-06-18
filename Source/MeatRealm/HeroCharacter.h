@@ -186,6 +186,7 @@ public:
 	void Input_Interact();
 	void Input_PrimaryWeapon();
 	void Input_SecondaryWeapon();
+	void Input_ToggleWeapon();
 
 	void SetUseMouseAim(bool bUseMouseAimIn) { bUseMouseAim = bUseMouseAimIn; }
 
@@ -231,6 +232,9 @@ private:
 	
 	UFUNCTION(Server, Reliable, WithValidation)
 		void ServerRPC_EquipSecondaryWeapon();
+
+	UFUNCTION(Server, Reliable, WithValidation)
+		void ServerRPC_ToggleWeapon();
 
 
 	template<class T>
