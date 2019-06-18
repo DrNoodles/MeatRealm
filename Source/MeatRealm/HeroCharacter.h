@@ -49,18 +49,6 @@ public:
 		bool bUseExperimentalMouseTracking = false;
 
 	UPROPERTY(EditAnywhere)
-	float AdsLineLength = 1500; // cm
-	
-	UPROPERTY(EditAnywhere)
-	FColor AdsLineColor = FColor{ 255,0,0 };
-	
-	UPROPERTY(EditAnywhere)
-	float EnemyAdsLineLength = 175; // cm
-
-	UPROPERTY(EditAnywhere)
-		FColor EnemyAdsLineColor = FColor{ 255,170,75 };
-
-	UPROPERTY(EditAnywhere)
 	float InteractableSearchDistance = 150.f; //cm
 
 	// Projectile class to spawn.
@@ -172,6 +160,8 @@ public:
 	bool AuthTryGiveArmour(float Delta) override;
 	UFUNCTION()
 	bool AuthTryGiveWeapon(const TSubclassOf<AWeapon>& Class) override;
+	UFUNCTION()
+	float GetGiveWeaponDelay() override;
 	/* End IAffectableInterface */
 
 
@@ -198,6 +188,7 @@ public:
 	void Input_Interact();
 	void Input_PrimaryWeapon();
 	void Input_SecondaryWeapon();
+	void Input_ToggleWeapon();
 
 	void SetUseMouseAim(bool bUseMouseAimIn) { bUseMouseAim = bUseMouseAimIn; }
 
@@ -223,7 +214,7 @@ private:
 
 
 	void SimulateAdsMode(bool IsAdsing);
-	void DrawAdsLine(const FColor& Color, float LineLength) const;
+	//void DrawAdsLine(const FColor& Color, float LineLength) const;
 
 
 	UFUNCTION()
@@ -243,6 +234,9 @@ private:
 	
 	UFUNCTION(Server, Reliable, WithValidation)
 		void ServerRPC_EquipSecondaryWeapon();
+
+	UFUNCTION(Server, Reliable, WithValidation)
+		void ServerRPC_ToggleWeapon();
 
 
 	template<class T>

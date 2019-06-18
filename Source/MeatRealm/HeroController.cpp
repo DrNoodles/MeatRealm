@@ -244,6 +244,7 @@ void AHeroController::SetupInputComponent()
 	I->BindAction("Interact", IE_Pressed, this, &AHeroController::Input_Interact);
 	I->BindAction("PrimaryWeapon", IE_Pressed, this, &AHeroController::Input_PrimaryWeapon);
 	I->BindAction("SecondaryWeapon", IE_Pressed, this, &AHeroController::Input_SecondaryWeapon);
+	I->BindAction("ToggleWeapon", IE_Pressed, this, &AHeroController::Input_ToggleWeapon);
 }
 
 bool AHeroController::InputAxis(FKey Key, float Delta, float DeltaTime, int32 NumSamples, bool bGamepad)
@@ -332,6 +333,12 @@ void AHeroController::Input_SecondaryWeapon()
 {
 	auto Char = GetHeroCharacter();
 	if (Char) Char->Input_SecondaryWeapon();
+}
+
+void AHeroController::Input_ToggleWeapon()
+{
+	auto Char = GetHeroCharacter();
+	if (Char) Char->Input_ToggleWeapon();
 }
 
 void AHeroController::SetUseMouseaim(bool bUseMouseAim)

@@ -36,7 +36,8 @@ bool APickupBase::AuthTryInteract(IAffectableInterface* const Affectable)
 	check(Affectable)
 	check(HasAuthority())
 
-	if (!CanInteract()) return false;
+	float Delay;
+	if (!CanInteract(Affectable, OUT Delay)) return false;
 	return TryPickup(Affectable);
 }
 

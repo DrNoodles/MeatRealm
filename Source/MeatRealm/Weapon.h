@@ -39,8 +39,10 @@ public:
 	void Input_AdsReleased();
 	bool TryGiveAmmo();
 
+	UFUNCTION(Client, Reliable)
+	void ClientRPC_RefreshCurrentInput();
 	void Draw();
-	void Holster();
+	void QueueHolster();
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly)
 	FString WeaponName = "NoNameWeapon";
@@ -48,8 +50,12 @@ public:
 	uint32 HeroControllerId;
 	void SetHeroControllerId(uint32 HeroControllerUid) { this->HeroControllerId = HeroControllerUid; }
 
+
+
+
+
 public:
-	FTimerHandle CanActionTimerHandle;
+	
 
 
 	/// Components
@@ -89,16 +95,19 @@ public:
 		float HipfireSpread = 20;
 
 	UPROPERTY(EditAnywhere)
-		int AmmoPoolSize = 50;
+		int AmmoPoolSize = 30;
 
 	UPROPERTY(EditAnywhere)
-		int AmmoPoolGiven = 40;
+		int AmmoPoolGiven = 20;
 
 	UPROPERTY(EditAnywhere)
 		int AmmoGivenPerPickup = 10;
 
 	UPROPERTY(EditAnywhere)
 		bool bUseClip = true;
+
+	UPROPERTY(EditAnywhere, meta = (EditCondition = "bUseClip"))
+		int ClipSizeGiven = 0;
 
 	UPROPERTY(EditAnywhere, meta = (EditCondition = "bUseClip"))
 		int ClipSize = 10;
@@ -151,6 +160,18 @@ public:
 
 
 private:
+	UPROPERTY(EditAnywhere)
+		float AdsLineLength = 1500; // cm
+
+	UPROPERTY(EditAnywhere)
+		FColor AdsLineColor = FColor{ 255,0,0 };
+
+	UPROPERTY(EditAnywhere)
+		float EnemyAdsLineLength = 175; // cm
+
+	UPROPERTY(EditAnywhere)
+		FColor EnemyAdsLineColor = FColor{ 255,170,75 };
+
 	UFUNCTION(Server, Reliable, WithValidation)
 		void ServerRPC_Reload();
 
@@ -181,7 +202,6 @@ private:
 	void AuthFireStart();
 	void AuthFireEnd();
 	void AuthHolsterStart();
-	//void AuthHolsterEnd();
 	void AuthReloadStart();
 	void AuthReloadEnd();
 
@@ -191,17 +211,21 @@ private:
 
 	void LogMsgWithRole(FString message);
 	FString GetRoleText();
+	void DrawAdsLine(const FColor& Color, float LineLength) const;
 
 	bool bCanAction;
 	bool bTriggerPulled;
+	
+	UPROPERTY(Replicated)
 	bool bAdsPressed;
-	bool bIsInAdsMode = false;
+	
 	bool bHasActionedThisTriggerPull;
 	bool bReloadQueued;
-
 	bool bHolsterQueued;
+
 	bool bWasReloadingOnHolster;
-	
 	FDateTime ClientReloadStartTime;
+	FTimerHandle CanActionTimerHandle;
+
 };
 
