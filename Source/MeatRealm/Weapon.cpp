@@ -36,6 +36,7 @@ void AWeapon::GetLifetimeReplicatedProps(TArray< FLifetimeProperty >& OutLifetim
 	DOREPLIFETIME(AWeapon, AmmoInClip);
 	DOREPLIFETIME(AWeapon, AmmoInPool);
 	DOREPLIFETIME(AWeapon, bIsReloading);
+	DOREPLIFETIME(AWeapon, bAdsPressed);
 }
 
 void AWeapon::BeginPlay()
@@ -74,6 +75,14 @@ void AWeapon::RemoteTick(float DeltaTime)
 		// Update UI
 		ReloadProgress = ElapsedReloadTime / ReloadTime;
 		UE_LOG(LogTemp, Warning, TEXT("InProgress %f"), ReloadProgress);
+	}
+
+	// Draw ADS line for self or others
+	if (bAdsPressed)
+	{
+		const auto Color = GetOwner()->GetLocalRole() == ROLE_AutonomousProxy ? AdsLineColor : EnemyAdsLineColor;
+		const auto Length = GetOwner()->GetLocalRole() == ROLE_AutonomousProxy ? AdsLineLength : EnemyAdsLineLength;
+		DrawAdsLine(Color, Length);
 	}
 }
 void AWeapon::AuthTick(float DeltaTime)
@@ -536,3 +545,23 @@ FString AWeapon::GetRoleText()
 	return GetEnumText(Role) + " " + GetEnumText(GetRemoteRole());
 }
 
+
+void AWeapon::DrawAdsLine(const FColor& Color, float LineLength) const
+{
+	const FVector Start = MuzzleLocationComp->GetComponentLocation();
+	FVector End = Start + MuzzleLocationComp->GetComponentRotation().Vector() * LineLength;
+
+	// Trace line to first hit for end
+	FHitResult HitResult;
+	const bool bIsHit = GetWorld()->LineTraceSingleByChannel(
+		OUT HitResult,
+		Start,
+		End,
+		ECC_Visibility,
+		FCollisionQueryParams{ FName(""), false, this }
+	);
+
+	if (bIsHit) End = HitResult.ImpactPoint;
+
+	DrawDebugLine(GetWorld(), Start, End, Color, false, -1., 0, 2.f);
+}

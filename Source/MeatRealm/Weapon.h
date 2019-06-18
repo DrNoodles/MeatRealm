@@ -50,8 +50,12 @@ public:
 	uint32 HeroControllerId;
 	void SetHeroControllerId(uint32 HeroControllerUid) { this->HeroControllerId = HeroControllerUid; }
 
+
+
+
+
 public:
-	FTimerHandle CanActionTimerHandle;
+	
 
 
 	/// Components
@@ -153,6 +157,18 @@ public:
 
 
 private:
+	UPROPERTY(EditAnywhere)
+		float AdsLineLength = 1500; // cm
+
+	UPROPERTY(EditAnywhere)
+		FColor AdsLineColor = FColor{ 255,0,0 };
+
+	UPROPERTY(EditAnywhere)
+		float EnemyAdsLineLength = 175; // cm
+
+	UPROPERTY(EditAnywhere)
+		FColor EnemyAdsLineColor = FColor{ 255,170,75 };
+
 	UFUNCTION(Server, Reliable, WithValidation)
 		void ServerRPC_Reload();
 
@@ -192,15 +208,21 @@ private:
 
 	void LogMsgWithRole(FString message);
 	FString GetRoleText();
+	void DrawAdsLine(const FColor& Color, float LineLength) const;
 
 	bool bCanAction;
 	bool bTriggerPulled;
+	
+	UPROPERTY(Replicated)
 	bool bAdsPressed;
+	
 	bool bHasActionedThisTriggerPull;
 	bool bReloadQueued;
 	bool bHolsterQueued;
 
 	bool bWasReloadingOnHolster;
 	FDateTime ClientReloadStartTime;
+	FTimerHandle CanActionTimerHandle;
+
 };
 

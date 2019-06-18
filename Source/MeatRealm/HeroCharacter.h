@@ -49,18 +49,6 @@ public:
 		bool bUseExperimentalMouseTracking = false;
 
 	UPROPERTY(EditAnywhere)
-	float AdsLineLength = 1500; // cm
-	
-	UPROPERTY(EditAnywhere)
-	FColor AdsLineColor = FColor{ 255,0,0 };
-	
-	UPROPERTY(EditAnywhere)
-	float EnemyAdsLineLength = 175; // cm
-
-	UPROPERTY(EditAnywhere)
-		FColor EnemyAdsLineColor = FColor{ 255,170,75 };
-
-	UPROPERTY(EditAnywhere)
 	float InteractableSearchDistance = 150.f; //cm
 
 	// Projectile class to spawn.
@@ -223,7 +211,7 @@ private:
 
 
 	void SimulateAdsMode(bool IsAdsing);
-	void DrawAdsLine(const FColor& Color, float LineLength) const;
+	//void DrawAdsLine(const FColor& Color, float LineLength) const;
 
 
 	UFUNCTION()

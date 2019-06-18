@@ -134,15 +134,6 @@ void AHeroCharacter::Tick(float DeltaSeconds)
 	if (HasAuthority()) return;
 
 
-	// Draw ADS line for enemies
-	if (Role == ROLE_SimulatedProxy && bIsAdsing)
-	{
-		DrawAdsLine(EnemyAdsLineColor, EnemyAdsLineLength);
-	}
-
-
-
-
 	// Local Client only below
 
 	const auto HeroCont = GetHeroController();
@@ -268,7 +259,7 @@ void AHeroCharacter::Tick(float DeltaSeconds)
 	// Draw ADS line
 	if (bIsAdsing) 
 	{
-		DrawAdsLine(AdsLineColor, AdsLineLength);
+		//DrawAdsLine(AdsLineColor, AdsLineLength);
 	}
 }
 
@@ -282,26 +273,26 @@ void AHeroCharacter::SimulateAdsMode(bool IsAdsing)
 	bIsAdsing = IsAdsing;
 	GetCharacterMovement()->MaxWalkSpeed = IsAdsing ? AdsSpeed : WalkSpeed;
 }
-
-void AHeroCharacter::DrawAdsLine(const FColor& Color, float LineLength) const
-{
-	const FVector Start = WeaponAnchor->GetComponentLocation();
-	FVector End = Start + WeaponAnchor->GetComponentRotation().Vector() * LineLength;
-
-	// Trace line to first hit for end
-	FHitResult HitResult;
-	const bool bIsHit = GetWorld()->LineTraceSingleByChannel(
-		OUT HitResult,
-		Start,
-		End,
-		ECC_Visibility,
-		FCollisionQueryParams{ FName(""), false, this }
-	);
-
-	if (bIsHit) End = HitResult.ImpactPoint;
-
-	DrawDebugLine(GetWorld(), Start, End, Color, false, -1., 0, 2.f);
-}
+//
+//void AHeroCharacter::DrawAdsLine(const FColor& Color, float LineLength) const
+//{
+//	const FVector Start = WeaponAnchor->GetComponentLocation();
+//	FVector End = Start + WeaponAnchor->GetComponentRotation().Vector() * LineLength;
+//
+//	// Trace line to first hit for end
+//	FHitResult HitResult;
+//	const bool bIsHit = GetWorld()->LineTraceSingleByChannel(
+//		OUT HitResult,
+//		Start,
+//		End,
+//		ECC_Visibility,
+//		FCollisionQueryParams{ FName(""), false, this }
+//	);
+//
+//	if (bIsHit) End = HitResult.ImpactPoint;
+//
+//	DrawDebugLine(GetWorld(), Start, End, Color, false, -1., 0, 2.f);
+//}
 
 void AHeroCharacter::ServerRPC_AdsReleased_Implementation()
 {
