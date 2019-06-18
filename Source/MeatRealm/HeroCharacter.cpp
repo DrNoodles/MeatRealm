@@ -422,6 +422,10 @@ void AHeroCharacter::EquipWeapon(const EWeaponSlots Slot)
 {
 	if (CurrentWeaponSlot == Slot) return;
 
+	// If desired slot is empty, do nothing.
+	auto NewWeapon = GetWeapon(Slot);
+	if (!NewWeapon) return;
+
 	const auto OldSlot = CurrentWeaponSlot;
 	CurrentWeaponSlot = Slot;
 
@@ -443,7 +447,6 @@ void AHeroCharacter::EquipWeapon(const EWeaponSlots Slot)
 
 
 	// Show new weapon
-	auto NewWeapon = GetWeapon(CurrentWeaponSlot);
 	if (NewWeapon)
 	{
 		//NewWeapon->SetActorHiddenInGame(false);
