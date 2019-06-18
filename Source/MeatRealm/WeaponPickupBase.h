@@ -21,7 +21,10 @@ public:
 		bExplicitInteraction = true;
 	}
 
+	bool CanInteract(IAffectableInterface* const Affectable, float& OutDelay) override;
+
 protected:
+
 	bool TryApplyAffect(IAffectableInterface* const Affectable) override;
 
 private:

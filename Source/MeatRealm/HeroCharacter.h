@@ -160,6 +160,8 @@ public:
 	bool AuthTryGiveArmour(float Delta) override;
 	UFUNCTION()
 	bool AuthTryGiveWeapon(const TSubclassOf<AWeapon>& Class) override;
+	UFUNCTION()
+	float GetGiveWeaponDelay() override;
 	/* End IAffectableInterface */
 
 

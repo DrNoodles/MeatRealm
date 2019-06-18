@@ -153,7 +153,8 @@ void AHeroCharacter::Tick(float DeltaSeconds)
 	auto CurrentLookVec = GetActorRotation().Vector();
 	bool bBackpedaling = IsBackpedaling(moveVec.GetSafeNormal(), CurrentLookVec, BackpedalThresholdAngle);
 
-	auto MoveScalar = bBackpedaling ? BackpedalSpeedMultiplier : 1.0f;
+	// TODO This needs to be server side or it's hackable!
+	auto MoveScalar = bBackpedaling ? BackpedalSpeedMultiplier : 1.0f; 
 
 	if (moveVec.SizeSquared() >= deadzoneSquared)
 	{
@@ -201,8 +202,12 @@ void AHeroCharacter::Tick(float DeltaSeconds)
 	// Scan for interables in front of player
 
 	auto* const Pickup = ScanForInteractable<AWeaponPickupBase>();
-	if (Pickup && Pickup->CanInteract())
+	
+	float PickupDelay;
+	if (Pickup && Pickup->CanInteract(this, OUT PickupDelay))
 	{
+		
+		LogMsgWithRole(FString::Printf(TEXT("Can Interact with delay! %f "), PickupDelay));
 		auto World = GetWorld();
 
 		auto* InputSettings = UInputSettings::GetInputSettings();
@@ -749,7 +754,16 @@ bool AHeroCharacter::AuthTryGiveWeapon(const TSubclassOf<AWeapon>& Class)
 	return true;
 }
 
+float AHeroCharacter::GetGiveWeaponDelay()
+{
+	const bool bIdealSlotAlreadyContainsWeapon = GetWeapon(FindGoodSlot()) != nullptr;
+	if (bIdealSlotAlreadyContainsWeapon)
+	{
+		return 2.; // delay pickup
+	}
 
+	return 0.f;
+}
 
 
 // Interacting
@@ -778,7 +792,12 @@ void AHeroCharacter::ServerRPC_TryInteract_Implementation()
 	//LogMsgWithRole("AHeroCharacter::ServerRPC_TryInteract_Implementation()");
 
 	auto* const Pickup = ScanForInteractable<AWeaponPickupBase>();
-	if (Pickup && Pickup->CanInteract())
+
+	float PickupDelay;
+
+	// TODO Write delayed interaction here if PickupDelay is > SMALL_NUMBER
+
+	if (Pickup && Pickup->CanInteract(this, OUT PickupDelay))
 	{
 		//LogMsgWithRole("AHeroCharacter::ServerRPC_TryInteract_Implementation() : Found");
 		Pickup->AuthTryInteract(this);
