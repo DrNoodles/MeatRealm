@@ -80,8 +80,6 @@ void AWeapon::AuthTick(float DeltaTime)
 {
 	check(HasAuthority())
 
-	bIsInAdsMode = bAdsPressed;
-
 	// If a holster is queued, wait for can action unless the action we're in is a reload
 	if (bHolsterQueued && (bCanAction || bIsReloading))
 	{
@@ -168,8 +166,11 @@ void AWeapon::Draw()
 	bWasReloadingOnHolster = false;
 
 	bCanAction = true;
-}
 
+
+	// Read inputs already in action before weapon drawn
+	ClientRPC_RefreshCurrentInput();
+}
 void AWeapon::Holster()
 {
 	check(HasAuthority());
@@ -182,10 +183,7 @@ void AWeapon::AuthHolsterStart()
 {
 	check(HasAuthority())
 	LogMsgWithRole("AWeapon::AuthHolsterStart()");
-	
-	bHolsterQueued = false;
-	bCanAction = false;
-	bAdsPressed = false;
+
 
 	// Kill any timer running
 	if (CanActionTimerHandle.IsValid())
@@ -197,27 +195,13 @@ void AWeapon::AuthHolsterStart()
 	bWasReloadingOnHolster = bIsReloading;
 	bIsReloading = false;
 
-
-	//// Create holster timer
-	//GetWorld()->GetTimerManager().SetTimer(
-	//	CanActionTimerHandle, this, &AWeapon::AuthHolsterEnd, HolsterTime, false, -1);
+	// Reset state to defaults
+	bHolsterQueued = false;
+	bCanAction = false;
+	bAdsPressed = false;
+	bTriggerPulled = false;
+	bHasActionedThisTriggerPull = false;
 }
-//void AWeapon::AuthHolsterEnd()
-//{
-//	check(HasAuthority())
-//	LogMsgWithRole("AWeapon::AuthHolsterEnd()");
-//
-//
-//	bCanAction = false; // Keep bCanAction=false cuz the gun is sleeping ZZzzzZZZZzzz...
-//
-//	// Clear holster timer
-//	if (CanActionTimerHandle.IsValid())
-//	{
-//		GetWorld()->GetTimerManager().ClearTimer(CanActionTimerHandle);
-//	}
-//
-//	// Raise holstered event!
-//}
 
 void AWeapon::AuthReloadStart()
 {
@@ -398,7 +382,7 @@ TArray<FVector> AWeapon::CalcShotPattern() const
 	TArray<FVector> Shots;
 
 	const float BarrelAngle = MuzzleLocationComp->GetForwardVector().HeadingAngle();
-	const float SpreadInRadians = FMath::DegreesToRadians(bIsInAdsMode ? AdsSpread :
+	const float SpreadInRadians = FMath::DegreesToRadians(bAdsPressed ? AdsSpread :
 HipfireSpread);
 
 	if (bEvenSpread && ProjectilesPerShot > 1)
@@ -511,6 +495,17 @@ bool AWeapon::TryGiveAmmo()
 	AmmoInPool = FMath::Min(AmmoInPool + AmmoGivenPerPickup, AmmoPoolSize);
 	
 	return true;
+}
+
+void AWeapon::ClientRPC_RefreshCurrentInput_Implementation()
+{
+	// TODO Read fire pressed
+	// TODO If fire pressed
+	//Input_PullTrigger()
+
+	// TODO Read ads pressed
+	// TODO If ads pressed
+	//Input_AdsPressed()
 }
 
 /// RPC

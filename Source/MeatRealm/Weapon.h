@@ -39,6 +39,8 @@ public:
 	void Input_AdsReleased();
 	bool TryGiveAmmo();
 
+	UFUNCTION(Client, Reliable)
+	void ClientRPC_RefreshCurrentInput();
 	void Draw();
 	void Holster();
 
@@ -181,7 +183,6 @@ private:
 	void AuthFireStart();
 	void AuthFireEnd();
 	void AuthHolsterStart();
-	//void AuthHolsterEnd();
 	void AuthReloadStart();
 	void AuthReloadEnd();
 
@@ -195,13 +196,11 @@ private:
 	bool bCanAction;
 	bool bTriggerPulled;
 	bool bAdsPressed;
-	bool bIsInAdsMode = false;
 	bool bHasActionedThisTriggerPull;
 	bool bReloadQueued;
-
 	bool bHolsterQueued;
+
 	bool bWasReloadingOnHolster;
-	
 	FDateTime ClientReloadStartTime;
 };
 
