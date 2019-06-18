@@ -45,7 +45,7 @@ void AWeapon::BeginPlay()
 
 	if (!HasAuthority()) return;
 
-	AmmoInClip = ClipSize;
+	AmmoInClip = ClipSizeGiven;
 	AmmoInPool = AmmoPoolGiven;
 
 	Draw();

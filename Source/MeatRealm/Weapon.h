@@ -95,16 +95,19 @@ public:
 		float HipfireSpread = 20;
 
 	UPROPERTY(EditAnywhere)
-		int AmmoPoolSize = 50;
+		int AmmoPoolSize = 30;
 
 	UPROPERTY(EditAnywhere)
-		int AmmoPoolGiven = 40;
+		int AmmoPoolGiven = 20;
 
 	UPROPERTY(EditAnywhere)
 		int AmmoGivenPerPickup = 10;
 
 	UPROPERTY(EditAnywhere)
 		bool bUseClip = true;
+
+	UPROPERTY(EditAnywhere, meta = (EditCondition = "bUseClip"))
+		int ClipSizeGiven = 0;
 
 	UPROPERTY(EditAnywhere, meta = (EditCondition = "bUseClip"))
 		int ClipSize = 10;
