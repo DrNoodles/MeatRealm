@@ -10,6 +10,7 @@
 class UArrowComponent;
 class USceneComponent;
 class UStaticMeshComponent;
+class UPointLightComponent;
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FReloadStarted);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FReloadEnded);
@@ -66,10 +67,11 @@ public:
 	UPROPERTY(VisibleAnywhere)
 		UStaticMeshComponent* MeshComp = nullptr;
 
-	UPROPERTY(VisibleAnywhere)
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
 		UArrowComponent* MuzzleLocationComp = nullptr;
 
-
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
+		UPointLightComponent* MuzzleLightComp = nullptr;
 
 	// Projectile class to spawn.
 	UPROPERTY(EditDefaultsOnly, Category = Weapon)

@@ -5,6 +5,7 @@
 #include "Engine/World.h"
 #include "Components/ArrowComponent.h"
 #include "Components/StaticMeshComponent.h"
+#include "Components/PointLightComponent.h"
 #include "DrawDebugHelpers.h"
 #include "UnrealNetwork.h"
 #include "Kismet/GameplayStatics.h"
@@ -28,6 +29,16 @@ AWeapon::AWeapon()
 
 	MuzzleLocationComp = CreateDefaultSubobject<UArrowComponent>(TEXT("MuzzleLocationComp"));
 	MuzzleLocationComp->SetupAttachment(RootComponent);
+	MuzzleLocationComp->ArrowColor = FColor{ 255,0,0 };
+	MuzzleLocationComp->ArrowSize = 0.2;
+
+	MuzzleLightComp = CreateDefaultSubobject<UPointLightComponent>(TEXT("MuzzleLightComp"));
+	MuzzleLightComp->SetupAttachment(RootComponent);
+	MuzzleLightComp->Intensity = 4000;
+	MuzzleLightComp->AttenuationRadius = 200;
+	MuzzleLightComp->bUseTemperature = true;
+	MuzzleLightComp->Temperature = 3000;
+	MuzzleLightComp->SetVisibility(false);
 }
 
 void AWeapon::GetLifetimeReplicatedProps(TArray< FLifetimeProperty >& OutLifetimeProps) const
@@ -361,6 +372,19 @@ bool AWeapon::ServerRPC_AdsReleased_Validate()
 
 void AWeapon::MultiRPC_NotifyOnShotFired_Implementation()
 {
+	MuzzleLightComp->SetVisibility(true);
+
+	
+	auto func = [this]
+	{
+		UE_LOG(LogTemp, Warning, TEXT("Test"));
+		MuzzleLightComp->SetVisibility(false);
+	};
+	FTimerHandle Handle;
+	GetWorld()->GetTimerManager().SetTimer(Handle, func, 0.05, false, -1);
+	
+
+
 	if (OnShotFired.IsBound()) OnShotFired.Broadcast();
 }
 
