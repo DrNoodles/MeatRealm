@@ -129,6 +129,8 @@ public:
 	UPROPERTY(EditAnywhere, meta = (EditCondition = "bEvenSpread"))
 		bool bSpreadClumping = true;
 
+	UPROPERTY(EditAnywhere)
+		float AdsMovementScale = 0.70;
 
 	// Gun status
 
