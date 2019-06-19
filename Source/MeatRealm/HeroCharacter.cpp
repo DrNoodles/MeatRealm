@@ -276,7 +276,19 @@ void AHeroCharacter::Tick(float DeltaSeconds)
 void AHeroCharacter::SimulateAdsMode(bool IsAdsing)
 {
 	bIsAdsing = IsAdsing;
-	GetCharacterMovement()->MaxWalkSpeed = IsAdsing ? AdsSpeed : WalkSpeed;
+
+	float MoveSpeed = WalkSpeed;
+
+	if (IsAdsing)
+	{
+		const auto Weapon = GetCurrentWeapon();
+		if (Weapon)
+		{
+			MoveSpeed = WalkSpeed * Weapon->AdsMovementScale;
+		}
+	}
+
+	GetCharacterMovement()->MaxWalkSpeed = MoveSpeed;
 }
 //
 //void AHeroCharacter::DrawAdsLine(const FColor& Color, float LineLength) const

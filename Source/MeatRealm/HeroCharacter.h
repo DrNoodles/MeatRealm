@@ -67,8 +67,8 @@ public:
 	UPROPERTY(BlueprintReadOnly, Replicated)
 		float Armour = 0.f;
 
-	UPROPERTY(EditAnywhere)
-		float AdsSpeed = 275;
+	//UPROPERTY(EditAnywhere)
+	//	float AdsSpeed = 275;
 
 	UPROPERTY(EditAnywhere)
 		float WalkSpeed = 400;
