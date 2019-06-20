@@ -5,6 +5,7 @@
 #include "Engine/World.h"
 #include "Components/ArrowComponent.h"
 #include "Components/StaticMeshComponent.h"
+#include "Components/PointLightComponent.h"
 #include "DrawDebugHelpers.h"
 #include "UnrealNetwork.h"
 #include "Kismet/GameplayStatics.h"
@@ -28,6 +29,16 @@ AWeapon::AWeapon()
 
 	MuzzleLocationComp = CreateDefaultSubobject<UArrowComponent>(TEXT("MuzzleLocationComp"));
 	MuzzleLocationComp->SetupAttachment(RootComponent);
+	MuzzleLocationComp->ArrowColor = FColor{ 255,0,0 };
+	MuzzleLocationComp->ArrowSize = 0.2;
+
+	MuzzleLightComp = CreateDefaultSubobject<UPointLightComponent>(TEXT("MuzzleLightComp"));
+	MuzzleLightComp->SetupAttachment(RootComponent);
+	MuzzleLightComp->Intensity = 4000;
+	MuzzleLightComp->AttenuationRadius = 200;
+	MuzzleLightComp->bUseTemperature = true;
+	MuzzleLightComp->Temperature = 3000;
+	MuzzleLightComp->SetVisibility(false);
 }
 
 void AWeapon::GetLifetimeReplicatedProps(TArray< FLifetimeProperty >& OutLifetimeProps) const
@@ -36,6 +47,7 @@ void AWeapon::GetLifetimeReplicatedProps(TArray< FLifetimeProperty >& OutLifetim
 	DOREPLIFETIME(AWeapon, AmmoInClip);
 	DOREPLIFETIME(AWeapon, AmmoInPool);
 	DOREPLIFETIME(AWeapon, bIsReloading);
+	DOREPLIFETIME(AWeapon, bAdsPressed);
 }
 
 void AWeapon::BeginPlay()
@@ -44,7 +56,7 @@ void AWeapon::BeginPlay()
 
 	if (!HasAuthority()) return;
 
-	AmmoInClip = ClipSize;
+	AmmoInClip = ClipSizeGiven;
 	AmmoInPool = AmmoPoolGiven;
 
 	Draw();
@@ -75,12 +87,18 @@ void AWeapon::RemoteTick(float DeltaTime)
 		ReloadProgress = ElapsedReloadTime / ReloadTime;
 		UE_LOG(LogTemp, Warning, TEXT("InProgress %f"), ReloadProgress);
 	}
+
+	// Draw ADS line for self or others
+	if (bAdsPressed)
+	{
+		const auto Color = GetOwner()->GetLocalRole() == ROLE_AutonomousProxy ? AdsLineColor : EnemyAdsLineColor;
+		const auto Length = GetOwner()->GetLocalRole() == ROLE_AutonomousProxy ? AdsLineLength : EnemyAdsLineLength;
+		DrawAdsLine(Color, Length);
+	}
 }
 void AWeapon::AuthTick(float DeltaTime)
 {
 	check(HasAuthority())
-
-	bIsInAdsMode = bAdsPressed;
 
 	// If a holster is queued, wait for can action unless the action we're in is a reload
 	if (bHolsterQueued && (bCanAction || bIsReloading))
@@ -163,14 +181,23 @@ void AWeapon::Draw()
 		GetWorld()->GetTimerManager().ClearTimer(CanActionTimerHandle);
 	}
 
+	// Reset state to defaults
+	bHolsterQueued = false;
+	bAdsPressed = false;
+	bTriggerPulled = false;
+	bHasActionedThisTriggerPull = false;
+
 	// Queue reload if it was mid reload on holster
 	bReloadQueued = bWasReloadingOnHolster;
 	bWasReloadingOnHolster = false;
 
+	// Ready to roll!
 	bCanAction = true;
-}
 
-void AWeapon::Holster()
+	// Read inputs already in action before weapon drawn
+	ClientRPC_RefreshCurrentInput();
+}
+void AWeapon::QueueHolster()
 {
 	check(HasAuthority());
 	LogMsgWithRole(FString::Printf(TEXT("AWeapon::Holster() %s"), *WeaponName));
@@ -182,10 +209,7 @@ void AWeapon::AuthHolsterStart()
 {
 	check(HasAuthority())
 	LogMsgWithRole("AWeapon::AuthHolsterStart()");
-	
-	bHolsterQueued = false;
-	bCanAction = false;
-	bAdsPressed = false;
+
 
 	// Kill any timer running
 	if (CanActionTimerHandle.IsValid())
@@ -197,27 +221,13 @@ void AWeapon::AuthHolsterStart()
 	bWasReloadingOnHolster = bIsReloading;
 	bIsReloading = false;
 
-
-	//// Create holster timer
-	//GetWorld()->GetTimerManager().SetTimer(
-	//	CanActionTimerHandle, this, &AWeapon::AuthHolsterEnd, HolsterTime, false, -1);
+	// Reset state to defaults
+	bHolsterQueued = false;
+	bCanAction = false;
+	bAdsPressed = false;
+	bTriggerPulled = false;
+	bHasActionedThisTriggerPull = false;
 }
-//void AWeapon::AuthHolsterEnd()
-//{
-//	check(HasAuthority())
-//	LogMsgWithRole("AWeapon::AuthHolsterEnd()");
-//
-//
-//	bCanAction = false; // Keep bCanAction=false cuz the gun is sleeping ZZzzzZZZZzzz...
-//
-//	// Clear holster timer
-//	if (CanActionTimerHandle.IsValid())
-//	{
-//		GetWorld()->GetTimerManager().ClearTimer(CanActionTimerHandle);
-//	}
-//
-//	// Raise holstered event!
-//}
 
 void AWeapon::AuthReloadStart()
 {
@@ -362,6 +372,19 @@ bool AWeapon::ServerRPC_AdsReleased_Validate()
 
 void AWeapon::MultiRPC_NotifyOnShotFired_Implementation()
 {
+	MuzzleLightComp->SetVisibility(true);
+
+	
+	auto func = [this]
+	{
+		UE_LOG(LogTemp, Warning, TEXT("Test"));
+		MuzzleLightComp->SetVisibility(false);
+	};
+	FTimerHandle Handle;
+	GetWorld()->GetTimerManager().SetTimer(Handle, func, 0.05, false, -1);
+	
+
+
 	if (OnShotFired.IsBound()) OnShotFired.Broadcast();
 }
 
@@ -398,7 +421,7 @@ TArray<FVector> AWeapon::CalcShotPattern() const
 	TArray<FVector> Shots;
 
 	const float BarrelAngle = MuzzleLocationComp->GetForwardVector().HeadingAngle();
-	const float SpreadInRadians = FMath::DegreesToRadians(bIsInAdsMode ? AdsSpread :
+	const float SpreadInRadians = FMath::DegreesToRadians(bAdsPressed ? AdsSpread :
 HipfireSpread);
 
 	if (bEvenSpread && ProjectilesPerShot > 1)
@@ -513,6 +536,17 @@ bool AWeapon::TryGiveAmmo()
 	return true;
 }
 
+void AWeapon::ClientRPC_RefreshCurrentInput_Implementation()
+{
+	// TODO Read fire pressed
+	// TODO If fire pressed
+	//Input_PullTrigger()
+
+	// TODO Read ads pressed
+	// TODO If ads pressed
+	//Input_AdsPressed()
+}
+
 /// RPC
 
 void AWeapon::LogMsgWithRole(FString message)
@@ -541,3 +575,23 @@ FString AWeapon::GetRoleText()
 	return GetEnumText(Role) + " " + GetEnumText(GetRemoteRole());
 }
 
+
+void AWeapon::DrawAdsLine(const FColor& Color, float LineLength) const
+{
+	const FVector Start = MuzzleLocationComp->GetComponentLocation();
+	FVector End = Start + MuzzleLocationComp->GetComponentRotation().Vector() * LineLength;
+
+	// Trace line to first hit for end
+	FHitResult HitResult;
+	const bool bIsHit = GetWorld()->LineTraceSingleByChannel(
+		OUT HitResult,
+		Start,
+		End,
+		ECC_Visibility,
+		FCollisionQueryParams{ FName(""), false, this }
+	);
+
+	if (bIsHit) End = HitResult.ImpactPoint;
+
+	DrawDebugLine(GetWorld(), Start, End, Color, false, -1., 0, 2.f);
+}

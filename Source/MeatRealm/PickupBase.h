@@ -52,10 +52,18 @@ private:
 
 public:
 	APickupBase();
-	bool CanInteract() const { return bExplicitInteraction && IsAvailable; }
+	//bool CanInteract() const { return bExplicitInteraction && IsAvailable; }
+	
+
+	virtual bool CanInteract(IAffectableInterface* const Affectable, OUT float& OutDelay)
+	{
+		OutDelay = 0;
+		return  bExplicitInteraction && IsAvailable;
+	}
 	bool AuthTryInteract(IAffectableInterface* const Affectable);
 
 protected:
+
 	// Override this to do whatever.
 	virtual bool TryApplyAffect(IAffectableInterface* const Affectable)
 	{

@@ -93,6 +93,7 @@ private:
 	void Input_Interact();
 	void Input_PrimaryWeapon();
 	void Input_SecondaryWeapon();
+	void Input_ToggleWeapon();
 
 	void SetUseMouseaim(bool bUseMouseAim);
 };

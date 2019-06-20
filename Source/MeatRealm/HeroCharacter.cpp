@@ -134,15 +134,6 @@ void AHeroCharacter::Tick(float DeltaSeconds)
 	if (HasAuthority()) return;
 
 
-	// Draw ADS line for enemies
-	if (Role == ROLE_SimulatedProxy && bIsAdsing)
-	{
-		DrawAdsLine(EnemyAdsLineColor, EnemyAdsLineLength);
-	}
-
-
-
-
 	// Local Client only below
 
 	const auto HeroCont = GetHeroController();
@@ -162,7 +153,8 @@ void AHeroCharacter::Tick(float DeltaSeconds)
 	auto CurrentLookVec = GetActorRotation().Vector();
 	bool bBackpedaling = IsBackpedaling(moveVec.GetSafeNormal(), CurrentLookVec, BackpedalThresholdAngle);
 
-	auto MoveScalar = bBackpedaling ? BackpedalSpeedMultiplier : 1.0f;
+	// TODO This needs to be server side or it's hackable!
+	auto MoveScalar = bBackpedaling ? BackpedalSpeedMultiplier : 1.0f; 
 
 	if (moveVec.SizeSquared() >= deadzoneSquared)
 	{
@@ -210,8 +202,12 @@ void AHeroCharacter::Tick(float DeltaSeconds)
 	// Scan for interables in front of player
 
 	auto* const Pickup = ScanForInteractable<AWeaponPickupBase>();
-	if (Pickup && Pickup->CanInteract())
+	
+	float PickupDelay;
+	if (Pickup && Pickup->CanInteract(this, OUT PickupDelay))
 	{
+		
+		LogMsgWithRole(FString::Printf(TEXT("Can Interact with delay! %f "), PickupDelay));
 		auto World = GetWorld();
 
 		auto* InputSettings = UInputSettings::GetInputSettings();
@@ -268,7 +264,7 @@ void AHeroCharacter::Tick(float DeltaSeconds)
 	// Draw ADS line
 	if (bIsAdsing) 
 	{
-		DrawAdsLine(AdsLineColor, AdsLineLength);
+		//DrawAdsLine(AdsLineColor, AdsLineLength);
 	}
 }
 
@@ -280,28 +276,40 @@ void AHeroCharacter::Tick(float DeltaSeconds)
 void AHeroCharacter::SimulateAdsMode(bool IsAdsing)
 {
 	bIsAdsing = IsAdsing;
-	GetCharacterMovement()->MaxWalkSpeed = IsAdsing ? AdsSpeed : WalkSpeed;
+
+	float MoveSpeed = WalkSpeed;
+
+	if (IsAdsing)
+	{
+		const auto Weapon = GetCurrentWeapon();
+		if (Weapon)
+		{
+			MoveSpeed = WalkSpeed * Weapon->AdsMovementScale;
+		}
+	}
+
+	GetCharacterMovement()->MaxWalkSpeed = MoveSpeed;
 }
-
-void AHeroCharacter::DrawAdsLine(const FColor& Color, float LineLength) const
-{
-	const FVector Start = WeaponAnchor->GetComponentLocation();
-	FVector End = Start + WeaponAnchor->GetComponentRotation().Vector() * LineLength;
-
-	// Trace line to first hit for end
-	FHitResult HitResult;
-	const bool bIsHit = GetWorld()->LineTraceSingleByChannel(
-		OUT HitResult,
-		Start,
-		End,
-		ECC_Visibility,
-		FCollisionQueryParams{ FName(""), false, this }
-	);
-
-	if (bIsHit) End = HitResult.ImpactPoint;
-
-	DrawDebugLine(GetWorld(), Start, End, Color, false, -1., 0, 2.f);
-}
+//
+//void AHeroCharacter::DrawAdsLine(const FColor& Color, float LineLength) const
+//{
+//	const FVector Start = WeaponAnchor->GetComponentLocation();
+//	FVector End = Start + WeaponAnchor->GetComponentRotation().Vector() * LineLength;
+//
+//	// Trace line to first hit for end
+//	FHitResult HitResult;
+//	const bool bIsHit = GetWorld()->LineTraceSingleByChannel(
+//		OUT HitResult,
+//		Start,
+//		End,
+//		ECC_Visibility,
+//		FCollisionQueryParams{ FName(""), false, this }
+//	);
+//
+//	if (bIsHit) End = HitResult.ImpactPoint;
+//
+//	DrawDebugLine(GetWorld(), Start, End, Color, false, -1., 0, 2.f);
+//}
 
 void AHeroCharacter::ServerRPC_AdsReleased_Implementation()
 {
@@ -431,6 +439,10 @@ void AHeroCharacter::EquipWeapon(const EWeaponSlots Slot)
 {
 	if (CurrentWeaponSlot == Slot) return;
 
+	// If desired slot is empty, do nothing.
+	auto NewWeapon = GetWeapon(Slot);
+	if (!NewWeapon) return;
+
 	const auto OldSlot = CurrentWeaponSlot;
 	CurrentWeaponSlot = Slot;
 
@@ -444,7 +456,7 @@ void AHeroCharacter::EquipWeapon(const EWeaponSlots Slot)
 	if (OldWeapon)
 	{
 		//OldWeapon->SetActorHiddenInGame(true);
-		OldWeapon->Holster();
+		OldWeapon->QueueHolster();
 		OldWeapon->AttachToComponent(HolsteredweaponAnchor, 
 			FAttachmentTransformRules{ EAttachmentRule::SnapToTarget, true });
 		HolsterDuration = OldWeapon->HolsterDuration;
@@ -452,7 +464,6 @@ void AHeroCharacter::EquipWeapon(const EWeaponSlots Slot)
 
 
 	// Show new weapon
-	auto NewWeapon = GetWeapon(CurrentWeaponSlot);
 	if (NewWeapon)
 	{
 		//NewWeapon->SetActorHiddenInGame(false);
@@ -755,7 +766,16 @@ bool AHeroCharacter::AuthTryGiveWeapon(const TSubclassOf<AWeapon>& Class)
 	return true;
 }
 
+float AHeroCharacter::GetGiveWeaponDelay()
+{
+	const bool bIdealSlotAlreadyContainsWeapon = GetWeapon(FindGoodSlot()) != nullptr;
+	if (bIdealSlotAlreadyContainsWeapon)
+	{
+		return 2.; // delay pickup
+	}
 
+	return 0.f;
+}
 
 
 // Interacting
@@ -770,11 +790,13 @@ void AHeroCharacter::Input_PrimaryWeapon()
 {
 	ServerRPC_EquipPrimaryWeapon();
 }
-
 void AHeroCharacter::Input_SecondaryWeapon()
 {
 	ServerRPC_EquipSecondaryWeapon();
-
+}
+void AHeroCharacter::Input_ToggleWeapon()
+{
+	ServerRPC_ToggleWeapon();
 }
 
 void AHeroCharacter::ServerRPC_TryInteract_Implementation()
@@ -782,7 +804,12 @@ void AHeroCharacter::ServerRPC_TryInteract_Implementation()
 	//LogMsgWithRole("AHeroCharacter::ServerRPC_TryInteract_Implementation()");
 
 	auto* const Pickup = ScanForInteractable<AWeaponPickupBase>();
-	if (Pickup && Pickup->CanInteract())
+
+	float PickupDelay;
+
+	// TODO Write delayed interaction here if PickupDelay is > SMALL_NUMBER
+
+	if (Pickup && Pickup->CanInteract(this, OUT PickupDelay))
 	{
 		//LogMsgWithRole("AHeroCharacter::ServerRPC_TryInteract_Implementation() : Found");
 		Pickup->AuthTryInteract(this);
@@ -814,6 +841,28 @@ bool AHeroCharacter::ServerRPC_EquipSecondaryWeapon_Validate()
 {
 	return true;
 }
+
+
+void AHeroCharacter::ServerRPC_ToggleWeapon_Implementation()
+{
+	switch (CurrentWeaponSlot)
+	{
+	case EWeaponSlots::Primary:
+		EquipWeapon(EWeaponSlots::Secondary);
+		break;
+
+	case EWeaponSlots::Undefined:
+	case EWeaponSlots::Secondary:
+	default:
+		EquipWeapon(EWeaponSlots::Primary);
+	}
+}
+
+bool AHeroCharacter::ServerRPC_ToggleWeapon_Validate()
+{
+	return true;
+}
+
 
 template <class T>
 T* AHeroCharacter::ScanForInteractable()
