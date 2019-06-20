@@ -39,6 +39,10 @@ AWeapon::AWeapon()
 	MuzzleLightComp->bUseTemperature = true;
 	MuzzleLightComp->Temperature = 3000;
 	MuzzleLightComp->SetVisibility(false);
+
+	ReceiverComp = CreateDefaultSubobject<UWeaponReceiverComponent>(TEXT("ReceiverComp"));
+	ReceiverComp->SetDelegate(this);
+	ReceiverComp->SetIsReplicated(true);
 }
 
 void AWeapon::GetLifetimeReplicatedProps(TArray< FLifetimeProperty >& OutLifetimeProps) const
@@ -371,16 +375,8 @@ void AWeapon::MultiRPC_NotifyOnShotFired_Implementation()
 {
 	MuzzleLightComp->SetVisibility(true);
 
-	
-	auto func = [this]
-	{
-		UE_LOG(LogTemp, Warning, TEXT("Test"));
-		MuzzleLightComp->SetVisibility(false);
-	};
 	FTimerHandle Handle;
-	GetWorld()->GetTimerManager().SetTimer(Handle, func, 0.05, false, -1);
-	
-
+	GetWorld()->GetTimerManager().SetTimer(Handle, [&] { MuzzleLightComp->SetVisibility(false); }, 0.05, false, -1);
 
 	if (OnShotFired.IsBound()) OnShotFired.Broadcast();
 }
@@ -534,6 +530,26 @@ bool AWeapon::TryGiveAmmo()
 }
 
 
+
+
+/* IReceiverComponentDelegate */
+void AWeapon::AmmoInClipChanged(int AmmoInClip)
+{
+	LogMsgWithRole(FString::Printf(TEXT("AWeapon::AmmoInClipChanged(%d)"), AmmoInClip));
+}
+void AWeapon::AmmoInPoolChanged(int AmmoInPool)
+{
+	LogMsgWithRole(FString::Printf(TEXT("AWeapon::AmmoInPoolChanged(%d)"), AmmoInPool));
+}
+void AWeapon::InReloadingChanged(bool IsReloading)
+{
+	LogMsgWithRole(FString::Printf(TEXT("AWeapon::InReloadingChanged(%s)"), IsReloading?"True":"False"));
+}
+void AWeapon::OnReloadProgressChanged(float ReloadProgress)
+{
+	LogMsgWithRole(FString::Printf(TEXT("AWeapon::OnReloadProgressChanged(%f)"), ReloadProgress));
+}
+/* End IReceiverComponentDelegate */
 
 /// RPC
 

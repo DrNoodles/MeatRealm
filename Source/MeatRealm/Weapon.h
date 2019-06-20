@@ -4,6 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/Actor.h"
+#include "WeaponReceiverComponent.h"
 
 #include "Weapon.generated.h"
 
@@ -18,12 +19,12 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE(FShotFired);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FAmmoWarning);
 
 UCLASS()
-class MEATREALM_API AWeapon : public AActor
+class MEATREALM_API AWeapon : public AActor, public IReceiverComponentDelegate
 {
 	GENERATED_BODY()
 
-
 public:
+
 protected:
 
 	/// Components
@@ -39,6 +40,9 @@ protected:
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
 		UPointLightComponent* MuzzleLightComp = nullptr;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
+		UWeaponReceiverComponent* ReceiverComp;
 
 	// Projectile class to spawn.
 	UPROPERTY(EditDefaultsOnly, Category = Weapon)
@@ -98,6 +102,7 @@ protected:
 
 	UPROPERTY(EditAnywhere)
 		float AdsMovementScale = 0.70;
+
 
 	// Gun status
 
@@ -173,6 +178,14 @@ public:
 	void SetHeroControllerId(uint32 HeroControllerUid) { this->HeroControllerId = HeroControllerUid; }
 	float GetAdsMovementScale() const { return AdsMovementScale; }
 	float GetHolsterDuration() const { return HolsterDuration; }
+
+	/* IReceiverComponentDelegate */
+	void AmmoInClipChanged(int AmmoInClip) override;
+	void AmmoInPoolChanged(int AmmoInPool) override;
+	void InReloadingChanged(bool IsReloading) override;
+	void OnReloadProgressChanged(float ReloadProgress) override;
+	/* End IReceiverComponentDelegate */
+
 
 protected:
 	UFUNCTION()
