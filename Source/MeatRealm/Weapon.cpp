@@ -193,9 +193,6 @@ void AWeapon::Draw()
 
 	// Ready to roll!
 	bCanAction = true;
-
-	// Read inputs already in action before weapon drawn
-	ClientRPC_RefreshCurrentInput();
 }
 void AWeapon::QueueHolster()
 {
@@ -295,7 +292,7 @@ bool AWeapon::NeedsReload() const
 	return bUseClip && AmmoInClip < 1;
 }
 
-bool AWeapon::IsMatchInProgress()
+bool AWeapon::IsMatchInProgress() const
 {
 	auto World = GetWorld();
 	if (World)
@@ -536,16 +533,7 @@ bool AWeapon::TryGiveAmmo()
 	return true;
 }
 
-void AWeapon::ClientRPC_RefreshCurrentInput_Implementation()
-{
-	// TODO Read fire pressed
-	// TODO If fire pressed
-	//Input_PullTrigger()
 
-	// TODO Read ads pressed
-	// TODO If ads pressed
-	//Input_AdsPressed()
-}
 
 /// RPC
 

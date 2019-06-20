@@ -284,7 +284,7 @@ void AHeroCharacter::SimulateAdsMode(bool IsAdsing)
 		const auto Weapon = GetCurrentWeapon();
 		if (Weapon)
 		{
-			MoveSpeed = WalkSpeed * Weapon->AdsMovementScale;
+			MoveSpeed = WalkSpeed * Weapon->GetAdsMovementScale();
 		}
 	}
 
@@ -459,7 +459,7 @@ void AHeroCharacter::EquipWeapon(const EWeaponSlots Slot)
 		OldWeapon->QueueHolster();
 		OldWeapon->AttachToComponent(HolsteredweaponAnchor, 
 			FAttachmentTransformRules{ EAttachmentRule::SnapToTarget, true });
-		HolsterDuration = OldWeapon->HolsterDuration;
+		HolsterDuration = OldWeapon->GetHolsterDuration();
 	}
 
 

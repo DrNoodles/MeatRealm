@@ -21,43 +21,10 @@ UCLASS()
 class MEATREALM_API AWeapon : public AActor
 {
 	GENERATED_BODY()
-	
-public:	
-	AWeapon();
 
+
+public:
 protected:
-	virtual void BeginPlay() override;
-
-public:
-	virtual void Tick(float DeltaTime) override;
-	void RemoteTick(float DeltaTime);
-	void AuthTick(float DeltaTime);
-
-	void Input_PullTrigger();
-	void Input_ReleaseTrigger();
-	void Input_Reload();
-	void Input_AdsPressed();
-	void Input_AdsReleased();
-	bool TryGiveAmmo();
-
-	UFUNCTION(Client, Reliable)
-	void ClientRPC_RefreshCurrentInput();
-	void Draw();
-	void QueueHolster();
-
-	UPROPERTY(EditAnywhere, BlueprintReadOnly)
-	FString WeaponName = "NoNameWeapon";
-
-	uint32 HeroControllerId;
-	void SetHeroControllerId(uint32 HeroControllerUid) { this->HeroControllerId = HeroControllerUid; }
-
-
-
-
-
-public:
-	
-
 
 	/// Components
 
@@ -141,14 +108,13 @@ public:
 		int AmmoInPool;
 
 	// Used for UI binding
-	UPROPERTY(BlueprintReadOnly, ReplicatedUsing=OnRep_IsReloadingChanged)
+	UPROPERTY(BlueprintReadOnly, ReplicatedUsing = OnRep_IsReloadingChanged)
 		bool bIsReloading = false;
-	UFUNCTION()
-		void OnRep_IsReloadingChanged();
+
 
 	// Used for UI binding
 	UPROPERTY(BlueprintReadOnly)
-	float ReloadProgress = 0.f;
+		float ReloadProgress = 0.f;
 
 	UPROPERTY(BlueprintAssignable, Category = "Event Dispatchers")
 		FShotFired OnShotFired;
@@ -158,10 +124,13 @@ public:
 
 	UPROPERTY(BlueprintAssignable, Category = "Event Dispatchers")
 		FReloadStarted OnReloadStarted;
-	
+
 	UPROPERTY(BlueprintAssignable, Category = "Event Dispatchers")
 		FReloadEnded OnReloadEnded;
 
+protected:
+	UPROPERTY(EditAnywhere, BlueprintReadOnly)
+		FString WeaponName = "NoNameWeapon";
 
 private:
 	UPROPERTY(EditAnywhere)
@@ -175,6 +144,47 @@ private:
 
 	UPROPERTY(EditAnywhere)
 		FColor EnemyAdsLineColor = FColor{ 255,170,75 };
+
+	UPROPERTY(Replicated)
+		bool bAdsPressed;
+
+	bool bCanAction;
+	bool bTriggerPulled;
+	bool bHasActionedThisTriggerPull;
+	bool bReloadQueued;
+	bool bHolsterQueued;
+	bool bWasReloadingOnHolster;
+	FDateTime ClientReloadStartTime;
+	FTimerHandle CanActionTimerHandle;
+	uint32 HeroControllerId;
+
+
+	
+public:	
+	AWeapon();
+	void Draw();
+	void QueueHolster();
+	void Input_PullTrigger();
+	void Input_ReleaseTrigger();
+	void Input_Reload();
+	void Input_AdsPressed();
+	void Input_AdsReleased();
+	bool TryGiveAmmo();
+	void SetHeroControllerId(uint32 HeroControllerUid) { this->HeroControllerId = HeroControllerUid; }
+	float GetAdsMovementScale() const { return AdsMovementScale; }
+	float GetHolsterDuration() const { return HolsterDuration; }
+
+protected:
+	UFUNCTION()
+		void OnRep_IsReloadingChanged();
+
+private:
+	/* AActor impl */
+	void BeginPlay() override;
+	void Tick(float DeltaTime) override;
+	void RemoteTick(float DeltaTime);
+	void AuthTick(float DeltaTime);
+	/* End AActor impl */
 
 	UFUNCTION(Server, Reliable, WithValidation)
 		void ServerRPC_Reload();
@@ -197,7 +207,6 @@ private:
 	UFUNCTION(Client, Reliable)
 		void ClientRPC_NotifyOnAmmoWarning();
 
-
 	void SpawnProjectiles() const;
 
 	TArray<FVector> CalcShotPattern() const;
@@ -211,25 +220,15 @@ private:
 
 	bool CanReload() const;
 	bool NeedsReload() const;
-	bool IsMatchInProgress();
+	bool IsMatchInProgress() const;
 
 	void LogMsgWithRole(FString message);
 	FString GetRoleText();
 	void DrawAdsLine(const FColor& Color, float LineLength) const;
 
-	bool bCanAction;
-	bool bTriggerPulled;
-	
-	UPROPERTY(Replicated)
-	bool bAdsPressed;
-	
-	bool bHasActionedThisTriggerPull;
-	bool bReloadQueued;
-	bool bHolsterQueued;
 
-	bool bWasReloadingOnHolster;
-	FDateTime ClientReloadStartTime;
-	FTimerHandle CanActionTimerHandle;
+
+
 
 };
 
