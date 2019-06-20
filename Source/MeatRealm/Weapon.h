@@ -49,77 +49,15 @@ protected:
 		TSubclassOf<class AProjectile> ProjectileClass;
 
 
-	// Configure the gun
+	//// Configure the gun
 
 	// Time (seconds) to holster the weapon
 	UPROPERTY(EditAnywhere)
 		float HolsterDuration = 1;
 
 	UPROPERTY(EditAnywhere)
-		float ShotsPerSecond = 1.0f;
-
-	UPROPERTY(EditAnywhere)
-		bool bFullAuto = true;
-
-	UPROPERTY(EditAnywhere, BlueprintReadOnly)
-		float AdsSpread = 1;
-
-	UPROPERTY(EditAnywhere, BlueprintReadOnly)
-		float HipfireSpread = 20;
-
-	UPROPERTY(EditAnywhere)
-		int AmmoPoolSize = 30;
-
-	UPROPERTY(EditAnywhere)
-		int AmmoPoolGiven = 20;
-
-	UPROPERTY(EditAnywhere)
-		int AmmoGivenPerPickup = 10;
-
-	UPROPERTY(EditAnywhere)
-		bool bUseClip = true;
-
-	UPROPERTY(EditAnywhere, meta = (EditCondition = "bUseClip"))
-		int ClipSizeGiven = 0;
-
-	UPROPERTY(EditAnywhere, meta = (EditCondition = "bUseClip"))
-		int ClipSize = 10;
-
-	UPROPERTY(EditAnywhere, meta = (EditCondition = "bUseClip"))
-		float ReloadTime = 3;
-
-	// The number of projectiles fired per shot
-	UPROPERTY(EditAnywhere)
-		int ProjectilesPerShot = 1;
-
-	// When ProjectilesPerShot > 1 this ensures all projectiles are spread evenly across the HipfireSpread angle.
-	UPROPERTY(EditAnywhere)
-		bool bEvenSpread = true;
-
-	// This makes even spreading feel more natural by randomly clumping the shots within the even spread.
-	UPROPERTY(EditAnywhere, meta = (EditCondition = "bEvenSpread"))
-		bool bSpreadClumping = true;
-
-	UPROPERTY(EditAnywhere)
 		float AdsMovementScale = 0.70;
 
-
-	// Gun status
-
-	UPROPERTY(BlueprintReadOnly, Replicated)
-		int AmmoInClip;
-
-	UPROPERTY(BlueprintReadOnly, Replicated)
-		int AmmoInPool;
-
-	// Used for UI binding
-	UPROPERTY(BlueprintReadOnly, ReplicatedUsing = OnRep_IsReloadingChanged)
-		bool bIsReloading = false;
-
-
-	// Used for UI binding
-	UPROPERTY(BlueprintReadOnly)
-		float ReloadProgress = 0.f;
 
 	UPROPERTY(BlueprintAssignable, Category = "Event Dispatchers")
 		FShotFired OnShotFired;
@@ -138,29 +76,7 @@ protected:
 		FString WeaponName = "NoNameWeapon";
 
 private:
-	UPROPERTY(EditAnywhere)
-		float AdsLineLength = 1500; // cm
 
-	UPROPERTY(EditAnywhere)
-		FColor AdsLineColor = FColor{ 255,0,0 };
-
-	UPROPERTY(EditAnywhere)
-		float EnemyAdsLineLength = 175; // cm
-
-	UPROPERTY(EditAnywhere)
-		FColor EnemyAdsLineColor = FColor{ 255,170,75 };
-
-	UPROPERTY(Replicated)
-		bool bAdsPressed;
-
-	bool bCanAction;
-	bool bTriggerPulled;
-	bool bHasActionedThisTriggerPull;
-	bool bReloadQueued;
-	bool bHolsterQueued;
-	bool bWasReloadingOnHolster;
-	FDateTime ClientReloadStartTime;
-	FTimerHandle CanActionTimerHandle;
 	uint32 HeroControllerId;
 
 
@@ -180,68 +96,31 @@ public:
 	float GetHolsterDuration() const { return HolsterDuration; }
 
 	/* IReceiverComponentDelegate */
+	void ShotFired() override;
 	void AmmoInClipChanged(int AmmoInClip) override;
 	void AmmoInPoolChanged(int AmmoInPool) override;
 	void InReloadingChanged(bool IsReloading) override;
 	void OnReloadProgressChanged(float ReloadProgress) override;
+	bool SpawnAProjectile(const FVector& Direction) override;
+	FVector GetBarrelDirection() override;
+	FVector GetBarrelLocation() override;
+
 	/* End IReceiverComponentDelegate */
 
 
 protected:
-	UFUNCTION()
-		void OnRep_IsReloadingChanged();
 
 private:
-	/* AActor impl */
-	void BeginPlay() override;
-	void Tick(float DeltaTime) override;
-	void RemoteTick(float DeltaTime);
-	void AuthTick(float DeltaTime);
-	/* End AActor impl */
-
-	UFUNCTION(Server, Reliable, WithValidation)
-		void ServerRPC_Reload();
-
-	UFUNCTION(Server, Reliable, WithValidation)
-		void ServerRPC_PullTrigger();
-
-	UFUNCTION(Server, Reliable, WithValidation)
-		void ServerRPC_ReleaseTrigger();
-
-	UFUNCTION(Server, Reliable, WithValidation)
-		void ServerRPC_AdsPressed();
-
-	UFUNCTION(Server, Reliable, WithValidation)
-		void ServerRPC_AdsReleased();
-
 	UFUNCTION(NetMulticast, Reliable)
 		void MultiRPC_NotifyOnShotFired();
 
 	UFUNCTION(Client, Reliable)
 		void ClientRPC_NotifyOnAmmoWarning();
 
-	void SpawnProjectiles() const;
-
-	TArray<FVector> CalcShotPattern() const;
-	bool SpawnAProjectile(const FVector& Direction) const;
-
-	void AuthFireStart();
-	void AuthFireEnd();
-	void AuthHolsterStart();
-	void AuthReloadStart();
-	void AuthReloadEnd();
-
-	bool CanReload() const;
-	bool NeedsReload() const;
-	bool IsMatchInProgress() const;
+	void BeginPlay() override;
 
 	void LogMsgWithRole(FString message);
 	FString GetRoleText();
-	void DrawAdsLine(const FColor& Color, float LineLength) const;
-
-
-
-
 
 };
 
