@@ -12,14 +12,28 @@ void UWeaponReceiverComponent::GetLifetimeReplicatedProps(TArray< FLifetimePrope
 	DOREPLIFETIME(UWeaponReceiverComponent, AmmoInPool);
 	DOREPLIFETIME(UWeaponReceiverComponent, bIsReloading);
 	DOREPLIFETIME(UWeaponReceiverComponent, bAdsPressed);
-
 }
-
 UWeaponReceiverComponent::UWeaponReceiverComponent()
 {
 	PrimaryComponentTick.bCanEverTick = true;
 	bReplicates = true;
 }
+void UWeaponReceiverComponent::BeginPlay()
+{
+	Super::BeginPlay();
+
+	if (!HasAuthority()) return;
+
+	AmmoInClip = ClipSizeGiven;
+	AmmoInPool = AmmoPoolGiven;
+
+	Draw();
+}
+
+
+
+
+// Input state 
 
 void UWeaponReceiverComponent::Input_PullTrigger()
 {
@@ -51,18 +65,69 @@ bool UWeaponReceiverComponent::TryGiveAmmo()
 }
 
 
+// TODO Turn these into Commands
 
-void UWeaponReceiverComponent::BeginPlay()
+// TODO Create an input state that the commands perturb
+
+// This info can be used to simulate commands onto state in a replayable way!
+
+void UWeaponReceiverComponent::ServerRPC_PullTrigger_Implementation()
 {
-	Super::BeginPlay();
-
-	if (!HasAuthority()) return;
-
-	AmmoInClip = ClipSizeGiven;
-	AmmoInPool = AmmoPoolGiven;
-
-	Draw();
+	bTriggerPulled = true;
+	bHasActionedThisTriggerPull = false;
 }
+bool UWeaponReceiverComponent::ServerRPC_PullTrigger_Validate()
+{
+	return true;
+}
+
+void UWeaponReceiverComponent::ServerRPC_ReleaseTrigger_Implementation()
+{
+	bTriggerPulled = false;
+	bHasActionedThisTriggerPull = false;
+}
+bool UWeaponReceiverComponent::ServerRPC_ReleaseTrigger_Validate()
+{
+	return true;
+}
+
+void UWeaponReceiverComponent::ServerRPC_Reload_Implementation()
+{
+	if (bTriggerPulled || !CanReload()) return;
+	bReloadQueued = true;
+}
+bool UWeaponReceiverComponent::ServerRPC_Reload_Validate()
+{
+	return true;
+}
+
+void UWeaponReceiverComponent::ServerRPC_AdsPressed_Implementation()
+{
+	//LogMsgWithRole("UWeaponReceiverComponent::ServerRPC_AdsPressed_Implementation()");
+	bAdsPressed = true;
+}
+bool UWeaponReceiverComponent::ServerRPC_AdsPressed_Validate()
+{
+	return true;
+}
+
+void UWeaponReceiverComponent::ServerRPC_AdsReleased_Implementation()
+{
+	//LogMsgWithRole("UWeaponReceiverComponent::ServerRPC_AdsReleased_Implementation()");
+	bAdsPressed = false;
+}
+bool UWeaponReceiverComponent::ServerRPC_AdsReleased_Validate()
+{
+	return true;
+}
+
+
+
+
+
+
+
+
 void UWeaponReceiverComponent::TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction)
 {
 	Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
@@ -162,7 +227,7 @@ void UWeaponReceiverComponent::AuthFireEnd()
 	//LogMsgWithRole("ClientFireEnd()");
 	check(HasAuthority())
 
-		bCanAction = true;
+	bCanAction = true;
 
 	if (CanActionTimerHandle.IsValid())
 	{
@@ -200,8 +265,6 @@ void UWeaponReceiverComponent::QueueHolster()
 	//LogMsgWithRole(FString::Printf(TEXT("UWeaponReceiverComponent::Holster() %s"), *WeaponName));
 	bHolsterQueued = true;
 }
-
-
 void UWeaponReceiverComponent::AuthHolsterStart()
 {
 	check(HasAuthority())
@@ -287,85 +350,9 @@ bool UWeaponReceiverComponent::CanReload() const
 		AmmoInClip < ClipSize &&
 		AmmoInPool > 0;
 }
-
 bool UWeaponReceiverComponent::NeedsReload() const
 {
 	return bUseClip && AmmoInClip < 1;
-}
-
-bool UWeaponReceiverComponent::IsMatchInProgress() const
-{
-	auto World = GetWorld();
-	if (World)
-	{
-		auto GM = World->GetAuthGameMode();
-		if (GM)
-		{
-			auto GS = GM->GetGameState<AGameState>();
-			if (GS && GS->IsMatchInProgress())
-			{
-				return true;
-			}
-		}
-	}
-	return false;
-}
-
-void UWeaponReceiverComponent::ServerRPC_PullTrigger_Implementation()
-{
-	if (!IsMatchInProgress()) return;
-
-	bTriggerPulled = true;
-	bHasActionedThisTriggerPull = false;
-}
-
-bool UWeaponReceiverComponent::ServerRPC_PullTrigger_Validate()
-{
-	return true;
-}
-
-void UWeaponReceiverComponent::ServerRPC_ReleaseTrigger_Implementation()
-{
-	bTriggerPulled = false;
-	bHasActionedThisTriggerPull = false;
-}
-
-bool UWeaponReceiverComponent::ServerRPC_ReleaseTrigger_Validate()
-{
-	return true;
-}
-
-void UWeaponReceiverComponent::ServerRPC_Reload_Implementation()
-{
-	if (bTriggerPulled || !CanReload()) return;
-	bReloadQueued = true;
-}
-
-bool UWeaponReceiverComponent::ServerRPC_Reload_Validate()
-{
-	return true;
-}
-
-void UWeaponReceiverComponent::ServerRPC_AdsPressed_Implementation()
-{
-	//LogMsgWithRole("UWeaponReceiverComponent::ServerRPC_AdsPressed_Implementation()");
-	bAdsPressed = true;
-}
-
-bool UWeaponReceiverComponent::ServerRPC_AdsPressed_Validate()
-{
-	return true;
-}
-
-void UWeaponReceiverComponent::ServerRPC_AdsReleased_Implementation()
-{
-	//LogMsgWithRole("UWeaponReceiverComponent::ServerRPC_AdsReleased_Implementation()");
-	bAdsPressed = false;
-}
-
-bool UWeaponReceiverComponent::ServerRPC_AdsReleased_Validate()
-{
-	return true;
 }
 
 void UWeaponReceiverComponent::SpawnProjectiles() const
@@ -379,7 +366,6 @@ void UWeaponReceiverComponent::SpawnProjectiles() const
 		Delegate->SpawnAProjectile(Direction);
 	}
 }
-
 TArray<FVector> UWeaponReceiverComponent::CalcShotPattern() const
 {
 	TArray<FVector> Shots;
@@ -434,6 +420,7 @@ TArray<FVector> UWeaponReceiverComponent::CalcShotPattern() const
 
 
 
+// Helpers
 
 void UWeaponReceiverComponent::DrawAdsLine(const FColor& Color, float LineLength) const
 {
@@ -454,7 +441,6 @@ void UWeaponReceiverComponent::DrawAdsLine(const FColor& Color, float LineLength
 
 	DrawDebugLine(GetWorld(), Start, End, Color, false, -1., 0, 2.f);
 }
-
 
 void UWeaponReceiverComponent::LogMsgWithRole(FString message)
 {
