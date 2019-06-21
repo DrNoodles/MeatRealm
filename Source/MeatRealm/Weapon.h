@@ -122,5 +122,6 @@ private:
 	void LogMsgWithRole(FString message);
 	FString GetRoleText();
 
+
 };
 

@@ -12,23 +12,63 @@ enum class EWeaponCommands : uint8
 	ReloadStart, ReloadEnd,
 };
 
-UENUM()
+inline FString EWeaponCommandsStr(const EWeaponCommands Cmd)
+{
+	switch (Cmd) 
+	{ 
+		case EWeaponCommands::FireStart: return "FireStart";
+		case EWeaponCommands::FireEnd: return "FireEnd";
+		case EWeaponCommands::ReloadStart: return "ReloadStart";
+		case EWeaponCommands::ReloadEnd: return "ReloadEnd";
+		default: return "Unknown";
+	}
+}
+
+
+UENUM(BlueprintType)
 enum class EWeaponModes : uint8
 {
 	None = 0, Ready, Firing, Reloading, Paused, ReloadingPaused
 };
 
-USTRUCT()
+
+inline FString EWeaponModesStr(const EWeaponModes Mode)
+{
+	switch (Mode)
+	{
+	case EWeaponModes::None: return "None";
+	case EWeaponModes::Ready: return "Ready";
+	case EWeaponModes::Firing: return "Firing";
+	case EWeaponModes::Reloading: return "Reloading";
+	case EWeaponModes::Paused: return "Paused";
+	case EWeaponModes::ReloadingPaused: return "ReloadingPaused";
+	default: return "Unknown";
+	}
+}
+
+
+USTRUCT(BlueprintType)
 struct FWeaponState
 {
 	GENERATED_BODY()
 
-	EWeaponModes Mode = EWeaponModes::None;
-	int AmmoInClip = 0;
-	int AmmoInPool = 0;
-	float ReloadProgress = 0; // For Reloading, ReloadingPaused states
+public:
+	UPROPERTY(BlueprintReadOnly)
+		EWeaponModes Mode = EWeaponModes::None;
+
+	UPROPERTY(BlueprintReadOnly)
+		int AmmoInClip = 0;
+	
+	UPROPERTY(BlueprintReadOnly)
+		int AmmoInPool = 0;
+
+	UPROPERTY(BlueprintReadOnly)
+		float ReloadProgress = 0; // For Reloading, ReloadingPaused states
+
+	UPROPERTY(BlueprintReadOnly)
+		bool IsAdsing = false;
+
 	bool HasFired = false; // For Firing state
-	bool IsAdsing = false;
 
 	FWeaponState Clone() const
 	{
@@ -37,8 +77,8 @@ struct FWeaponState
 		Clone.AmmoInClip = this->AmmoInClip;
 		Clone.AmmoInPool = this->AmmoInPool;
 		Clone.ReloadProgress = this->ReloadProgress;
-		Clone.HasFired = this->HasFired;
 		Clone.IsAdsing = this->IsAdsing;
+		Clone.HasFired = this->HasFired;
 		return Clone;
 	}
 };
@@ -138,16 +178,14 @@ public:
 	bool TryGiveAmmo();
 
 protected:
-	UFUNCTION()
-		void OnRep_IsReloadingChanged();
+	//UFUNCTION()
+	//	void OnRep_IsReloadingChanged();
 
 private:
 	bool HasAuthority() const { return GetOwnerRole() == ROLE_Authority; }
 	virtual void BeginPlay() override;
 	virtual void TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction) override;
 	FWeaponState ChangeState(EWeaponCommands Cmd, const FWeaponState& InState);
-	void RemoteTick(float DeltaTime);
-	void AuthTick(float DeltaTime);
 
 
 	UFUNCTION(Server, Reliable, WithValidation)
@@ -246,24 +284,15 @@ public:
 
 	// Gun status
 
-	UPROPERTY(BlueprintReadOnly, Replicated)
-		int AmmoInClip;
-
-	UPROPERTY(BlueprintReadOnly, Replicated)
-		int AmmoInPool;
-
-	// Used for UI binding
-	UPROPERTY(BlueprintReadOnly, ReplicatedUsing = OnRep_IsReloadingChanged)
-		bool bIsReloading = false;
 	
-	// Used for UI binding
-	UPROPERTY(BlueprintReadOnly)
-		float ReloadProgress = 0.f;
 
 	EWeaponCommands LastCommand;
 
+	UPROPERTY(Replicated, BlueprintReadOnly)
+		FWeaponState WeaponState {};
 
 protected:
+
 
 private:
 	UPROPERTY(EditAnywhere)
@@ -278,15 +307,12 @@ private:
 	UPROPERTY(EditAnywhere)
 		FColor EnemyAdsLineColor = FColor{ 255,170,75 };
 
-	UPROPERTY(Replicated)
-		bool bAdsPressed;
-	
-	FWeaponState WeaponState{};
+
+
 	FWeaponInputState InputState{};
 
 	IReceiverComponentDelegate* Delegate = nullptr;
 
-	bool bTriggerPulled;
 	int ShotsFired; // Number of shots fired while in the Firing state
 	
 	/*
@@ -294,7 +320,8 @@ private:
 	bool bHolsterQueued;
 	bool bWasReloadingOnHolster;*/
 
-	FDateTime ClientReloadStartTime;
+	bool bIsMidReload;
+	FDateTime ReloadStartTime;
 
 	bool bIsBusy;
 	FTimerHandle BusyTimerHandle;

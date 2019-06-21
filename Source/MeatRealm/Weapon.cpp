@@ -144,6 +144,10 @@ void AWeapon::InReloadingChanged(bool IsReloading)
 {
 	//FString Str{ IsReloading ? "True" : "False" };
 	LogMsgWithRole(FString::Printf(TEXT("AWeapon::InReloadingChanged(%s)"), *FString{ IsReloading ? "True" : "False" }));
+
+	// Use for client side effects only 
+	if (HasAuthority()) return;
+
 	if (IsReloading)
 	{
 		OnReloadStarted.Broadcast();

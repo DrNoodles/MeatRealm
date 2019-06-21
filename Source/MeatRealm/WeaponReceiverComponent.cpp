@@ -8,10 +8,10 @@
 void UWeaponReceiverComponent::GetLifetimeReplicatedProps(TArray< FLifetimeProperty >& OutLifetimeProps) const
 {
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
-	DOREPLIFETIME(UWeaponReceiverComponent, AmmoInClip);
-	DOREPLIFETIME(UWeaponReceiverComponent, AmmoInPool);
-	DOREPLIFETIME(UWeaponReceiverComponent, bIsReloading);
-	DOREPLIFETIME(UWeaponReceiverComponent, bAdsPressed);
+	DOREPLIFETIME(UWeaponReceiverComponent, WeaponState);
+	//DOREPLIFETIME(UWeaponReceiverComponent, WeaponState.AmmoInPool);
+	//DOREPLIFETIME(UWeaponReceiverComponent, WeaponState.bIsReloading);
+	//DOREPLIFETIME(UWeaponReceiverComponent, bAdsPressed);
 }
 UWeaponReceiverComponent::UWeaponReceiverComponent()
 {
@@ -24,8 +24,8 @@ void UWeaponReceiverComponent::BeginPlay()
 
 	if (!HasAuthority()) return;
 
-	AmmoInClip = ClipSizeGiven;
-	AmmoInPool = AmmoPoolGiven;
+	WeaponState.AmmoInClip = ClipSizeGiven;
+	WeaponState.AmmoInPool = AmmoPoolGiven;
 
 	Draw();
 }
@@ -57,17 +57,12 @@ void UWeaponReceiverComponent::Input_AdsReleased()
 }
 bool UWeaponReceiverComponent::TryGiveAmmo()
 {
-	if (AmmoInPool == AmmoPoolSize) return false;
+	if (WeaponState.AmmoInPool == AmmoPoolSize) return false;
 
-	AmmoInPool = FMath::Min(AmmoInPool + AmmoGivenPerPickup, AmmoPoolSize);
+	WeaponState.AmmoInPool = FMath::Min(WeaponState.AmmoInPool + AmmoGivenPerPickup, AmmoPoolSize);
 
 	return true;
 }
-
-
-// TODO Turn these into Commands
-
-// TODO Create an input state that the commands perturb
 
 // This info can be used to simulate commands onto state in a replayable way!
 
@@ -140,21 +135,16 @@ void UWeaponReceiverComponent::TickComponent(float DeltaTime, ELevelTick TickTyp
 	Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
 
 
-	if (!HasAuthority()) return;
+	if (HasAuthority())
+	{
+		// TODO These ticks might only do 1 operation per tick. Maybe return a bool from each TickFunction if a state was changed so we can reprocess it right away?
 
-	// TODO 
-
-
-	//FCommandBase* Command = nullptr;
-
-	// TODO These ticks might only do 1 operation per tick. Maybe return a bool from each TickFunction if a state was changed so we can reprocess it right away?
-
-	switch (WeaponState.Mode) 
-	{ 
-		case EWeaponModes::Ready: 
+		switch (WeaponState.Mode)
+		{
+		case EWeaponModes::Ready:
 			TickReady(DeltaTime);
 			break;
-		
+
 		case EWeaponModes::Firing:
 			TickFiring(DeltaTime);
 			break;
@@ -166,77 +156,26 @@ void UWeaponReceiverComponent::TickComponent(float DeltaTime, ELevelTick TickTyp
 		case EWeaponModes::None:
 		case EWeaponModes::Paused:
 		case EWeaponModes::ReloadingPaused:
-		default: 
+		default:
 			LogMsgWithRole(FString::Printf(TEXT("TickComponent() - WeaponMode unimplemented %d"), WeaponState.Mode));
+		}
 	}
-
-
-	//if (HasAuthority())
-	//{
-	//	AuthTick(DeltaTime);
-	//}
-	//else
-	//{
-	//	RemoteTick(DeltaTime);
-	//}
-}
-
-FWeaponState UWeaponReceiverComponent::ChangeState(EWeaponCommands Cmd, const FWeaponState& InState)
-{
-	LogMsgWithRole(FString::Printf(TEXT("UWeaponReceiverComponent::ChangeState(Cmd:%d)"), Cmd));
-	FWeaponState OutState = InState.Clone();
-
-	switch (Cmd) 
-	{ 
-		case EWeaponCommands::FireStart:
+	else
+	{
+		// Draw ADS line for self or others
+		if (WeaponState.IsAdsing)
 		{
-			ensure(InState.Mode == EWeaponModes::Ready);
-
-			OutState.Mode = EWeaponModes::Firing;
-			LastCommand = Cmd;
+			const auto Color = GetOwnerOwnerLocalRole() == ROLE_AutonomousProxy ? AdsLineColor : EnemyAdsLineColor;
+			const auto Length = GetOwnerOwnerLocalRole() == ROLE_AutonomousProxy ? AdsLineLength : EnemyAdsLineLength;
+			DrawAdsLine(Color, Length);
 		}
-		break;
-
-
-		case EWeaponCommands::FireEnd:
-		{
-			ensure(InState.Mode == EWeaponModes::Firing);
-
-			OutState.Mode = EWeaponModes::Ready;
-			LastCommand = Cmd;
-		}
-		break;
-
-
-		case EWeaponCommands::ReloadStart:
-		{
-			ensure(InState.Mode == EWeaponModes::Ready);
-
-			OutState.Mode = EWeaponModes::Reloading;
-			LastCommand = Cmd;
-		}
-		break;
-
-
-		case EWeaponCommands::ReloadEnd:
-		{
-			ensure(InState.Mode == EWeaponModes::Reloading);
-
-			OutState.Mode = EWeaponModes::Ready;
-			LastCommand = Cmd;
-		}
-		break;
 	}
-
-	return OutState;
 }
-
-
 
 
 void UWeaponReceiverComponent::TickReady(float DT)
 {
-	LogMsgWithRole("EWeaponModes::Ready");
+	//LogMsgWithRole("EWeaponModes::Ready");
 
 
 	// Ready > Firing
@@ -264,7 +203,7 @@ void UWeaponReceiverComponent::TickReady(float DT)
 
 void UWeaponReceiverComponent::TickFiring(float DT)
 {
-	LogMsgWithRole("EWeaponModes::Firing");
+	//LogMsgWithRole("EWeaponModes::Firing");
 
 
 	// Allow fluid enter/exit of ADS state
@@ -293,7 +232,7 @@ void UWeaponReceiverComponent::TickFiring(float DT)
 
 	// Can we fire?
 
-	const auto bHasAmmoReady = bUseClip ? AmmoInClip > 0 : AmmoInPool > 0;
+	const auto bHasAmmoReady = bUseClip ? WeaponState.AmmoInClip > 0 : WeaponState.AmmoInPool > 0;
 	const auto bReceiverCanCycle = bFullAuto || ShotsFired == 0;
 	const bool bCanShoot = bHasAmmoReady && bReceiverCanCycle;
 	if (!bCanShoot)
@@ -305,9 +244,9 @@ void UWeaponReceiverComponent::TickFiring(float DT)
 	// Subtract some ammo
 
 	if (bUseClip)
-		--AmmoInClip;
+		--WeaponState.AmmoInClip;
 	else
-		--AmmoInPool;
+		--WeaponState.AmmoInPool;
 
 
 	// Fire the shot(s)!
@@ -333,27 +272,27 @@ void UWeaponReceiverComponent::TickFiring(float DT)
 	Delegate->ShotFired();
 
 	if (bUseClip)
-		Delegate->AmmoInClipChanged(AmmoInClip);
+		Delegate->AmmoInClipChanged(WeaponState.AmmoInClip);
 	else
-		Delegate->AmmoInPoolChanged(AmmoInPool);
+		Delegate->AmmoInPoolChanged(WeaponState.AmmoInPool);
 }
 
 void UWeaponReceiverComponent::TickReloading(float DT)
 {
-	LogMsgWithRole("EWeaponModes::Reloading");
+	//LogMsgWithRole("EWeaponModes::Reloading");
 
 
-	//// Report reload progress for clients
-	//if (!HasAuthority() && bIsReloading)
-	//{
-	//	const auto ElapsedReloadTime = (FDateTime::Now() - ClientReloadStartTime).GetTotalSeconds();
-
-	//	// Update UI
-	//	ReloadProgress = ElapsedReloadTime / ReloadTime;
-	//	UE_LOG(LogTemp, Warning, TEXT("InProgress %f"), ReloadProgress);
-	//}
 
 
+	if (bIsMidReload)
+	{
+		// Track reload progress
+
+		const auto ElapsedReloadTime = (FDateTime::Now() - ReloadStartTime).GetTotalSeconds();
+		WeaponState.ReloadProgress = ElapsedReloadTime / ReloadTime;
+		
+		UE_LOG(LogTemp, Warning, TEXT("InProgress %f"), WeaponState.ReloadProgress);
+	}
 
 
 
@@ -362,12 +301,15 @@ void UWeaponReceiverComponent::TickReloading(float DT)
 
 	if (bIsBusy) return;
 
-	bIsReloading = true;
+	
 
 	// Force Ads off while reloading
 	//WeaponState.IsAdsing = false;
 
-
+	// Start Reloading!
+	bIsMidReload = true;
+	WeaponState.ReloadProgress = 0;
+	ReloadStartTime = FDateTime::Now();
 
 
 
@@ -375,15 +317,17 @@ void UWeaponReceiverComponent::TickReloading(float DT)
 
 	auto DoReloadEnd = [&]
 	{
-		bIsReloading = false;
+		bIsMidReload = false;
+		WeaponState.ReloadProgress = 100;
+
 		bIsBusy = false;
 		if (BusyTimerHandle.IsValid()) GetWorld()->GetTimerManager().ClearTimer(BusyTimerHandle);
 
 		// Take ammo from pool
-		const int AmmoNeeded = ClipSize - AmmoInClip;
-		const int AmmoReceived = (AmmoNeeded > AmmoInPool) ? AmmoInPool : AmmoNeeded;
-		AmmoInPool -= AmmoReceived;
-		AmmoInClip += AmmoReceived;
+		const int AmmoNeeded = ClipSize - WeaponState.AmmoInClip;
+		const int AmmoReceived = (AmmoNeeded > WeaponState.AmmoInPool) ? WeaponState.AmmoInPool : AmmoNeeded;
+		WeaponState.AmmoInPool -= AmmoReceived;
+		WeaponState.AmmoInClip += AmmoReceived;
 
 
 		WeaponState = ChangeState(EWeaponCommands::ReloadEnd, WeaponState);
@@ -395,69 +339,44 @@ void UWeaponReceiverComponent::TickReloading(float DT)
 }
 
 
-
-
-
-void UWeaponReceiverComponent::RemoteTick(float DeltaTime)
+FWeaponState UWeaponReceiverComponent::ChangeState(EWeaponCommands Cmd, const FWeaponState& InState)
 {
-	//check(!HasAuthority())
+	/*LogMsgWithRole(FString::Printf(TEXT("UWeaponReceiverComponent::ChangeState(In:%s Cmd:%s)"), 
+		*EWeaponModesStr(InState.Mode), *EWeaponCommandsStr(Cmd)));*/
 
-		//if (bIsReloading)
-		//{
-		//	const auto ElapsedReloadTime = (FDateTime::Now() - ClientReloadStartTime).GetTotalSeconds();
+	FWeaponState OutState = InState.Clone();
 
-		//	// Update UI
-		//	ReloadProgress = ElapsedReloadTime / ReloadTime;
-		//	UE_LOG(LogTemp, Warning, TEXT("InProgress %f"), ReloadProgress);
-		//}
+	if (Cmd == EWeaponCommands::FireStart) {
+		ensure(InState.Mode == EWeaponModes::Ready);
+		OutState.Mode = EWeaponModes::Firing;
+		LastCommand = Cmd;
+	}
 
-	//// Draw ADS line for self or others
-	//if (bAdsPressed)
-	//{
-	//	LogMsgWithRole("bAdsPressed");
-	//	const auto Color = GetOwnerOwnerLocalRole() == ROLE_AutonomousProxy ? AdsLineColor : EnemyAdsLineColor;
-	//	const auto Length = GetOwnerOwnerLocalRole() == ROLE_AutonomousProxy ? AdsLineLength : EnemyAdsLineLength;
-	//	DrawAdsLine(Color, Length);
-	//}
+	if (Cmd == EWeaponCommands::FireEnd) {
+		ensure(InState.Mode == EWeaponModes::Firing);
+		OutState.Mode = EWeaponModes::Ready;
+		LastCommand = Cmd;
+	}
+
+	if (Cmd == EWeaponCommands::ReloadStart) {
+		ensure(InState.Mode == EWeaponModes::Ready);
+		OutState.Mode = EWeaponModes::Reloading;
+		LastCommand = Cmd;
+	}
+
+	if (Cmd == EWeaponCommands::ReloadEnd) {
+		ensure(InState.Mode == EWeaponModes::Reloading);
+		OutState.Mode = EWeaponModes::Ready;
+		LastCommand = Cmd;
+	}
+
+	LogMsgWithRole(FString::Printf(TEXT("WeapReceiver::ChangeState(%s > %s > %s)"),
+		*EWeaponModesStr(InState.Mode), *EWeaponCommandsStr(Cmd), *EWeaponModesStr(OutState.Mode)));
+
+	return OutState;
 }
-void UWeaponReceiverComponent::AuthTick(float DeltaTime)
-{
-	//check(HasAuthority())
-
-	//	// If a holster is queued, wait for can action unless the action we're in is a reload
-	//	if (bHolsterQueued && (bCanAction || bIsReloading))
-	//	{
-	//		AuthHolsterStart();
-	//		return;
-	//	}
-
-	//if (!bCanAction) return;
 
 
-	//// Reload!
-	//if (bReloadQueued && CanReload())
-	//{
-	//	AuthReloadStart();
-	//	return;
-	//}
-
-
-	//// Fire!
-
-	//// Behaviour: Holding the trigger on an auto gun will auto reload then auto resume firing. Whereas a semiauto requires a new trigger pull to reload and then a new trigger pull to fire again.
-	//const auto bWeaponCanCycle = bFullAuto || !bHasActionedThisTriggerPull;
-	//if (bTriggerPulled && bWeaponCanCycle)
-	//{
-	//	if (NeedsReload() && CanReload())
-	//	{
-	//		AuthReloadStart();
-	//	}
-	//	else if (AmmoInClip > 0)
-	//	{
-	//		AuthFireStart();
-	//	}
-	//}
-}
 
 void UWeaponReceiverComponent::Draw()
 {
@@ -559,35 +478,36 @@ void UWeaponReceiverComponent::AuthHolsterStart()
 }
 
 
-void UWeaponReceiverComponent::OnRep_IsReloadingChanged()
-{
-	if (bIsReloading)
-	{
-		// Init reload
-		ClientReloadStartTime = FDateTime::Now();
-
-		// Update UI
-		ReloadProgress = 0;
-	}
-	else
-	{
-		// Finish reload
-		ReloadProgress = 100;
-	}
-
-	Delegate->InReloadingChanged(bIsReloading);
-	Delegate->OnReloadProgressChanged(ReloadProgress);
-}
+// TODO Figure out what to do with this shit...
+//void UWeaponReceiverComponent::IsReloadingChanged()
+//{
+//	if (WeaponState.Mode == EWeaponModes::Reloading)
+//	{
+//		// Init reload
+//		ClientReloadStartTime = FDateTime::Now();
+//
+//		// Update UI
+//		WeaponState.ReloadProgress = 0;
+//	}
+//	else
+//	{
+//		// Finish reload
+//		WeaponState.ReloadProgress = 100;
+//	}
+//
+//	Delegate->InReloadingChanged(WeaponState.Mode == EWeaponModes::Reloading);
+//	Delegate->OnReloadProgressChanged(WeaponState.ReloadProgress);
+//}
 
 bool UWeaponReceiverComponent::CanReload() const
 {
 	return bUseClip &&
-		AmmoInClip < ClipSize &&
-		AmmoInPool > 0;
+		WeaponState.AmmoInClip < ClipSize &&
+		WeaponState.AmmoInPool > 0;
 }
 bool UWeaponReceiverComponent::NeedsReload() const
 {
-	return bUseClip && AmmoInClip < 1;
+	return bUseClip && WeaponState.AmmoInClip < 1;
 }
 
 void UWeaponReceiverComponent::SpawnProjectiles() const
