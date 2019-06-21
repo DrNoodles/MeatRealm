@@ -138,7 +138,8 @@ void AWeapon::AmmoInPoolChanged(int AmmoInPool)
 }
 void AWeapon::InReloadingChanged(bool IsReloading)
 {
-	LogMsgWithRole(FString::Printf(TEXT("AWeapon::InReloadingChanged(%s)"), IsReloading ? "True" : "False"));
+	//FString Str{ IsReloading ? "True" : "False" };
+	LogMsgWithRole(FString::Printf(TEXT("AWeapon::InReloadingChanged(%s)"), *FString{ IsReloading ? "True" : "False" }));
 	if (IsReloading)
 	{
 		OnReloadStarted.Broadcast();

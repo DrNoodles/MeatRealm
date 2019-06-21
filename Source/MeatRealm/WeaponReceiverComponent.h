@@ -5,6 +5,91 @@
 
 #include "WeaponReceiverComponent.generated.h"
 
+UENUM()
+enum class EWeaponModes : uint8
+{
+	None = 0, Ready, Firing, Reloading, Paused, ReloadingPaused
+};
+
+USTRUCT()
+struct FWeaponState
+{
+	GENERATED_BODY()
+
+	EWeaponModes Mode = EWeaponModes::None;
+	int AmmoOInClip = 0;
+	int AmmoOInPool = 0;
+	float ReloadProgress = 0; // For Reloading, ReloadingPaused states
+	bool HasFired = false; // For Firing state
+
+	FWeaponState Clone() const
+	{
+		FWeaponState Clone;
+		Clone.Mode = this->Mode;
+		Clone.AmmoOInClip = this->AmmoOInClip;
+		Clone.AmmoOInPool = this->AmmoOInPool;
+		Clone.ReloadProgress = this->ReloadProgress;
+		Clone.HasFired = this->HasFired;
+		return Clone;
+	}
+};
+
+USTRUCT()
+struct FWeaponInputState
+{
+	GENERATED_BODY()
+
+	uint8 Fire = 0; // 0 nothing, 1, pressed, 2 held, 3 released
+	uint8 Ads = 0; // 0 nothing, 1, pressed, 2 held, 3 released
+	bool Reload = false;
+	bool Holster = false;
+	bool Draw = false;
+};
+
+class FCommandBase
+{
+public:
+	
+	FCommandBase()
+	{
+		// TODO Generate time stamp, cmd id, whatnot
+	}
+	virtual ~FCommandBase() = default;
+
+	virtual FWeaponState Apply(const FWeaponState& InState) const = 0;
+
+private:
+	static unsigned int CommandId;
+};
+
+unsigned FCommandBase::CommandId = 0;
+
+class FCommandFireStart final : public FCommandBase
+{
+	FWeaponState Apply(const FWeaponState& InState) const override
+	{
+		// Enforce Ready > Fire
+		if (InState.Mode != EWeaponModes::Ready) return InState;
+
+		FWeaponState OutState = InState.Clone();
+		OutState.Mode = EWeaponModes::Firing;
+		return OutState;
+	}
+};
+
+class FCommandFireEnd final : public FCommandBase
+{
+	FWeaponState Apply(const FWeaponState& InState) const override
+	{
+		// Enforce Firing > Ready
+		if (InState.Mode != EWeaponModes::Firing) return InState;
+
+		FWeaponState OutState = InState.Clone();
+		OutState.Mode = EWeaponModes::Ready;
+		return OutState;
+	}
+};
+
 class IReceiverComponentDelegate
 {
 public:
@@ -77,7 +162,6 @@ private:
 
 	bool CanReload() const;
 	bool NeedsReload() const;
-	bool IsMatchInProgress() const;
 	void DrawAdsLine(const FColor& Color, float LineLength) const;
 
 	void LogMsgWithRole(FString message);
