@@ -45,7 +45,7 @@ void UWeaponReceiverComponent::Input_ReleaseTrigger()
 }
 void UWeaponReceiverComponent::Input_Reload()
 {
-	//ServerRPC_Reload();
+	ServerRPC_Reload();
 }
 void UWeaponReceiverComponent::Input_AdsPressed()
 {
@@ -93,17 +93,18 @@ bool UWeaponReceiverComponent::ServerRPC_ReleaseTrigger_Validate()
 {
 	return true;
 }
-//
-//void UWeaponReceiverComponent::ServerRPC_Reload_Implementation()
-//{
-//	if (bTriggerPulled || !CanReload()) return;
-//	bReloadQueued = true;
-//}
-//bool UWeaponReceiverComponent::ServerRPC_Reload_Validate()
-//{
-//	return true;
-//}
-//
+
+void UWeaponReceiverComponent::ServerRPC_Reload_Implementation()
+{
+	InputState.Reload = true;
+	/*if (bTriggerPulled || !CanReload()) return;
+	bReloadQueued = true;*/
+}
+bool UWeaponReceiverComponent::ServerRPC_Reload_Validate()
+{
+	return true;
+}
+
 //void UWeaponReceiverComponent::ServerRPC_AdsPressed_Implementation()
 //{
 //	//LogMsgWithRole("UWeaponReceiverComponent::ServerRPC_AdsPressed_Implementation()");
@@ -183,20 +184,40 @@ FWeaponState UWeaponReceiverComponent::ChangeState(EWeaponCommands Cmd, const FW
 	{ 
 		case EWeaponCommands::FireStart:
 		{
-			// Enforce Ready > Fire
-			if (InState.Mode != EWeaponModes::Ready) return InState;
-			LastCommand = Cmd;
+			ensure(InState.Mode == EWeaponModes::Ready);
+
 			OutState.Mode = EWeaponModes::Firing;
+			LastCommand = Cmd;
 		}
 		break;
 
 
 		case EWeaponCommands::FireEnd:
 		{
-			// Enforce Firing > Ready
-			if (InState.Mode != EWeaponModes::Firing) return InState;
-			LastCommand = Cmd;
+			ensure(InState.Mode == EWeaponModes::Firing);
+
 			OutState.Mode = EWeaponModes::Ready;
+			LastCommand = Cmd;
+		}
+		break;
+
+
+		case EWeaponCommands::ReloadStart:
+		{
+			ensure(InState.Mode == EWeaponModes::Ready);
+
+			OutState.Mode = EWeaponModes::Reloading;
+			LastCommand = Cmd;
+		}
+		break;
+
+
+		case EWeaponCommands::ReloadEnd:
+		{
+			ensure(InState.Mode == EWeaponModes::Reloading);
+
+			OutState.Mode = EWeaponModes::Ready;
+			LastCommand = Cmd;
 		}
 		break;
 	}
@@ -288,6 +309,24 @@ void UWeaponReceiverComponent::TickFiring(float DT)
 		Delegate->AmmoInPoolChanged(AmmoInPool);
 }
 
+void UWeaponReceiverComponent::TickReloading(float DT)
+{
+	LogMsgWithRole("EWeaponModes::Reloading");
+
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 void UWeaponReceiverComponent::RemoteTick(float DeltaTime)
 {
@@ -349,36 +388,6 @@ void UWeaponReceiverComponent::AuthTick(float DeltaTime)
 	//	}
 	//}
 }
-//
-//void UWeaponReceiverComponent::AuthFireStart()
-//{
-//	//LogMsgWithRole("ClientFireStart()");
-//	check(HasAuthority())
-//
-//	bHasActionedThisTriggerPull = true;
-//	bIsBusy = true;
-//	if (bUseClip) --AmmoInClip;
-//
-//	SpawnProjectiles();
-//
-//	Delegate->ShotFired();
-//	Delegate->AmmoInClipChanged(AmmoInClip);
-//
-//	GetWorld()->GetTimerManager().SetTimer(
-//		CurrentActionTimerHandle, this, &UWeaponReceiverComponent::AuthFireEnd, 1.f / ShotsPerSecond, false, -1);
-//}
-//void UWeaponReceiverComponent::AuthFireEnd()
-//{
-//	//LogMsgWithRole("ClientFireEnd()");
-//	check(HasAuthority())
-//
-//	bIsBusy = false;
-//
-//	if (CurrentActionTimerHandle.IsValid())
-//	{
-//		GetWorld()->GetTimerManager().ClearTimer(CurrentActionTimerHandle);
-//	}
-//}
 
 void UWeaponReceiverComponent::Draw()
 {

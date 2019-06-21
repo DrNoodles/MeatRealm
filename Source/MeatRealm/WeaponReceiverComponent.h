@@ -8,7 +8,8 @@
 UENUM()
 enum class EWeaponCommands : uint8
 {
-	FireStart, FireEnd
+	FireStart, FireEnd, 
+	ReloadStart, ReloadEnd,
 };
 
 UENUM()
@@ -147,8 +148,8 @@ private:
 	void AuthTick(float DeltaTime);
 
 
-	//UFUNCTION(Server, Reliable, WithValidation)
-	//	void ServerRPC_Reload();
+	UFUNCTION(Server, Reliable, WithValidation)
+		void ServerRPC_Reload();
 
 	UFUNCTION(Server, Reliable, WithValidation)
 		void ServerRPC_PullTrigger();
@@ -166,12 +167,11 @@ private:
 	// All the states!
 	void TickReady(float DT);
 	void TickFiring(float DT);
+	void TickReloading(float DT);
 
 	void SpawnProjectiles() const;
 	TArray<FVector> CalcShotPattern() const;
 
-	//void AuthFireStart();
-	//void AuthFireEnd();
 	void AuthHolsterStart();
 	//void AuthReloadStart();
 	//void AuthReloadEnd();
