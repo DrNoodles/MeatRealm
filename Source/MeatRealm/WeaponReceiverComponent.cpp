@@ -49,11 +49,11 @@ void UWeaponReceiverComponent::Input_Reload()
 }
 void UWeaponReceiverComponent::Input_AdsPressed()
 {
-	//ServerRPC_AdsPressed();
+	ServerRPC_AdsPressed();
 }
 void UWeaponReceiverComponent::Input_AdsReleased()
 {
-	//ServerRPC_AdsReleased();
+	ServerRPC_AdsReleased();
 }
 bool UWeaponReceiverComponent::TryGiveAmmo()
 {
@@ -105,25 +105,28 @@ bool UWeaponReceiverComponent::ServerRPC_Reload_Validate()
 	return true;
 }
 
-//void UWeaponReceiverComponent::ServerRPC_AdsPressed_Implementation()
-//{
-//	//LogMsgWithRole("UWeaponReceiverComponent::ServerRPC_AdsPressed_Implementation()");
-//	bAdsPressed = true;
-//}
-//bool UWeaponReceiverComponent::ServerRPC_AdsPressed_Validate()
-//{
-//	return true;
-//}
-//
-//void UWeaponReceiverComponent::ServerRPC_AdsReleased_Implementation()
-//{
-//	//LogMsgWithRole("UWeaponReceiverComponent::ServerRPC_AdsReleased_Implementation()");
-//	bAdsPressed = false;
-//}
-//bool UWeaponReceiverComponent::ServerRPC_AdsReleased_Validate()
-//{
-//	return true;
-//}
+void UWeaponReceiverComponent::ServerRPC_AdsPressed_Implementation()
+{
+	//LogMsgWithRole("UWeaponReceiverComponent::ServerRPC_AdsPressed_Implementation()");
+	InputState.AdsPressed = true;
+	//bAdsPressed = true;
+}
+bool UWeaponReceiverComponent::ServerRPC_AdsPressed_Validate()
+{
+	return true;
+}
+
+void UWeaponReceiverComponent::ServerRPC_AdsReleased_Implementation()
+{
+	InputState.AdsPressed = false;
+
+	//LogMsgWithRole("UWeaponReceiverComponent::ServerRPC_AdsReleased_Implementation()");
+	//bAdsPressed = false;
+}
+bool UWeaponReceiverComponent::ServerRPC_AdsReleased_Validate()
+{
+	return true;
+}
 
 
 
@@ -243,8 +246,6 @@ void UWeaponReceiverComponent::TickReady(float DT)
 	}
 
 
-
-
 	// Ready > Reloading
 	if (InputState.ReloadRequested)
 	{
@@ -256,11 +257,19 @@ void UWeaponReceiverComponent::TickReady(float DT)
 			WeaponState = ChangeState(EWeaponCommands::ReloadStart, WeaponState);
 		}
 	}
+
+	// Allow fluid enter/exit of ADS state
+	WeaponState.IsAdsing = InputState.AdsPressed;
 }
 
 void UWeaponReceiverComponent::TickFiring(float DT)
 {
 	LogMsgWithRole("EWeaponModes::Firing");
+
+
+	// Allow fluid enter/exit of ADS state
+	WeaponState.IsAdsing = InputState.AdsPressed;
+
 
 	// If busy, do nothing
 
@@ -333,11 +342,32 @@ void UWeaponReceiverComponent::TickReloading(float DT)
 {
 	LogMsgWithRole("EWeaponModes::Reloading");
 
+
+	//// Report reload progress for clients
+	//if (!HasAuthority() && bIsReloading)
+	//{
+	//	const auto ElapsedReloadTime = (FDateTime::Now() - ClientReloadStartTime).GetTotalSeconds();
+
+	//	// Update UI
+	//	ReloadProgress = ElapsedReloadTime / ReloadTime;
+	//	UE_LOG(LogTemp, Warning, TEXT("InProgress %f"), ReloadProgress);
+	//}
+
+
+
+
+
+
 	// If busy, do nothing
 
 	if (bIsBusy) return;
 
 	bIsReloading = true;
+
+	// Force Ads off while reloading
+	//WeaponState.IsAdsing = false;
+
+
 
 
 
@@ -531,22 +561,22 @@ void UWeaponReceiverComponent::AuthHolsterStart()
 
 void UWeaponReceiverComponent::OnRep_IsReloadingChanged()
 {
-	//if (bIsReloading)
-	//{
-	//	// Init reload
-	//	ClientReloadStartTime = FDateTime::Now();
+	if (bIsReloading)
+	{
+		// Init reload
+		ClientReloadStartTime = FDateTime::Now();
 
-	//	// Update UI
-	//	ReloadProgress = 0;
-	//}
-	//else
-	//{
-	//	// Finish reload
-	//	ReloadProgress = 100;
-	//}
+		// Update UI
+		ReloadProgress = 0;
+	}
+	else
+	{
+		// Finish reload
+		ReloadProgress = 100;
+	}
 
-	//Delegate->InReloadingChanged(bIsReloading);
-	//Delegate->OnReloadProgressChanged(ReloadProgress);
+	Delegate->InReloadingChanged(bIsReloading);
+	Delegate->OnReloadProgressChanged(ReloadProgress);
 }
 
 bool UWeaponReceiverComponent::CanReload() const
@@ -576,7 +606,7 @@ TArray<FVector> UWeaponReceiverComponent::CalcShotPattern() const
 	TArray<FVector> Shots;
 	
 	const float BarrelAngle = Delegate->GetBarrelDirection().HeadingAngle();
-	const float SpreadInRadians = FMath::DegreesToRadians(bAdsPressed ? AdsSpread :
+	const float SpreadInRadians = FMath::DegreesToRadians(WeaponState.IsAdsing ? AdsSpread :
 		HipfireSpread);
 
 	if (bEvenSpread && ProjectilesPerShot > 1)

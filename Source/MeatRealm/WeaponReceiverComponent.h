@@ -28,6 +28,7 @@ struct FWeaponState
 	int AmmoInPool = 0;
 	float ReloadProgress = 0; // For Reloading, ReloadingPaused states
 	bool HasFired = false; // For Firing state
+	bool IsAdsing = false;
 
 	FWeaponState Clone() const
 	{
@@ -37,6 +38,7 @@ struct FWeaponState
 		Clone.AmmoInPool = this->AmmoInPool;
 		Clone.ReloadProgress = this->ReloadProgress;
 		Clone.HasFired = this->HasFired;
+		Clone.IsAdsing = this->IsAdsing;
 		return Clone;
 	}
 };
@@ -157,11 +159,11 @@ private:
 	UFUNCTION(Server, Reliable, WithValidation)
 		void ServerRPC_ReleaseTrigger();
 
-	//UFUNCTION(Server, Reliable, WithValidation)
-	//	void ServerRPC_AdsPressed();
+	UFUNCTION(Server, Reliable, WithValidation)
+		void ServerRPC_AdsPressed();
 
-	//UFUNCTION(Server, Reliable, WithValidation)
-	//	void ServerRPC_AdsReleased();
+	UFUNCTION(Server, Reliable, WithValidation)
+		void ServerRPC_AdsReleased();
 
 	
 	// All the states!
@@ -173,8 +175,6 @@ private:
 	TArray<FVector> CalcShotPattern() const;
 
 	void AuthHolsterStart();
-	//void AuthReloadStart();
-	//void AuthReloadEnd();
 
 	bool CanReload() const;
 	bool NeedsReload() const;
@@ -288,12 +288,13 @@ private:
 
 	bool bTriggerPulled;
 	int ShotsFired; // Number of shots fired while in the Firing state
-/*
+	
+	/*
 	bool bReloadQueued;
-
 	bool bHolsterQueued;
-	bool bWasReloadingOnHolster;
-	FDateTime ClientReloadStartTime;*/
+	bool bWasReloadingOnHolster;*/
+
+	FDateTime ClientReloadStartTime;
 
 	bool bIsBusy;
 	FTimerHandle BusyTimerHandle;
