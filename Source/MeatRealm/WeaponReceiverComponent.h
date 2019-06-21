@@ -46,11 +46,11 @@ struct FWeaponInputState
 {
 	GENERATED_BODY()
 
-	bool Fire = false; // 0 nothing, 1, pressed, 2 held, 3 released
-	bool Ads = false; // 0 nothing, 1, pressed, 2 held, 3 released
-	bool Reload = false;
-	bool Holster = false;
-	bool Draw = false;
+	bool FirePressed = false; // 0 nothing, 1, pressed, 2 held, 3 released
+	bool AdsPressed = false; // 0 nothing, 1, pressed, 2 held, 3 released
+	bool ReloadRequested = false;
+	bool HolsterRequested = false;
+	bool DrawRequested = false;
 };
 //
 //class UCommandBase : public UObject

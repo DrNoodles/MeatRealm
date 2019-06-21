@@ -73,7 +73,7 @@ bool UWeaponReceiverComponent::TryGiveAmmo()
 
 void UWeaponReceiverComponent::ServerRPC_PullTrigger_Implementation()
 {
-	InputState.Fire = true;
+	InputState.FirePressed = true;
 	/*bTriggerPulled = true;
 	bHasActionedThisTriggerPull = false;*/
 }
@@ -84,7 +84,7 @@ bool UWeaponReceiverComponent::ServerRPC_PullTrigger_Validate()
 
 void UWeaponReceiverComponent::ServerRPC_ReleaseTrigger_Implementation()
 {
-	InputState.Fire = false;
+	InputState.FirePressed = false;
 
 	//bTriggerPulled = false;
 	//bHasActionedThisTriggerPull = false;
@@ -96,7 +96,7 @@ bool UWeaponReceiverComponent::ServerRPC_ReleaseTrigger_Validate()
 
 void UWeaponReceiverComponent::ServerRPC_Reload_Implementation()
 {
-	InputState.Reload = true;
+	InputState.ReloadRequested = true;
 	/*if (bTriggerPulled || !CanReload()) return;
 	bReloadQueued = true;*/
 }
@@ -157,6 +157,9 @@ void UWeaponReceiverComponent::TickComponent(float DeltaTime, ELevelTick TickTyp
 			break;
 
 		case EWeaponModes::Reloading:
+			TickReloading(DeltaTime);
+			break;
+
 		case EWeaponModes::None:
 		case EWeaponModes::Paused:
 		case EWeaponModes::ReloadingPaused:
@@ -227,14 +230,31 @@ FWeaponState UWeaponReceiverComponent::ChangeState(EWeaponCommands Cmd, const FW
 
 
 
+
 void UWeaponReceiverComponent::TickReady(float DT)
 {
 	LogMsgWithRole("EWeaponModes::Ready");
 
+
 	// Ready > Firing
-	if (InputState.Fire)
+	if (InputState.FirePressed)
 	{
 		WeaponState = ChangeState(EWeaponCommands::FireStart, WeaponState);
+	}
+
+
+
+
+	// Ready > Reloading
+	if (InputState.ReloadRequested)
+	{
+		// Only process for one frame as we dont have a release
+		InputState.ReloadRequested = false;
+
+		if (CanReload())
+		{
+			WeaponState = ChangeState(EWeaponCommands::ReloadStart, WeaponState);
+		}
 	}
 }
 
@@ -250,7 +270,7 @@ void UWeaponReceiverComponent::TickFiring(float DT)
 
 	// Process Input
 
-	if (!InputState.Fire)
+	if (!InputState.FirePressed)
 	{  // Firing > Ready
 		WeaponState = ChangeState(EWeaponCommands::FireEnd, WeaponState);
 
@@ -313,16 +333,36 @@ void UWeaponReceiverComponent::TickReloading(float DT)
 {
 	LogMsgWithRole("EWeaponModes::Reloading");
 
+	// If busy, do nothing
+
+	if (bIsBusy) return;
+
+	bIsReloading = true;
+
+
+
+	// Set busy timer
+
+	auto DoReloadEnd = [&]
+	{
+		bIsReloading = false;
+		bIsBusy = false;
+		if (BusyTimerHandle.IsValid()) GetWorld()->GetTimerManager().ClearTimer(BusyTimerHandle);
+
+		// Take ammo from pool
+		const int AmmoNeeded = ClipSize - AmmoInClip;
+		const int AmmoReceived = (AmmoNeeded > AmmoInPool) ? AmmoInPool : AmmoNeeded;
+		AmmoInPool -= AmmoReceived;
+		AmmoInClip += AmmoReceived;
+
+
+		WeaponState = ChangeState(EWeaponCommands::ReloadEnd, WeaponState);
+	};
+
+
+	bIsBusy = true;
+	GetWorld()->GetTimerManager().SetTimer(BusyTimerHandle, DoReloadEnd, ReloadTime, false);
 }
-
-
-
-
-
-
-
-
-
 
 
 
@@ -488,40 +528,6 @@ void UWeaponReceiverComponent::AuthHolsterStart()
 	//bHasActionedThisTriggerPull = false;
 }
 
-//void UWeaponReceiverComponent::AuthReloadStart()
-//{
-//	//LogMsgWithRole("ClientReloadStart()");
-//	check(HasAuthority())
-//
-//		if (!bUseClip) return;
-//
-//	bIsReloading = true;
-//	bCanAction = false;
-//	bHasActionedThisTriggerPull = true;
-//
-//	GetWorld()->GetTimerManager().SetTimer(
-//		CurrentActionTimerHandle, this, &UWeaponReceiverComponent::AuthReloadEnd, ReloadTime, false, -1);
-//}
-//void UWeaponReceiverComponent::AuthReloadEnd()
-//{
-//	//LogMsgWithRole("ClientReloadEnd()");
-//	check(HasAuthority())
-//
-//		bIsReloading = false;
-//	bCanAction = true;
-//	bReloadQueued = false;
-//
-//	// Take ammo from pool
-//	const int AmmoNeeded = ClipSize - AmmoInClip;
-//	const int AmmoReceived = (AmmoNeeded > AmmoInPool) ? AmmoInPool : AmmoNeeded;
-//	AmmoInPool -= AmmoReceived;
-//	AmmoInClip += AmmoReceived;
-//
-//	if (CurrentActionTimerHandle.IsValid())
-//	{
-//		GetWorld()->GetTimerManager().ClearTimer(CurrentActionTimerHandle);
-//	}
-//}
 
 void UWeaponReceiverComponent::OnRep_IsReloadingChanged()
 {
