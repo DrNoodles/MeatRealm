@@ -143,6 +143,8 @@ void UWeaponReceiverComponent::TickComponent(float DeltaTime, ELevelTick TickTyp
 
 	//FCommandBase* Command = nullptr;
 
+	// TODO These ticks might only do 1 operation per tick. Maybe return a bool from each TickFunction if a state was changed so we can reprocess it right away?
+
 	switch (WeaponState.Mode) 
 	{ 
 		case EWeaponModes::Ready: 
@@ -172,9 +174,9 @@ void UWeaponReceiverComponent::TickComponent(float DeltaTime, ELevelTick TickTyp
 	//}
 }
 
-FWeaponState UWeaponReceiverComponent::ApplyCommand(EWeaponCommands Cmd, const FWeaponState& InState)
+FWeaponState UWeaponReceiverComponent::ChangeState(EWeaponCommands Cmd, const FWeaponState& InState)
 {
-	//LogMsgWithRole(FString::Printf(TEXT("ApplyCommand(Cmd:%d)"), Cmd));
+	LogMsgWithRole(FString::Printf(TEXT("UWeaponReceiverComponent::ChangeState(Cmd:%d)"), Cmd));
 	FWeaponState OutState = InState.Clone();
 
 	switch (Cmd) 
@@ -202,6 +204,8 @@ FWeaponState UWeaponReceiverComponent::ApplyCommand(EWeaponCommands Cmd, const F
 	return OutState;
 }
 
+
+
 void UWeaponReceiverComponent::TickReady(float DT)
 {
 	LogMsgWithRole("EWeaponModes::Ready");
@@ -209,7 +213,7 @@ void UWeaponReceiverComponent::TickReady(float DT)
 	// Ready > Firing
 	if (InputState.Fire)
 	{
-		WeaponState = ApplyCommand(EWeaponCommands::FireStart, WeaponState);
+		WeaponState = ChangeState(EWeaponCommands::FireStart, WeaponState);
 	}
 }
 
@@ -217,22 +221,77 @@ void UWeaponReceiverComponent::TickFiring(float DT)
 {
 	LogMsgWithRole("EWeaponModes::Firing");
 
+	// If busy, do nothing
 
-	// If mid action, do nothing
+	if (bIsBusy) return;
 
 
 
-	// Firing > Ready
+	// Process Input
+
 	if (!InputState.Fire)
-	{
-		WeaponState = ApplyCommand(EWeaponCommands::FireEnd, WeaponState);
+	{  // Firing > Ready
+		WeaponState = ChangeState(EWeaponCommands::FireEnd, WeaponState);
+
+		ShotsFired = 0;
+		return;
 	}
+
+
+	// If using clip and it's empty, transition to reload
+
+
+	// Can we fire?
+
+	const auto bHasAmmoReady = bUseClip ? AmmoInClip > 0 : AmmoInPool > 0;
+	const auto bReceiverCanCycle = bFullAuto || ShotsFired == 0;
+	const bool bCanShoot = bHasAmmoReady && bReceiverCanCycle;
+	if (!bCanShoot)
+	{
+		return;
+	}
+
+
+	// Subtract some ammo
+
+	if (bUseClip)
+		--AmmoInClip;
+	else
+		--AmmoInPool;
+
+
+	// Fire the shot(s)!
+
+	ShotsFired++;
+	SpawnProjectiles();
+
+
+	// Set busy timer
+
+	auto DoFireEnd = [&]
+	{
+		bIsBusy = false;
+		if (BusyTimerHandle.IsValid()) GetWorld()->GetTimerManager().ClearTimer(BusyTimerHandle);
+	};
+
+	bIsBusy = true;
+	GetWorld()->GetTimerManager().SetTimer(BusyTimerHandle, DoFireEnd, 1.f / ShotsPerSecond, false);
+
+
+	// Notify changes
+
+	Delegate->ShotFired();
+
+	if (bUseClip)
+		Delegate->AmmoInClipChanged(AmmoInClip);
+	else
+		Delegate->AmmoInPoolChanged(AmmoInPool);
 }
 
 
 void UWeaponReceiverComponent::RemoteTick(float DeltaTime)
 {
-	check(!HasAuthority())
+	//check(!HasAuthority())
 
 		//if (bIsReloading)
 		//{
@@ -290,36 +349,36 @@ void UWeaponReceiverComponent::AuthTick(float DeltaTime)
 	//	}
 	//}
 }
-
-void UWeaponReceiverComponent::AuthFireStart()
-{
-	//LogMsgWithRole("ClientFireStart()");
-	check(HasAuthority())
-
-		bHasActionedThisTriggerPull = true;
-	bCanAction = false;
-	if (bUseClip) --AmmoInClip;
-
-	SpawnProjectiles();
-
-	Delegate->ShotFired();
-	Delegate->AmmoInClipChanged(AmmoInClip);
-
-	GetWorld()->GetTimerManager().SetTimer(
-		CurrentActionTimerHandle, this, &UWeaponReceiverComponent::AuthFireEnd, 1.f / ShotsPerSecond, false, -1);
-}
-void UWeaponReceiverComponent::AuthFireEnd()
-{
-	//LogMsgWithRole("ClientFireEnd()");
-	check(HasAuthority())
-
-	bCanAction = true;
-
-	if (CurrentActionTimerHandle.IsValid())
-	{
-		GetWorld()->GetTimerManager().ClearTimer(CurrentActionTimerHandle);
-	}
-}
+//
+//void UWeaponReceiverComponent::AuthFireStart()
+//{
+//	//LogMsgWithRole("ClientFireStart()");
+//	check(HasAuthority())
+//
+//	bHasActionedThisTriggerPull = true;
+//	bIsBusy = true;
+//	if (bUseClip) --AmmoInClip;
+//
+//	SpawnProjectiles();
+//
+//	Delegate->ShotFired();
+//	Delegate->AmmoInClipChanged(AmmoInClip);
+//
+//	GetWorld()->GetTimerManager().SetTimer(
+//		CurrentActionTimerHandle, this, &UWeaponReceiverComponent::AuthFireEnd, 1.f / ShotsPerSecond, false, -1);
+//}
+//void UWeaponReceiverComponent::AuthFireEnd()
+//{
+//	//LogMsgWithRole("ClientFireEnd()");
+//	check(HasAuthority())
+//
+//	bIsBusy = false;
+//
+//	if (CurrentActionTimerHandle.IsValid())
+//	{
+//		GetWorld()->GetTimerManager().ClearTimer(CurrentActionTimerHandle);
+//	}
+//}
 
 void UWeaponReceiverComponent::Draw()
 {
@@ -332,10 +391,11 @@ void UWeaponReceiverComponent::Draw()
 
 	// NEW HERE
 
-	if (CurrentActionTimerHandle.IsValid())
+	if (BusyTimerHandle.IsValid())
 	{
-		GetWorld()->GetTimerManager().ClearTimer(CurrentActionTimerHandle);
+		GetWorld()->GetTimerManager().ClearTimer(BusyTimerHandle);
 	}
+	bIsBusy = false;
 
 	InputState = FWeaponInputState{};
 	WeaponState.ReloadProgress = false;
@@ -384,9 +444,9 @@ void UWeaponReceiverComponent::AuthHolsterStart()
 
 	// NEW HERE
 
-	if (CurrentActionTimerHandle.IsValid())
+	if (BusyTimerHandle.IsValid())
 	{
-		GetWorld()->GetTimerManager().ClearTimer(CurrentActionTimerHandle);
+		GetWorld()->GetTimerManager().ClearTimer(BusyTimerHandle);
 	}
 
 

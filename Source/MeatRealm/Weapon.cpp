@@ -135,6 +135,10 @@ void AWeapon::AmmoInClipChanged(int AmmoInClip)
 void AWeapon::AmmoInPoolChanged(int AmmoInPool)
 {
 	LogMsgWithRole(FString::Printf(TEXT("AWeapon::AmmoInPoolChanged(%d)"), AmmoInPool));
+	if (AmmoInPool == 0)
+	{
+		ClientRPC_NotifyOnAmmoWarning();
+	}
 }
 void AWeapon::InReloadingChanged(bool IsReloading)
 {

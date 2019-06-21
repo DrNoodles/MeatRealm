@@ -142,7 +142,7 @@ private:
 	bool HasAuthority() const { return GetOwnerRole() == ROLE_Authority; }
 	virtual void BeginPlay() override;
 	virtual void TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction) override;
-	FWeaponState ApplyCommand(EWeaponCommands Cmd, const FWeaponState& InState);
+	FWeaponState ChangeState(EWeaponCommands Cmd, const FWeaponState& InState);
 	void RemoteTick(float DeltaTime);
 	void AuthTick(float DeltaTime);
 
@@ -170,8 +170,8 @@ private:
 	void SpawnProjectiles() const;
 	TArray<FVector> CalcShotPattern() const;
 
-	void AuthFireStart();
-	void AuthFireEnd();
+	//void AuthFireStart();
+	//void AuthFireEnd();
 	void AuthHolsterStart();
 	//void AuthReloadStart();
 	//void AuthReloadEnd();
@@ -286,14 +286,15 @@ private:
 
 	IReceiverComponentDelegate* Delegate = nullptr;
 
-	bool bCanAction;
 	bool bTriggerPulled;
-	bool bHasActionedThisTriggerPull;
+	int ShotsFired; // Number of shots fired while in the Firing state
 /*
 	bool bReloadQueued;
 
 	bool bHolsterQueued;
 	bool bWasReloadingOnHolster;
 	FDateTime ClientReloadStartTime;*/
-	FTimerHandle CurrentActionTimerHandle;
+
+	bool bIsBusy;
+	FTimerHandle BusyTimerHandle;
 };
