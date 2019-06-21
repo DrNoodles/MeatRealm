@@ -69,6 +69,7 @@ bool UWeaponReceiverComponent::TryGiveAmmo()
 void UWeaponReceiverComponent::ServerRPC_PullTrigger_Implementation()
 {
 	InputState.FirePressed = true;
+	ShotsFiredThisTriggerPull = 0;
 	/*bTriggerPulled = true;
 	bHasActionedThisTriggerPull = false;*/
 }
@@ -80,6 +81,7 @@ bool UWeaponReceiverComponent::ServerRPC_PullTrigger_Validate()
 void UWeaponReceiverComponent::ServerRPC_ReleaseTrigger_Implementation()
 {
 	InputState.FirePressed = false;
+	ShotsFiredThisTriggerPull = 0;
 
 	//bTriggerPulled = false;
 	//bHasActionedThisTriggerPull = false;
@@ -216,25 +218,35 @@ void UWeaponReceiverComponent::TickFiring(float DT)
 
 
 
+
+
+
 	// Process Input
 
 	if (!InputState.FirePressed)
 	{  // Firing > Ready
 		WeaponState = ChangeState(EWeaponCommands::FireEnd, WeaponState);
 
-		ShotsFired = 0;
+	//	ShotsFired = 0;
 		return;
 	}
 
 
-	// If using clip and it's empty, transition to reload
 
 
-	// Can we fire?
 
+
+	// Can we fire/reload or do nothing
+
+	const auto bReceiverCanCycle = bFullAuto || ShotsFiredThisTriggerPull == 0;
+	if (bReceiverCanCycle && NeedsReload() && CanReload())
+	{
+		// Reload instead
+		WeaponState = ChangeState(EWeaponCommands::ReloadStart, WeaponState);
+		return;
+	}
 	const auto bHasAmmoReady = bUseClip ? WeaponState.AmmoInClip > 0 : WeaponState.AmmoInPool > 0;
-	const auto bReceiverCanCycle = bFullAuto || ShotsFired == 0;
-	const bool bCanShoot = bHasAmmoReady && bReceiverCanCycle;
+	const auto bCanShoot = bHasAmmoReady && bReceiverCanCycle;
 	if (!bCanShoot)
 	{
 		return;
@@ -251,7 +263,7 @@ void UWeaponReceiverComponent::TickFiring(float DT)
 
 	// Fire the shot(s)!
 
-	ShotsFired++;
+	ShotsFiredThisTriggerPull++;
 	SpawnProjectiles();
 
 
@@ -282,35 +294,37 @@ void UWeaponReceiverComponent::TickReloading(float DT)
 	//LogMsgWithRole("EWeaponModes::Reloading");
 
 
-
+	// Track reload progress
 
 	if (bIsMidReload)
 	{
-		// Track reload progress
-
 		const auto ElapsedReloadTime = (FDateTime::Now() - ReloadStartTime).GetTotalSeconds();
 		WeaponState.ReloadProgress = ElapsedReloadTime / ReloadTime;
-		
 		UE_LOG(LogTemp, Warning, TEXT("InProgress %f"), WeaponState.ReloadProgress);
 	}
-
-
 
 
 	// If busy, do nothing
 
 	if (bIsBusy) return;
 
-	
 
-	// Force Ads off while reloading
-	//WeaponState.IsAdsing = false;
+
+	if (!CanReload())
+	{
+		WeaponState = ChangeState(EWeaponCommands::ReloadEnd, WeaponState);
+	}
+
+
+
+
 
 	// Start Reloading!
+
 	bIsMidReload = true;
 	WeaponState.ReloadProgress = 0;
 	ReloadStartTime = FDateTime::Now();
-
+	WeaponState.IsAdsing = false;
 
 
 	// Set busy timer
@@ -328,7 +342,6 @@ void UWeaponReceiverComponent::TickReloading(float DT)
 		const int AmmoReceived = (AmmoNeeded > WeaponState.AmmoInPool) ? WeaponState.AmmoInPool : AmmoNeeded;
 		WeaponState.AmmoInPool -= AmmoReceived;
 		WeaponState.AmmoInClip += AmmoReceived;
-
 
 		WeaponState = ChangeState(EWeaponCommands::ReloadEnd, WeaponState);
 	};
@@ -359,7 +372,7 @@ FWeaponState UWeaponReceiverComponent::ChangeState(EWeaponCommands Cmd, const FW
 	}
 
 	if (Cmd == EWeaponCommands::ReloadStart) {
-		ensure(InState.Mode == EWeaponModes::Ready);
+		ensure(InState.Mode == EWeaponModes::Ready|| InState.Mode == EWeaponModes::Firing);
 		OutState.Mode = EWeaponModes::Reloading;
 		LastCommand = Cmd;
 	}

@@ -313,7 +313,7 @@ private:
 
 	IReceiverComponentDelegate* Delegate = nullptr;
 
-	int ShotsFired; // Number of shots fired while in the Firing state
+	int ShotsFiredThisTriggerPull; // Number of shots since pulling the trigger
 	
 	/*
 	bool bReloadQueued;
