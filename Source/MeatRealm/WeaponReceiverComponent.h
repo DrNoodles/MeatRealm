@@ -10,6 +10,7 @@ enum class EWeaponCommands : uint8
 {
 	FireStart, FireEnd, 
 	ReloadStart, ReloadEnd,
+	DrawWeapon, HolsterWeapon
 };
 
 inline FString EWeaponCommandsStr(const EWeaponCommands Cmd)
@@ -20,6 +21,8 @@ inline FString EWeaponCommandsStr(const EWeaponCommands Cmd)
 		case EWeaponCommands::FireEnd: return "FireEnd";
 		case EWeaponCommands::ReloadStart: return "ReloadStart";
 		case EWeaponCommands::ReloadEnd: return "ReloadEnd";
+		case EWeaponCommands::DrawWeapon: return "DrawWeapon";
+		case EWeaponCommands::HolsterWeapon: return "HolsterWeapon";
 		default: return "Unknown";
 	}
 }
@@ -168,8 +171,8 @@ class MEATREALM_API UWeaponReceiverComponent : public UActorComponent
 public:	
 	UWeaponReceiverComponent();
 	void SetDelegate(IReceiverComponentDelegate* TheDelegate) { Delegate = TheDelegate; }
-	void Draw();
-	void QueueHolster();
+	void Resume();
+	void Pause();
 	void Input_PullTrigger();
 	void Input_ReleaseTrigger();
 	void Input_Reload();
@@ -206,6 +209,7 @@ private:
 	
 	// All the states!
 	void TickReady(float DT);
+	void TickPaused(float DeltaTime);
 	void TickFiring(float DT);
 	void TickReloading(float DT);
 

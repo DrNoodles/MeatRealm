@@ -47,12 +47,12 @@ AWeapon::AWeapon()
 
 void AWeapon::Draw()
 {
-	ReceiverComp->Draw();
+	ReceiverComp->Resume();
 }
 
 void AWeapon::QueueHolster()
 {
-	ReceiverComp->QueueHolster();
+	ReceiverComp->Pause();
 }
 
 //
