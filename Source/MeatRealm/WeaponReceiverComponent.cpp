@@ -45,15 +45,15 @@ void UWeaponReceiverComponent::Input_ReleaseTrigger()
 }
 void UWeaponReceiverComponent::Input_Reload()
 {
-	ServerRPC_Reload();
+	//ServerRPC_Reload();
 }
 void UWeaponReceiverComponent::Input_AdsPressed()
 {
-	ServerRPC_AdsPressed();
+	//ServerRPC_AdsPressed();
 }
 void UWeaponReceiverComponent::Input_AdsReleased()
 {
-	ServerRPC_AdsReleased();
+	//ServerRPC_AdsReleased();
 }
 bool UWeaponReceiverComponent::TryGiveAmmo()
 {
@@ -73,8 +73,9 @@ bool UWeaponReceiverComponent::TryGiveAmmo()
 
 void UWeaponReceiverComponent::ServerRPC_PullTrigger_Implementation()
 {
-	bTriggerPulled = true;
-	bHasActionedThisTriggerPull = false;
+	InputState.Fire = true;
+	/*bTriggerPulled = true;
+	bHasActionedThisTriggerPull = false;*/
 }
 bool UWeaponReceiverComponent::ServerRPC_PullTrigger_Validate()
 {
@@ -83,43 +84,45 @@ bool UWeaponReceiverComponent::ServerRPC_PullTrigger_Validate()
 
 void UWeaponReceiverComponent::ServerRPC_ReleaseTrigger_Implementation()
 {
-	bTriggerPulled = false;
-	bHasActionedThisTriggerPull = false;
+	InputState.Fire = false;
+
+	//bTriggerPulled = false;
+	//bHasActionedThisTriggerPull = false;
 }
 bool UWeaponReceiverComponent::ServerRPC_ReleaseTrigger_Validate()
 {
 	return true;
 }
-
-void UWeaponReceiverComponent::ServerRPC_Reload_Implementation()
-{
-	if (bTriggerPulled || !CanReload()) return;
-	bReloadQueued = true;
-}
-bool UWeaponReceiverComponent::ServerRPC_Reload_Validate()
-{
-	return true;
-}
-
-void UWeaponReceiverComponent::ServerRPC_AdsPressed_Implementation()
-{
-	//LogMsgWithRole("UWeaponReceiverComponent::ServerRPC_AdsPressed_Implementation()");
-	bAdsPressed = true;
-}
-bool UWeaponReceiverComponent::ServerRPC_AdsPressed_Validate()
-{
-	return true;
-}
-
-void UWeaponReceiverComponent::ServerRPC_AdsReleased_Implementation()
-{
-	//LogMsgWithRole("UWeaponReceiverComponent::ServerRPC_AdsReleased_Implementation()");
-	bAdsPressed = false;
-}
-bool UWeaponReceiverComponent::ServerRPC_AdsReleased_Validate()
-{
-	return true;
-}
+//
+//void UWeaponReceiverComponent::ServerRPC_Reload_Implementation()
+//{
+//	if (bTriggerPulled || !CanReload()) return;
+//	bReloadQueued = true;
+//}
+//bool UWeaponReceiverComponent::ServerRPC_Reload_Validate()
+//{
+//	return true;
+//}
+//
+//void UWeaponReceiverComponent::ServerRPC_AdsPressed_Implementation()
+//{
+//	//LogMsgWithRole("UWeaponReceiverComponent::ServerRPC_AdsPressed_Implementation()");
+//	bAdsPressed = true;
+//}
+//bool UWeaponReceiverComponent::ServerRPC_AdsPressed_Validate()
+//{
+//	return true;
+//}
+//
+//void UWeaponReceiverComponent::ServerRPC_AdsReleased_Implementation()
+//{
+//	//LogMsgWithRole("UWeaponReceiverComponent::ServerRPC_AdsReleased_Implementation()");
+//	bAdsPressed = false;
+//}
+//bool UWeaponReceiverComponent::ServerRPC_AdsReleased_Validate()
+//{
+//	return true;
+//}
 
 
 
@@ -132,77 +135,160 @@ void UWeaponReceiverComponent::TickComponent(float DeltaTime, ELevelTick TickTyp
 {
 	Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
 
-	if (HasAuthority())
-	{
-		AuthTick(DeltaTime);
+
+	if (!HasAuthority()) return;
+
+	// TODO 
+
+
+	//FCommandBase* Command = nullptr;
+
+	switch (WeaponState.Mode) 
+	{ 
+		case EWeaponModes::Ready: 
+			TickReady(DeltaTime);
+			break;
+		
+		case EWeaponModes::Firing:
+			TickFiring(DeltaTime);
+			break;
+
+		case EWeaponModes::Reloading:
+		case EWeaponModes::None:
+		case EWeaponModes::Paused:
+		case EWeaponModes::ReloadingPaused:
+		default: 
+			LogMsgWithRole(FString::Printf(TEXT("TickComponent() - WeaponMode unimplemented %d"), WeaponState.Mode));
 	}
-	else
+
+
+	//if (HasAuthority())
+	//{
+	//	AuthTick(DeltaTime);
+	//}
+	//else
+	//{
+	//	RemoteTick(DeltaTime);
+	//}
+}
+
+FWeaponState UWeaponReceiverComponent::ApplyCommand(EWeaponCommands Cmd, const FWeaponState& InState)
+{
+	//LogMsgWithRole(FString::Printf(TEXT("ApplyCommand(Cmd:%d)"), Cmd));
+	FWeaponState OutState = InState.Clone();
+
+	switch (Cmd) 
+	{ 
+		case EWeaponCommands::FireStart:
+		{
+			// Enforce Ready > Fire
+			if (InState.Mode != EWeaponModes::Ready) return InState;
+			LastCommand = Cmd;
+			OutState.Mode = EWeaponModes::Firing;
+		}
+		break;
+
+
+		case EWeaponCommands::FireEnd:
+		{
+			// Enforce Firing > Ready
+			if (InState.Mode != EWeaponModes::Firing) return InState;
+			LastCommand = Cmd;
+			OutState.Mode = EWeaponModes::Ready;
+		}
+		break;
+	}
+
+	return OutState;
+}
+
+void UWeaponReceiverComponent::TickReady(float DT)
+{
+	LogMsgWithRole("EWeaponModes::Ready");
+
+	// Ready > Firing
+	if (InputState.Fire)
 	{
-		RemoteTick(DeltaTime);
+		WeaponState = ApplyCommand(EWeaponCommands::FireStart, WeaponState);
 	}
 }
 
+void UWeaponReceiverComponent::TickFiring(float DT)
+{
+	LogMsgWithRole("EWeaponModes::Firing");
+
+
+	// If mid action, do nothing
+
+
+
+	// Firing > Ready
+	if (!InputState.Fire)
+	{
+		WeaponState = ApplyCommand(EWeaponCommands::FireEnd, WeaponState);
+	}
+}
 
 
 void UWeaponReceiverComponent::RemoteTick(float DeltaTime)
 {
 	check(!HasAuthority())
 
-		if (bIsReloading)
-		{
-			const auto ElapsedReloadTime = (FDateTime::Now() - ClientReloadStartTime).GetTotalSeconds();
+		//if (bIsReloading)
+		//{
+		//	const auto ElapsedReloadTime = (FDateTime::Now() - ClientReloadStartTime).GetTotalSeconds();
 
-			// Update UI
-			ReloadProgress = ElapsedReloadTime / ReloadTime;
-			UE_LOG(LogTemp, Warning, TEXT("InProgress %f"), ReloadProgress);
-		}
+		//	// Update UI
+		//	ReloadProgress = ElapsedReloadTime / ReloadTime;
+		//	UE_LOG(LogTemp, Warning, TEXT("InProgress %f"), ReloadProgress);
+		//}
 
-	// Draw ADS line for self or others
-	if (bAdsPressed)
-	{
-		LogMsgWithRole("bAdsPressed");
-		const auto Color = GetOwnerOwnerLocalRole() == ROLE_AutonomousProxy ? AdsLineColor : EnemyAdsLineColor;
-		const auto Length = GetOwnerOwnerLocalRole() == ROLE_AutonomousProxy ? AdsLineLength : EnemyAdsLineLength;
-		DrawAdsLine(Color, Length);
-	}
+	//// Draw ADS line for self or others
+	//if (bAdsPressed)
+	//{
+	//	LogMsgWithRole("bAdsPressed");
+	//	const auto Color = GetOwnerOwnerLocalRole() == ROLE_AutonomousProxy ? AdsLineColor : EnemyAdsLineColor;
+	//	const auto Length = GetOwnerOwnerLocalRole() == ROLE_AutonomousProxy ? AdsLineLength : EnemyAdsLineLength;
+	//	DrawAdsLine(Color, Length);
+	//}
 }
 void UWeaponReceiverComponent::AuthTick(float DeltaTime)
 {
-	check(HasAuthority())
+	//check(HasAuthority())
 
-		// If a holster is queued, wait for can action unless the action we're in is a reload
-		if (bHolsterQueued && (bCanAction || bIsReloading))
-		{
-			AuthHolsterStart();
-			return;
-		}
+	//	// If a holster is queued, wait for can action unless the action we're in is a reload
+	//	if (bHolsterQueued && (bCanAction || bIsReloading))
+	//	{
+	//		AuthHolsterStart();
+	//		return;
+	//	}
 
-	if (!bCanAction) return;
-
-
-	// Reload!
-	if (bReloadQueued && CanReload())
-	{
-		AuthReloadStart();
-		return;
-	}
+	//if (!bCanAction) return;
 
 
-	// Fire!
+	//// Reload!
+	//if (bReloadQueued && CanReload())
+	//{
+	//	AuthReloadStart();
+	//	return;
+	//}
 
-	// Behaviour: Holding the trigger on an auto gun will auto reload then auto resume firing. Whereas a semiauto requires a new trigger pull to reload and then a new trigger pull to fire again.
-	const auto bWeaponCanCycle = bFullAuto || !bHasActionedThisTriggerPull;
-	if (bTriggerPulled && bWeaponCanCycle)
-	{
-		if (NeedsReload() && CanReload())
-		{
-			AuthReloadStart();
-		}
-		else if (AmmoInClip > 0)
-		{
-			AuthFireStart();
-		}
-	}
+
+	//// Fire!
+
+	//// Behaviour: Holding the trigger on an auto gun will auto reload then auto resume firing. Whereas a semiauto requires a new trigger pull to reload and then a new trigger pull to fire again.
+	//const auto bWeaponCanCycle = bFullAuto || !bHasActionedThisTriggerPull;
+	//if (bTriggerPulled && bWeaponCanCycle)
+	//{
+	//	if (NeedsReload() && CanReload())
+	//	{
+	//		AuthReloadStart();
+	//	}
+	//	else if (AmmoInClip > 0)
+	//	{
+	//		AuthFireStart();
+	//	}
+	//}
 }
 
 void UWeaponReceiverComponent::AuthFireStart()
@@ -220,7 +306,7 @@ void UWeaponReceiverComponent::AuthFireStart()
 	Delegate->AmmoInClipChanged(AmmoInClip);
 
 	GetWorld()->GetTimerManager().SetTimer(
-		CanActionTimerHandle, this, &UWeaponReceiverComponent::AuthFireEnd, 1.f / ShotsPerSecond, false, -1);
+		CurrentActionTimerHandle, this, &UWeaponReceiverComponent::AuthFireEnd, 1.f / ShotsPerSecond, false, -1);
 }
 void UWeaponReceiverComponent::AuthFireEnd()
 {
@@ -229,119 +315,163 @@ void UWeaponReceiverComponent::AuthFireEnd()
 
 	bCanAction = true;
 
-	if (CanActionTimerHandle.IsValid())
+	if (CurrentActionTimerHandle.IsValid())
 	{
-		GetWorld()->GetTimerManager().ClearTimer(CanActionTimerHandle);
+		GetWorld()->GetTimerManager().ClearTimer(CurrentActionTimerHandle);
 	}
 }
 
 void UWeaponReceiverComponent::Draw()
 {
 	check(HasAuthority());
+
 	//LogMsgWithRole(FString::Printf(TEXT("UWeaponReceiverComponent::Draw() %s"), *WeaponName));
 
-	// Clear any timer
-	if (CanActionTimerHandle.IsValid())
+
+
+
+	// NEW HERE
+
+	if (CurrentActionTimerHandle.IsValid())
 	{
-		GetWorld()->GetTimerManager().ClearTimer(CanActionTimerHandle);
+		GetWorld()->GetTimerManager().ClearTimer(CurrentActionTimerHandle);
 	}
 
-	// Reset state to defaults
-	bHolsterQueued = false;
-	bAdsPressed = false;
-	bTriggerPulled = false;
-	bHasActionedThisTriggerPull = false;
+	InputState = FWeaponInputState{};
+	WeaponState.ReloadProgress = false;
+	WeaponState.HasFired = false;
+	WeaponState.Mode = EWeaponModes::Ready;
+	// TODO Enable ticking (if disabled on holster)?
 
-	// Queue reload if it was mid reload on holster
-	bReloadQueued = bWasReloadingOnHolster;
-	bWasReloadingOnHolster = false;
 
-	// Ready to roll!
-	bCanAction = true;
+
+	// OLD BELOW
+
+
+	//// Clear any timer
+	//if (CurrentActionTimerHandle.IsValid())
+	//{
+	//	GetWorld()->GetTimerManager().ClearTimer(CurrentActionTimerHandle);
+	//}
+
+	//// Reset state to defaults
+
+	//
+	//bHolsterQueued = false;
+	//bAdsPressed = false;
+	//bTriggerPulled = false;
+	//bHasActionedThisTriggerPull = false;
+
+	//// Queue reload if it was mid reload on holster
+	//bReloadQueued = bWasReloadingOnHolster;
+	//bWasReloadingOnHolster = false;
+
+	//// Ready to roll!
+	//bCanAction = true;
+
 }
 void UWeaponReceiverComponent::QueueHolster()
 {
 	check(HasAuthority());
 	//LogMsgWithRole(FString::Printf(TEXT("UWeaponReceiverComponent::Holster() %s"), *WeaponName));
-	bHolsterQueued = true;
+	//bHolsterQueued = true;
 }
 void UWeaponReceiverComponent::AuthHolsterStart()
 {
 	check(HasAuthority())
-		//LogMsgWithRole("UWeaponReceiverComponent::AuthHolsterStart()");
+	//LogMsgWithRole("UWeaponReceiverComponent::AuthHolsterStart()");
 
 
-	// Kill any timer running
-	if (CanActionTimerHandle.IsValid())
+	// NEW HERE
+
+	if (CurrentActionTimerHandle.IsValid())
 	{
-		GetWorld()->GetTimerManager().ClearTimer(CanActionTimerHandle);
+		GetWorld()->GetTimerManager().ClearTimer(CurrentActionTimerHandle);
 	}
 
-	// Pause reload
-	bWasReloadingOnHolster = bIsReloading;
-	bIsReloading = false;
 
-	// Reset state to defaults
-	bHolsterQueued = false;
-	bCanAction = false;
-	bAdsPressed = false;
-	bTriggerPulled = false;
-	bHasActionedThisTriggerPull = false;
+	InputState = FWeaponInputState{};
+	WeaponState.ReloadProgress = false;
+	WeaponState.HasFired = false;
+	WeaponState.Mode = EWeaponModes::None;
+	// TODO Disable ticking?
+
+
+
+	// OLD BELOW
+	
+
+	//// Kill any timer running
+	//if (CurrentActionTimerHandle.IsValid())
+	//{
+	//	GetWorld()->GetTimerManager().ClearTimer(CurrentActionTimerHandle);
+	//}
+
+	//// Pause reload
+	//bWasReloadingOnHolster = bIsReloading;
+	//bIsReloading = false;
+
+	//// Reset state to defaults
+	//bHolsterQueued = false;
+	//bCanAction = false;
+	//bAdsPressed = false;
+	//bTriggerPulled = false;
+	//bHasActionedThisTriggerPull = false;
 }
 
-void UWeaponReceiverComponent::AuthReloadStart()
-{
-	//LogMsgWithRole("ClientReloadStart()");
-	check(HasAuthority())
-
-		if (!bUseClip) return;
-
-	bIsReloading = true;
-	bCanAction = false;
-	bHasActionedThisTriggerPull = true;
-
-	GetWorld()->GetTimerManager().SetTimer(
-		CanActionTimerHandle, this, &UWeaponReceiverComponent::AuthReloadEnd, ReloadTime, false, -1);
-}
-void UWeaponReceiverComponent::AuthReloadEnd()
-{
-	//LogMsgWithRole("ClientReloadEnd()");
-	check(HasAuthority())
-
-		bIsReloading = false;
-	bCanAction = true;
-	bReloadQueued = false;
-
-	// Take ammo from pool
-	const int AmmoNeeded = ClipSize - AmmoInClip;
-	const int AmmoReceived = (AmmoNeeded > AmmoInPool) ? AmmoInPool : AmmoNeeded;
-	AmmoInPool -= AmmoReceived;
-	AmmoInClip += AmmoReceived;
-
-	if (CanActionTimerHandle.IsValid())
-	{
-		GetWorld()->GetTimerManager().ClearTimer(CanActionTimerHandle);
-	}
-}
+//void UWeaponReceiverComponent::AuthReloadStart()
+//{
+//	//LogMsgWithRole("ClientReloadStart()");
+//	check(HasAuthority())
+//
+//		if (!bUseClip) return;
+//
+//	bIsReloading = true;
+//	bCanAction = false;
+//	bHasActionedThisTriggerPull = true;
+//
+//	GetWorld()->GetTimerManager().SetTimer(
+//		CurrentActionTimerHandle, this, &UWeaponReceiverComponent::AuthReloadEnd, ReloadTime, false, -1);
+//}
+//void UWeaponReceiverComponent::AuthReloadEnd()
+//{
+//	//LogMsgWithRole("ClientReloadEnd()");
+//	check(HasAuthority())
+//
+//		bIsReloading = false;
+//	bCanAction = true;
+//	bReloadQueued = false;
+//
+//	// Take ammo from pool
+//	const int AmmoNeeded = ClipSize - AmmoInClip;
+//	const int AmmoReceived = (AmmoNeeded > AmmoInPool) ? AmmoInPool : AmmoNeeded;
+//	AmmoInPool -= AmmoReceived;
+//	AmmoInClip += AmmoReceived;
+//
+//	if (CurrentActionTimerHandle.IsValid())
+//	{
+//		GetWorld()->GetTimerManager().ClearTimer(CurrentActionTimerHandle);
+//	}
+//}
 
 void UWeaponReceiverComponent::OnRep_IsReloadingChanged()
 {
-	if (bIsReloading)
-	{
-		// Init reload
-		ClientReloadStartTime = FDateTime::Now();
+	//if (bIsReloading)
+	//{
+	//	// Init reload
+	//	ClientReloadStartTime = FDateTime::Now();
 
-		// Update UI
-		ReloadProgress = 0;
-	}
-	else
-	{
-		// Finish reload
-		ReloadProgress = 100;
-	}
+	//	// Update UI
+	//	ReloadProgress = 0;
+	//}
+	//else
+	//{
+	//	// Finish reload
+	//	ReloadProgress = 100;
+	//}
 
-	Delegate->InReloadingChanged(bIsReloading);
-	Delegate->OnReloadProgressChanged(ReloadProgress);
+	//Delegate->InReloadingChanged(bIsReloading);
+	//Delegate->OnReloadProgressChanged(ReloadProgress);
 }
 
 bool UWeaponReceiverComponent::CanReload() const

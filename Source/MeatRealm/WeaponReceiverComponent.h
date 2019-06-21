@@ -6,6 +6,12 @@
 #include "WeaponReceiverComponent.generated.h"
 
 UENUM()
+enum class EWeaponCommands : uint8
+{
+	FireStart, FireEnd
+};
+
+UENUM()
 enum class EWeaponModes : uint8
 {
 	None = 0, Ready, Firing, Reloading, Paused, ReloadingPaused
@@ -17,8 +23,8 @@ struct FWeaponState
 	GENERATED_BODY()
 
 	EWeaponModes Mode = EWeaponModes::None;
-	int AmmoOInClip = 0;
-	int AmmoOInPool = 0;
+	int AmmoInClip = 0;
+	int AmmoInPool = 0;
 	float ReloadProgress = 0; // For Reloading, ReloadingPaused states
 	bool HasFired = false; // For Firing state
 
@@ -26,8 +32,8 @@ struct FWeaponState
 	{
 		FWeaponState Clone;
 		Clone.Mode = this->Mode;
-		Clone.AmmoOInClip = this->AmmoOInClip;
-		Clone.AmmoOInPool = this->AmmoOInPool;
+		Clone.AmmoInClip = this->AmmoInClip;
+		Clone.AmmoInPool = this->AmmoInPool;
 		Clone.ReloadProgress = this->ReloadProgress;
 		Clone.HasFired = this->HasFired;
 		return Clone;
@@ -39,56 +45,62 @@ struct FWeaponInputState
 {
 	GENERATED_BODY()
 
-	uint8 Fire = 0; // 0 nothing, 1, pressed, 2 held, 3 released
-	uint8 Ads = 0; // 0 nothing, 1, pressed, 2 held, 3 released
+	bool Fire = false; // 0 nothing, 1, pressed, 2 held, 3 released
+	bool Ads = false; // 0 nothing, 1, pressed, 2 held, 3 released
 	bool Reload = false;
 	bool Holster = false;
 	bool Draw = false;
 };
-
-class FCommandBase
-{
-public:
-	
-	FCommandBase()
-	{
-		// TODO Generate time stamp, cmd id, whatnot
-	}
-	virtual ~FCommandBase() = default;
-
-	virtual FWeaponState Apply(const FWeaponState& InState) const = 0;
-
-private:
-	static unsigned int CommandId;
-};
-
-unsigned FCommandBase::CommandId = 0;
-
-class FCommandFireStart final : public FCommandBase
-{
-	FWeaponState Apply(const FWeaponState& InState) const override
-	{
-		// Enforce Ready > Fire
-		if (InState.Mode != EWeaponModes::Ready) return InState;
-
-		FWeaponState OutState = InState.Clone();
-		OutState.Mode = EWeaponModes::Firing;
-		return OutState;
-	}
-};
-
-class FCommandFireEnd final : public FCommandBase
-{
-	FWeaponState Apply(const FWeaponState& InState) const override
-	{
-		// Enforce Firing > Ready
-		if (InState.Mode != EWeaponModes::Firing) return InState;
-
-		FWeaponState OutState = InState.Clone();
-		OutState.Mode = EWeaponModes::Ready;
-		return OutState;
-	}
-};
+//
+//class UCommandBase : public UObject
+//{
+//public:
+//	
+//	UCommandBase()
+//	{
+//		// TODO Generate time stamp, cmd id, whatnot
+//	}
+//	virtual ~UCommandBase() = default;
+//	virtual FWeaponState Apply(const FWeaponState& InState) const = 0;
+//
+//private:
+//	static unsigned int CommandId;
+//};
+//
+//unsigned UCommandBase::CommandId = 0;
+//
+//UCLASS()
+//class MEATREALM_API UCommandFireStart final : public UCommandBase
+//{
+//	GENERATED_BODY()
+//
+//public:
+//	FWeaponState Apply(const FWeaponState& InState) const override
+//	{
+//		// Enforce Ready > Fire
+//		if (InState.Mode != EWeaponModes::Ready) return InState;
+//
+//		FWeaponState OutState = InState.Clone();
+//		OutState.Mode = EWeaponModes::Firing;
+//		return OutState;
+//	}
+//};
+//
+//UCLASS()
+//class MEATREALM_API UCommandFireEnd final : public UCommandBase
+//{
+//	GENERATED_BODY()
+//public:
+//	FWeaponState Apply(const FWeaponState& InState) const override
+//	{
+//		// Enforce Firing > Ready
+//		if (InState.Mode != EWeaponModes::Firing) return InState;
+//
+//		FWeaponState OutState = InState.Clone();
+//		OutState.Mode = EWeaponModes::Ready;
+//		return OutState;
+//	}
+//};
 
 class IReceiverComponentDelegate
 {
@@ -130,12 +142,13 @@ private:
 	bool HasAuthority() const { return GetOwnerRole() == ROLE_Authority; }
 	virtual void BeginPlay() override;
 	virtual void TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction) override;
+	FWeaponState ApplyCommand(EWeaponCommands Cmd, const FWeaponState& InState);
 	void RemoteTick(float DeltaTime);
 	void AuthTick(float DeltaTime);
 
 
-	UFUNCTION(Server, Reliable, WithValidation)
-		void ServerRPC_Reload();
+	//UFUNCTION(Server, Reliable, WithValidation)
+	//	void ServerRPC_Reload();
 
 	UFUNCTION(Server, Reliable, WithValidation)
 		void ServerRPC_PullTrigger();
@@ -143,22 +156,25 @@ private:
 	UFUNCTION(Server, Reliable, WithValidation)
 		void ServerRPC_ReleaseTrigger();
 
-	UFUNCTION(Server, Reliable, WithValidation)
-		void ServerRPC_AdsPressed();
+	//UFUNCTION(Server, Reliable, WithValidation)
+	//	void ServerRPC_AdsPressed();
 
-	UFUNCTION(Server, Reliable, WithValidation)
-		void ServerRPC_AdsReleased();
+	//UFUNCTION(Server, Reliable, WithValidation)
+	//	void ServerRPC_AdsReleased();
 
+	
+	// All the states!
+	void TickReady(float DT);
+	void TickFiring(float DT);
 
 	void SpawnProjectiles() const;
-
 	TArray<FVector> CalcShotPattern() const;
 
 	void AuthFireStart();
 	void AuthFireEnd();
 	void AuthHolsterStart();
-	void AuthReloadStart();
-	void AuthReloadEnd();
+	//void AuthReloadStart();
+	//void AuthReloadEnd();
 
 	bool CanReload() const;
 	bool NeedsReload() const;
@@ -244,6 +260,7 @@ public:
 	UPROPERTY(BlueprintReadOnly)
 		float ReloadProgress = 0.f;
 
+	EWeaponCommands LastCommand;
 
 
 protected:
@@ -263,17 +280,20 @@ private:
 
 	UPROPERTY(Replicated)
 		bool bAdsPressed;
-
+	
+	FWeaponState WeaponState{};
+	FWeaponInputState InputState{};
 
 	IReceiverComponentDelegate* Delegate = nullptr;
 
 	bool bCanAction;
 	bool bTriggerPulled;
 	bool bHasActionedThisTriggerPull;
+/*
 	bool bReloadQueued;
+
 	bool bHolsterQueued;
 	bool bWasReloadingOnHolster;
-	FDateTime ClientReloadStartTime;
-	FTimerHandle CanActionTimerHandle;
-
+	FDateTime ClientReloadStartTime;*/
+	FTimerHandle CurrentActionTimerHandle;
 };
