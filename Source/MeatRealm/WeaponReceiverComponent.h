@@ -116,64 +116,6 @@ class MEATREALM_API UWeaponReceiverComponent : public UActorComponent
 {
 	GENERATED_BODY()
 
-public:	
-	UWeaponReceiverComponent();
-	void SetDelegate(IReceiverComponentDelegate* TheDelegate) { Delegate = TheDelegate; }
-	void RequestResume();
-	void RequestPause();
-	void Input_PullTrigger();
-	void Input_ReleaseTrigger();
-	void Input_Reload();
-	void Input_AdsPressed();
-	void Input_AdsReleased();
-	bool TryGiveAmmo();
-
-protected:
-
-private:
-	bool HasAuthority() const { return GetOwnerRole() == ROLE_Authority; }
-	virtual void BeginPlay() override;
-	virtual void TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction) override;
-
-
-
-	UFUNCTION(Server, Reliable, WithValidation)
-		void ServerRPC_Reload();
-
-	UFUNCTION(Server, Reliable, WithValidation)
-		void ServerRPC_PullTrigger();
-
-	UFUNCTION(Server, Reliable, WithValidation)
-		void ServerRPC_ReleaseTrigger();
-
-	UFUNCTION(Server, Reliable, WithValidation)
-		void ServerRPC_AdsPressed();
-
-	UFUNCTION(Server, Reliable, WithValidation)
-		void ServerRPC_AdsReleased();
-
-	
-	// All the states!
-	void TickReady(float DT);
-	void TickPaused(float DeltaTime);
-	void TickFiring(float DT);
-	void TickReloading(float DT);
-	void DoTransitionAction(const EWeaponModes OldMode, const EWeaponModes NewMode);
-	FWeaponState ChangeState(EWeaponCommands Cmd, const FWeaponState& InState);
-
-	TArray<FVector> CalcShotPattern() const;
-	bool CanReload() const;
-	bool NeedsReload() const;
-	void DrawAdsLine(const FColor& Color, float LineLength) const;
-
-	void LogMsgWithRole(FString message);
-	FString GetEnumText(ENetRole role);
-	AActor* GetGrandpappy() const;
-	ENetRole GetOwnerOwnerLocalRole() const;
-	ENetRole GetOwnerOwnerRemoteRole() const;
-	FString GetRoleText();
-
-
 public:
 
 	// Configure the gun
@@ -249,4 +191,60 @@ private:
 	FDateTime ReloadStartTime;
 	FTimerHandle BusyTimerHandle;
 	bool bIsBusy;
+
+
+
+public:	
+	UWeaponReceiverComponent();
+	void SetDelegate(IReceiverComponentDelegate* TheDelegate) { Delegate = TheDelegate; }
+	void RequestResume();
+	void RequestPause();
+	void Input_PullTrigger();
+	void Input_ReleaseTrigger();
+	void Input_Reload();
+	void Input_AdsPressed();
+	void Input_AdsReleased();
+	bool TryGiveAmmo();
+
+protected:
+
+private:
+	bool HasAuthority() const { return GetOwnerRole() == ROLE_Authority; }
+	virtual void BeginPlay() override;
+	virtual void TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction) override;
+
+	UFUNCTION(Server, Reliable, WithValidation)
+		void ServerRPC_Reload();
+
+	UFUNCTION(Server, Reliable, WithValidation)
+		void ServerRPC_PullTrigger();
+
+	UFUNCTION(Server, Reliable, WithValidation)
+		void ServerRPC_ReleaseTrigger();
+
+	UFUNCTION(Server, Reliable, WithValidation)
+		void ServerRPC_AdsPressed();
+
+	UFUNCTION(Server, Reliable, WithValidation)
+		void ServerRPC_AdsReleased();
+
+	// All the states!
+	void TickReady(float DT);
+	void TickPaused(float DeltaTime);
+	void TickFiring(float DT);
+	void TickReloading(float DT);
+	void DoTransitionAction(const EWeaponModes OldMode, const EWeaponModes NewMode);
+	FWeaponState ChangeState(EWeaponCommands Cmd, const FWeaponState& InState);
+
+	TArray<FVector> CalcShotPattern() const;
+	bool CanReload() const;
+	bool NeedsReload() const;
+	void DrawAdsLine(const FColor& Color, float LineLength) const;
+
+	void LogMsgWithRole(FString message);
+	FString GetEnumText(ENetRole role);
+	AActor* GetGrandpappy() const;
+	ENetRole GetOwnerOwnerLocalRole() const;
+	ENetRole GetOwnerOwnerRemoteRole() const;
+	FString GetRoleText();
 };
