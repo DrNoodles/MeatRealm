@@ -15,6 +15,13 @@ UWeaponReceiverComponent::UWeaponReceiverComponent()
 	PrimaryComponentTick.bCanEverTick = true;
 	bReplicates = true;
 }
+
+void UWeaponReceiverComponent::BeginDestroy()
+{
+	UE_LOG(LogTemp, Error, TEXT("Receiver begin destroy"));
+	Super::BeginDestroy();
+}
+
 void UWeaponReceiverComponent::BeginPlay()
 {
 	Super::BeginPlay();
@@ -23,7 +30,8 @@ void UWeaponReceiverComponent::BeginPlay()
 
 	WeaponState.AmmoInClip = ClipSizeGiven;
 	WeaponState.AmmoInPool = AmmoPoolGiven;
-	WeaponState.Mode = EWeaponModes::Ready;
+
+	WeaponState = ChangeState(EWeaponCommands::DrawWeapon, WeaponState);
 }
 
 
@@ -121,63 +129,17 @@ bool UWeaponReceiverComponent::ServerRPC_AdsReleased_Validate()
 	return true;
 }
 
-void UWeaponReceiverComponent::Pause()
+void UWeaponReceiverComponent::RequestPause()
 {
 	check(HasAuthority());
-	//LogMsgWithRole(FString::Printf(TEXT("UWeaponReceiverComponent::Holster() %s"), *WeaponName));
+	LogMsgWithRole(FString::Printf(TEXT("InputState.HolsterRequested = true")));
 	InputState.HolsterRequested = true;
 }
-
-
-void UWeaponReceiverComponent::Resume()
+void UWeaponReceiverComponent::RequestResume()
 {
 	check(HasAuthority());
-	//LogMsgWithRole(FString::Printf(TEXT("UWeaponReceiverComponent::Draw() %s"), *WeaponName));
-	
+	LogMsgWithRole(FString::Printf(TEXT("InputState.DrawRequested = true")));
 	InputState.DrawRequested = true;
-	return;
-
-
-	// NEW HERE
-
-	if (BusyTimerHandle.IsValid())
-	{
-		GetWorld()->GetTimerManager().ClearTimer(BusyTimerHandle);
-	}
-	bIsBusy = false;
-
-	InputState = FWeaponInputState{};
-	WeaponState.ReloadProgress = false;
-	WeaponState.HasFired = false;
-	WeaponState.Mode = EWeaponModes::Ready;
-	// TODO Enable ticking (if disabled on holster)?
-
-
-
-	// OLD BELOW
-
-
-	//// Clear any timer
-	//if (CurrentActionTimerHandle.IsValid())
-	//{
-	//	GetWorld()->GetTimerManager().ClearTimer(CurrentActionTimerHandle);
-	//}
-
-	//// Reset state to defaults
-
-	//
-	//bHolsterQueued = false;
-	//bAdsPressed = false;
-	//bTriggerPulled = false;
-	//bHasActionedThisTriggerPull = false;
-
-	//// Queue reload if it was mid reload on holster
-	//bReloadQueued = bWasReloadingOnHolster;
-	//bWasReloadingOnHolster = false;
-
-	//// Ready to roll!
-	//bCanAction = true;
-
 }
 
 
@@ -209,7 +171,7 @@ void UWeaponReceiverComponent::TickComponent(float DeltaTime, ELevelTick TickTyp
 			break;
 
 		case EWeaponModes::Paused:
-			TickPaused(DeltaTime); 
+			TickPaused(DeltaTime);
 			break;
 
 		case EWeaponModes::None:
@@ -230,7 +192,6 @@ void UWeaponReceiverComponent::TickComponent(float DeltaTime, ELevelTick TickTyp
 	}
 }
 
-
 void UWeaponReceiverComponent::TickReady(float DT)
 {
 	//LogMsgWithRole("EWeaponModes::Ready");
@@ -240,6 +201,8 @@ void UWeaponReceiverComponent::TickReady(float DT)
 
 	if (InputState.HolsterRequested)
 	{
+		LogMsgWithRole("EWeaponModes::TickReady - Processing HolsterRequested");
+
 		InputState.HolsterRequested = false;
 		WeaponState = ChangeState(EWeaponCommands::HolsterWeapon, WeaponState);
 		return;
@@ -248,6 +211,8 @@ void UWeaponReceiverComponent::TickReady(float DT)
 	// Ready > Firing
 	if (InputState.FirePressed)
 	{
+		LogMsgWithRole("EWeaponModes::TickReady - Processing FirePressed");
+
 		WeaponState = ChangeState(EWeaponCommands::FireStart, WeaponState);
 		return;
 	}
@@ -256,7 +221,9 @@ void UWeaponReceiverComponent::TickReady(float DT)
 	// Ready > Reloading
 	if (InputState.ReloadRequested)
 	{
+		LogMsgWithRole("EWeaponModes::TickReady - Processing ReloadRequested");
 		// Only process for one frame as we dont have a release
+
 		InputState.ReloadRequested = false;
 
 		if (CanReload())
@@ -270,13 +237,15 @@ void UWeaponReceiverComponent::TickReady(float DT)
 
 void UWeaponReceiverComponent::TickPaused(float DeltaTime)
 {
-	LogMsgWithRole("EWeaponModes::TickPaused");
+	//LogMsgWithRole("EWeaponModes::TickPaused");
 
 
 	// Do a whole lot of not much!
 
 	if (InputState.DrawRequested)
 	{
+		LogMsgWithRole("EWeaponModes::TickPaused - Processed Draw Request");
+
 		InputState.DrawRequested = false;
 		WeaponState = ChangeState(EWeaponCommands::DrawWeapon, WeaponState);
 	}
@@ -284,11 +253,12 @@ void UWeaponReceiverComponent::TickPaused(float DeltaTime)
 
 void UWeaponReceiverComponent::TickFiring(float DT)
 {
-	LogMsgWithRole("EWeaponModes::Firing");
+	//LogMsgWithRole("EWeaponModes::Firing");
 
 
 	// Allow fluid enter/exit of ADS state
 	WeaponState.IsAdsing = InputState.AdsPressed;
+
 
 
 	// If busy, do nothing
@@ -297,26 +267,20 @@ void UWeaponReceiverComponent::TickFiring(float DT)
 
 
 
-
-
-
-	// Process Input
+	// Process State Transitions
 
 	if (!InputState.FirePressed)
-	{  // Firing > Ready
+	{ 
 		WeaponState = ChangeState(EWeaponCommands::FireEnd, WeaponState);
-
-	//	ShotsFired = 0;
+		return;
+	}
+	if (InputState.HolsterRequested)
+	{
+		WeaponState = ChangeState(EWeaponCommands::HolsterWeapon, WeaponState);
 		return;
 	}
 
-
-
-
-
-
 	// Can we fire/reload or do nothing
-
 	const auto bReceiverCanCycle = bFullAuto || ShotsFiredThisTriggerPull == 0;
 	if (bReceiverCanCycle && NeedsReload() && CanReload())
 	{
@@ -332,6 +296,7 @@ void UWeaponReceiverComponent::TickFiring(float DT)
 		return;
 	}
 
+	LogMsgWithRole("TickFiring: BANG!");
 
 	// Subtract some ammo
 
@@ -371,17 +336,17 @@ void UWeaponReceiverComponent::TickFiring(float DT)
 
 void UWeaponReceiverComponent::TickReloading(float DT)
 {
-	LogMsgWithRole("EWeaponModes::Reloading");
+	//LogMsgWithRole("EWeaponModes::Reloading");
 
 
 	// Track reload progress
 
-	if (InputState.HolsterRequested)
-	{
-		InputState.HolsterRequested = false;
-		WeaponState = ChangeState(EWeaponCommands::HolsterWeapon, WeaponState);
-		return;
-	}
+	//if (InputState.HolsterRequested)
+	//{
+	//	InputState.HolsterRequested = false;
+	//	WeaponState = ChangeState(EWeaponCommands::HolsterWeapon, WeaponState);
+	//	return;
+	//}
 
 	if (bIsMidReload)
 	{
@@ -439,12 +404,67 @@ void UWeaponReceiverComponent::TickReloading(float DT)
 	GetWorld()->GetTimerManager().SetTimer(BusyTimerHandle, DoReloadEnd, ReloadTime, false);
 }
 
+void UWeaponReceiverComponent::DoTransitionActionAction(const EWeaponModes OldMode, const EWeaponModes NewMode)
+{
+	if ((OldMode == EWeaponModes::None || OldMode == EWeaponModes::Paused) 
+		&& NewMode == EWeaponModes::Ready)
+	{
+		// Stop any actions - should never be true.. TODO Convert these to asserts to make sure we've good elsewhere
+		bIsBusy = false;
+		if (BusyTimerHandle.IsValid()) GetWorld()->GetTimerManager().ClearTimer(BusyTimerHandle);
+
+		// Remove all input
+		InputState = FWeaponInputState{};
+
+		// Forget all unimportant state
+		WeaponState.ReloadProgress = false;
+		WeaponState.IsAdsing = false;
+		WeaponState.HasFired = false;
+		ShotsFiredThisTriggerPull = 0;
+		bIsMidReload = false;
+
+		// TODO Enable ticking (if disabled on holster)?
+	}
+	else if (NewMode == EWeaponModes::Paused)
+	{
+		// NEW HERE
+
+		bIsBusy = false;
+		if (BusyTimerHandle.IsValid()) GetWorld()->GetTimerManager().ClearTimer(BusyTimerHandle);
+		
+		InputState = FWeaponInputState{};
+		
+		WeaponState.ReloadProgress = false;
+		WeaponState.IsAdsing = false;
+		WeaponState.HasFired = false;
+		ShotsFiredThisTriggerPull = 0;
+		bIsMidReload = false;
+
+
+
+		// OLD BELOW
+
+		//// Kill any timer running
+		//if (CurrentActionTimerHandle.IsValid())
+		//{
+		//	GetWorld()->GetTimerManager().ClearTimer(CurrentActionTimerHandle);
+		//}
+
+		//// Pause reload
+		//bWasReloadingOnHolster = bIsReloading; // TODO < This could be useful for NEW
+		//bIsReloading = false;
+
+		//// Reset state to defaults
+		//bHolsterQueued = false;
+		//bCanAction = false;
+		//bAdsPressed = false;
+		//bTriggerPulled = false;
+		//bHasActionedThisTriggerPull = false;
+	}
+}
 
 FWeaponState UWeaponReceiverComponent::ChangeState(EWeaponCommands Cmd, const FWeaponState& InState)
 {
-	/*LogMsgWithRole(FString::Printf(TEXT("UWeaponReceiverComponent::ChangeState(In:%s Cmd:%s)"), 
-		*EWeaponModesStr(InState.Mode), *EWeaponCommandsStr(Cmd)));*/
-
 	FWeaponState OutState = InState.Clone();
 
 	if (Cmd == EWeaponCommands::FireStart) {
@@ -472,13 +492,13 @@ FWeaponState UWeaponReceiverComponent::ChangeState(EWeaponCommands Cmd, const FW
 	}
 
 	if (Cmd == EWeaponCommands::HolsterWeapon) {
-		ensure(InState.Mode == EWeaponModes::Ready || InState.Mode == EWeaponModes::Reloading);
+		ensure(InState.Mode == EWeaponModes::Ready || InState.Mode == EWeaponModes::Firing);
 		OutState.Mode = EWeaponModes::Paused;
 		LastCommand = Cmd;
 	}
 
 	if (Cmd == EWeaponCommands::DrawWeapon) {
-		ensure(InState.Mode == EWeaponModes::Paused);
+		ensure(InState.Mode == EWeaponModes::Paused || InState.Mode == EWeaponModes::None);
 		OutState.Mode = EWeaponModes::Ready;
 		LastCommand = Cmd;
 	}
@@ -486,75 +506,15 @@ FWeaponState UWeaponReceiverComponent::ChangeState(EWeaponCommands Cmd, const FW
 	LogMsgWithRole(FString::Printf(TEXT("WeapReceiver::ChangeState(%s > %s > %s)"),
 		*EWeaponModesStr(InState.Mode), *EWeaponCommandsStr(Cmd), *EWeaponModesStr(OutState.Mode)));
 
-	return OutState;
-}
 
-
-
-void UWeaponReceiverComponent::AuthHolsterStart()
-{
-	check(HasAuthority())
-	//LogMsgWithRole("UWeaponReceiverComponent::AuthHolsterStart()");
-
-
-	// NEW HERE
-
-	if (BusyTimerHandle.IsValid())
+	const bool bWeChangedStates = InState.Mode != OutState.Mode;
+	if (bWeChangedStates)
 	{
-		GetWorld()->GetTimerManager().ClearTimer(BusyTimerHandle);
+		DoTransitionActionAction(InState.Mode, OutState.Mode);
 	}
 
-
-	InputState = FWeaponInputState{};
-	WeaponState.ReloadProgress = false;
-	WeaponState.HasFired = false;
-	WeaponState.Mode = EWeaponModes::None;
-	// TODO Disable ticking?
-
-
-
-	// OLD BELOW
-	
-
-	//// Kill any timer running
-	//if (CurrentActionTimerHandle.IsValid())
-	//{
-	//	GetWorld()->GetTimerManager().ClearTimer(CurrentActionTimerHandle);
-	//}
-
-	//// Pause reload
-	//bWasReloadingOnHolster = bIsReloading;
-	//bIsReloading = false;
-
-	//// Reset state to defaults
-	//bHolsterQueued = false;
-	//bCanAction = false;
-	//bAdsPressed = false;
-	//bTriggerPulled = false;
-	//bHasActionedThisTriggerPull = false;
+	return OutState;
 }
-
-
-// TODO Figure out what to do with this shit...
-//void UWeaponReceiverComponent::IsReloadingChanged()
-//{
-//	if (WeaponState.Mode == EWeaponModes::Reloading)
-//	{
-//		// Init reload
-//		ClientReloadStartTime = FDateTime::Now();
-//
-//		// Update UI
-//		WeaponState.ReloadProgress = 0;
-//	}
-//	else
-//	{
-//		// Finish reload
-//		WeaponState.ReloadProgress = 100;
-//	}
-//
-//	Delegate->InReloadingChanged(WeaponState.Mode == EWeaponModes::Reloading);
-//	Delegate->OnReloadProgressChanged(WeaponState.ReloadProgress);
-//}
 
 bool UWeaponReceiverComponent::CanReload() const
 {
@@ -678,16 +638,37 @@ FString UWeaponReceiverComponent::GetEnumText(ENetRole role)
 
 ENetRole UWeaponReceiverComponent::GetOwnerOwnerLocalRole() const
 {
-	return GetOwner()->GetOwner()->GetLocalRole();
+	auto OwnerOfComponent = GetOwner();
+	if (!OwnerOfComponent)
+	{
+		UE_LOG(LogTemp, Error, TEXT("OwnerOfComponent is null!"));
+		return ENetRole::ROLE_None;
+	}
+	auto GrandOwnerOfComponent = OwnerOfComponent->GetOwner();
+	if (!GrandOwnerOfComponent)
+	{
+		UE_LOG(LogTemp, Error, TEXT("GrandOwnerOfComponent is null!"));
+		return ENetRole::ROLE_None;
+	}
+	return GrandOwnerOfComponent->GetLocalRole();
 }
 ENetRole UWeaponReceiverComponent::GetOwnerOwnerRemoteRole() const
 {
-	return GetOwner()->GetOwner()->GetRemoteRole();
+	auto OwnerOfComponent = GetOwner();
+	if (!OwnerOfComponent)
+	{
+		UE_LOG(LogTemp, Error, TEXT("OwnerOfComponent is null!"));
+		return ENetRole::ROLE_None;
+	}
+	auto GrandOwnerOfComponent = OwnerOfComponent->GetOwner();
+	if (!GrandOwnerOfComponent)
+	{
+		UE_LOG(LogTemp, Error, TEXT("GrandOwnerOfComponent is null!"));
+		return ENetRole::ROLE_None;
+	}
+	return GrandOwnerOfComponent->GetRemoteRole();
 }
 FString UWeaponReceiverComponent::GetRoleText()
 {
-	
-	return 
-	GetEnumText(GetOwnerOwnerLocalRole()) + " " + 
-	GetEnumText(GetOwnerOwnerRemoteRole());
+	return GetEnumText(GetOwnerOwnerLocalRole()) + " " + GetEnumText(GetOwnerOwnerRemoteRole());
 }

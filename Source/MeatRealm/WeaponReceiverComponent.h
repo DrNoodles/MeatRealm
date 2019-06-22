@@ -13,41 +13,11 @@ enum class EWeaponCommands : uint8
 	DrawWeapon, HolsterWeapon
 };
 
-inline FString EWeaponCommandsStr(const EWeaponCommands Cmd)
-{
-	switch (Cmd) 
-	{ 
-		case EWeaponCommands::FireStart: return "FireStart";
-		case EWeaponCommands::FireEnd: return "FireEnd";
-		case EWeaponCommands::ReloadStart: return "ReloadStart";
-		case EWeaponCommands::ReloadEnd: return "ReloadEnd";
-		case EWeaponCommands::DrawWeapon: return "DrawWeapon";
-		case EWeaponCommands::HolsterWeapon: return "HolsterWeapon";
-		default: return "Unknown";
-	}
-}
-
-
 UENUM(BlueprintType)
 enum class EWeaponModes : uint8
 {
 	None = 0, Ready, Firing, Reloading, Paused, ReloadingPaused
 };
-
-
-inline FString EWeaponModesStr(const EWeaponModes Mode)
-{
-	switch (Mode)
-	{
-	case EWeaponModes::None: return "None";
-	case EWeaponModes::Ready: return "Ready";
-	case EWeaponModes::Firing: return "Firing";
-	case EWeaponModes::Reloading: return "Reloading";
-	case EWeaponModes::Paused: return "Paused";
-	case EWeaponModes::ReloadingPaused: return "ReloadingPaused";
-	default: return "Unknown";
-	}
-}
 
 
 USTRUCT(BlueprintType)
@@ -97,56 +67,6 @@ struct FWeaponInputState
 	bool HolsterRequested = false;
 	bool DrawRequested = false;
 };
-//
-//class UCommandBase : public UObject
-//{
-//public:
-//	
-//	UCommandBase()
-//	{
-//		// TODO Generate time stamp, cmd id, whatnot
-//	}
-//	virtual ~UCommandBase() = default;
-//	virtual FWeaponState Apply(const FWeaponState& InState) const = 0;
-//
-//private:
-//	static unsigned int CommandId;
-//};
-//
-//unsigned UCommandBase::CommandId = 0;
-//
-//UCLASS()
-//class MEATREALM_API UCommandFireStart final : public UCommandBase
-//{
-//	GENERATED_BODY()
-//
-//public:
-//	FWeaponState Apply(const FWeaponState& InState) const override
-//	{
-//		// Enforce Ready > Fire
-//		if (InState.Mode != EWeaponModes::Ready) return InState;
-//
-//		FWeaponState OutState = InState.Clone();
-//		OutState.Mode = EWeaponModes::Firing;
-//		return OutState;
-//	}
-//};
-//
-//UCLASS()
-//class MEATREALM_API UCommandFireEnd final : public UCommandBase
-//{
-//	GENERATED_BODY()
-//public:
-//	FWeaponState Apply(const FWeaponState& InState) const override
-//	{
-//		// Enforce Firing > Ready
-//		if (InState.Mode != EWeaponModes::Firing) return InState;
-//
-//		FWeaponState OutState = InState.Clone();
-//		OutState.Mode = EWeaponModes::Ready;
-//		return OutState;
-//	}
-//};
 
 class IReceiverComponentDelegate
 {
@@ -163,6 +83,35 @@ public:
 };
 
 
+inline FString EWeaponCommandsStr(const EWeaponCommands Cmd)
+{
+	switch (Cmd)
+	{
+	case EWeaponCommands::FireStart: return "FireStart";
+	case EWeaponCommands::FireEnd: return "FireEnd";
+	case EWeaponCommands::ReloadStart: return "ReloadStart";
+	case EWeaponCommands::ReloadEnd: return "ReloadEnd";
+	case EWeaponCommands::DrawWeapon: return "DrawWeapon";
+	case EWeaponCommands::HolsterWeapon: return "HolsterWeapon";
+	default: return "Unknown";
+	}
+}
+inline FString EWeaponModesStr(const EWeaponModes Mode)
+{
+	switch (Mode)
+	{
+	case EWeaponModes::None: return "None";
+	case EWeaponModes::Ready: return "Ready";
+	case EWeaponModes::Firing: return "Firing";
+	case EWeaponModes::Reloading: return "Reloading";
+	case EWeaponModes::Paused: return "Paused";
+	case EWeaponModes::ReloadingPaused: return "ReloadingPaused";
+	default: return "Unknown";
+	}
+}
+
+
+
 UCLASS( ClassGroup=(Custom), meta=(BlueprintSpawnableComponent) )
 class MEATREALM_API UWeaponReceiverComponent : public UActorComponent
 {
@@ -170,9 +119,10 @@ class MEATREALM_API UWeaponReceiverComponent : public UActorComponent
 
 public:	
 	UWeaponReceiverComponent();
+	virtual void BeginDestroy() override;
 	void SetDelegate(IReceiverComponentDelegate* TheDelegate) { Delegate = TheDelegate; }
-	void Resume();
-	void Pause();
+	void RequestResume();
+	void RequestPause();
 	void Input_PullTrigger();
 	void Input_ReleaseTrigger();
 	void Input_Reload();
@@ -188,6 +138,7 @@ private:
 	bool HasAuthority() const { return GetOwnerRole() == ROLE_Authority; }
 	virtual void BeginPlay() override;
 	virtual void TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction) override;
+
 	FWeaponState ChangeState(EWeaponCommands Cmd, const FWeaponState& InState);
 
 
@@ -212,11 +163,10 @@ private:
 	void TickPaused(float DeltaTime);
 	void TickFiring(float DT);
 	void TickReloading(float DT);
+	void DoTransitionActionAction(const EWeaponModes OldMode, const EWeaponModes NewMode);
 
 	void SpawnProjectiles() const;
 	TArray<FVector> CalcShotPattern() const;
-
-	void AuthHolsterStart();
 
 	bool CanReload() const;
 	bool NeedsReload() const;
@@ -281,14 +231,7 @@ public:
 	// This makes even spreading feel more natural by randomly clumping the shots within the even spread.
 	UPROPERTY(EditAnywhere, meta = (EditCondition = "bEvenSpread"))
 		bool bSpreadClumping = true;
-
-	/*UPROPERTY(EditAnywhere)
-		float AdsMovementScale = 0.70;*/
-
-
-	// Gun status
-
-	
+	  
 
 	EWeaponCommands LastCommand;
 
@@ -318,15 +261,8 @@ private:
 	IReceiverComponentDelegate* Delegate = nullptr;
 
 	int ShotsFiredThisTriggerPull; // Number of shots since pulling the trigger
-	
-	/*
-	bool bReloadQueued;
-	bool bHolsterQueued;
-	bool bWasReloadingOnHolster;*/
-
 	bool bIsMidReload;
 	FDateTime ReloadStartTime;
-
-	bool bIsBusy;
 	FTimerHandle BusyTimerHandle;
+	bool bIsBusy;
 };

@@ -12,6 +12,20 @@
 #include "TimerManager.h"
 #include "Projectile.h"
 
+
+void AWeapon::BeginPlay()
+{
+	Super::BeginPlay();
+}
+
+void AWeapon::BeginDestroy()
+{
+	// Clean up!
+	UE_LOG(LogTemp, Error, TEXT("Weapon begin destroy"));
+
+	Super::BeginDestroy();
+}
+
 AWeapon::AWeapon()
 {
 	PrimaryActorTick.bCanEverTick = true;
@@ -47,12 +61,12 @@ AWeapon::AWeapon()
 
 void AWeapon::Draw()
 {
-	ReceiverComp->Resume();
+	ReceiverComp->RequestResume();
 }
 
 void AWeapon::QueueHolster()
 {
-	ReceiverComp->Pause();
+	ReceiverComp->RequestPause();
 }
 
 //
@@ -76,11 +90,6 @@ void AWeapon::ClientRPC_NotifyOnAmmoWarning_Implementation()
 {
 	LogMsgWithRole("AWeapon::ClientRPC_NotifyOnAmmoWarning_Implementation()");
 	if (OnAmmoWarning.IsBound()) OnAmmoWarning.Broadcast();
-}
-
-void AWeapon::BeginPlay()
-{
-	Super::BeginPlay();
 }
 
 
