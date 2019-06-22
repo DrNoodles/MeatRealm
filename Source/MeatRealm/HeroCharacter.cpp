@@ -284,7 +284,7 @@ void AHeroCharacter::SimulateAdsMode(bool IsAdsing)
 		const auto Weapon = GetCurrentWeapon();
 		if (Weapon)
 		{
-			MoveSpeed = WalkSpeed * Weapon->AdsMovementScale;
+			MoveSpeed = WalkSpeed * Weapon->GetAdsMovementScale();
 		}
 	}
 
@@ -441,7 +441,10 @@ void AHeroCharacter::EquipWeapon(const EWeaponSlots Slot)
 
 	// If desired slot is empty, do nothing.
 	auto NewWeapon = GetWeapon(Slot);
-	if (!NewWeapon) return;
+	
+	bool CanEquipEmptyWeaponSlot = true; 
+
+	if (!NewWeapon && !CanEquipEmptyWeaponSlot) return;
 
 	const auto OldSlot = CurrentWeaponSlot;
 	CurrentWeaponSlot = Slot;
@@ -459,7 +462,7 @@ void AHeroCharacter::EquipWeapon(const EWeaponSlots Slot)
 		OldWeapon->QueueHolster();
 		OldWeapon->AttachToComponent(HolsteredweaponAnchor, 
 			FAttachmentTransformRules{ EAttachmentRule::SnapToTarget, true });
-		HolsterDuration = OldWeapon->HolsterDuration;
+		HolsterDuration = OldWeapon->GetHolsterDuration();
 	}
 
 
