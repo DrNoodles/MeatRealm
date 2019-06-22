@@ -8,15 +8,15 @@
 UENUM()
 enum class EWeaponCommands : uint8
 {
-	FireStart, FireEnd, 
+	FireStart, FireEnd,
 	ReloadStart, ReloadEnd,
-	DrawWeapon, HolsterWeapon
+	DrawWeapon, HolsterWeapon,
 };
 
 UENUM(BlueprintType)
 enum class EWeaponModes : uint8
 {
-	None = 0, Ready, Firing, Reloading, Paused, ReloadingPaused
+	None = 0, Ready, Firing, Reloading, Paused,
 };
 
 
@@ -105,7 +105,6 @@ inline FString EWeaponModesStr(const EWeaponModes Mode)
 	case EWeaponModes::Firing: return "Firing";
 	case EWeaponModes::Reloading: return "Reloading";
 	case EWeaponModes::Paused: return "Paused";
-	case EWeaponModes::ReloadingPaused: return "ReloadingPaused";
 	default: return "Unknown";
 	}
 }
@@ -119,7 +118,6 @@ class MEATREALM_API UWeaponReceiverComponent : public UActorComponent
 
 public:	
 	UWeaponReceiverComponent();
-	virtual void BeginDestroy() override;
 	void SetDelegate(IReceiverComponentDelegate* TheDelegate) { Delegate = TheDelegate; }
 	void RequestResume();
 	void RequestPause();
@@ -131,15 +129,12 @@ public:
 	bool TryGiveAmmo();
 
 protected:
-	//UFUNCTION()
-	//	void OnRep_IsReloadingChanged();
 
 private:
 	bool HasAuthority() const { return GetOwnerRole() == ROLE_Authority; }
 	virtual void BeginPlay() override;
 	virtual void TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction) override;
 
-	FWeaponState ChangeState(EWeaponCommands Cmd, const FWeaponState& InState);
 
 
 	UFUNCTION(Server, Reliable, WithValidation)
@@ -163,17 +158,17 @@ private:
 	void TickPaused(float DeltaTime);
 	void TickFiring(float DT);
 	void TickReloading(float DT);
-	void DoTransitionActionAction(const EWeaponModes OldMode, const EWeaponModes NewMode);
+	void DoTransitionAction(const EWeaponModes OldMode, const EWeaponModes NewMode);
+	FWeaponState ChangeState(EWeaponCommands Cmd, const FWeaponState& InState);
 
-	void SpawnProjectiles() const;
 	TArray<FVector> CalcShotPattern() const;
-
 	bool CanReload() const;
 	bool NeedsReload() const;
 	void DrawAdsLine(const FColor& Color, float LineLength) const;
 
 	void LogMsgWithRole(FString message);
 	FString GetEnumText(ENetRole role);
+	AActor* GetGrandpappy() const;
 	ENetRole GetOwnerOwnerLocalRole() const;
 	ENetRole GetOwnerOwnerRemoteRole() const;
 	FString GetRoleText();
@@ -182,10 +177,6 @@ private:
 public:
 
 	// Configure the gun
-
-//// Time (seconds) to holster the weapon
-//	UPROPERTY(EditAnywhere)
-//		float HolsterDuration = 1;
 
 	UPROPERTY(EditAnywhere)
 		float ShotsPerSecond = 1.0f;
@@ -231,15 +222,12 @@ public:
 	// This makes even spreading feel more natural by randomly clumping the shots within the even spread.
 	UPROPERTY(EditAnywhere, meta = (EditCondition = "bEvenSpread"))
 		bool bSpreadClumping = true;
-	  
 
 	EWeaponCommands LastCommand;
 
+protected:
 	UPROPERTY(Replicated, BlueprintReadOnly)
 		FWeaponState WeaponState {};
-
-protected:
-
 
 private:
 	UPROPERTY(EditAnywhere)
@@ -254,13 +242,9 @@ private:
 	UPROPERTY(EditAnywhere)
 		FColor EnemyAdsLineColor = FColor{ 255,170,75 };
 
-
-
 	FWeaponInputState InputState{};
-
 	IReceiverComponentDelegate* Delegate = nullptr;
 
-	int ShotsFiredThisTriggerPull; // Number of shots since pulling the trigger
 	bool bIsMidReload;
 	FDateTime ReloadStartTime;
 	FTimerHandle BusyTimerHandle;

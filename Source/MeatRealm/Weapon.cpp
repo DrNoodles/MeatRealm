@@ -18,14 +18,6 @@ void AWeapon::BeginPlay()
 	Super::BeginPlay();
 }
 
-void AWeapon::BeginDestroy()
-{
-	// Clean up!
-	UE_LOG(LogTemp, Error, TEXT("Weapon begin destroy"));
-
-	Super::BeginDestroy();
-}
-
 AWeapon::AWeapon()
 {
 	PrimaryActorTick.bCanEverTick = true;

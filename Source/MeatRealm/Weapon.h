@@ -82,7 +82,6 @@ private:
 
 	
 public:
-	virtual void BeginDestroy() override;
 	AWeapon();
 	void Draw();
 	void QueueHolster();
