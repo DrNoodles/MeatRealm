@@ -10,6 +10,7 @@
 
 class USceneComponent;
 class UStaticMeshComponent;
+class USkeletalMeshComponent;
 class UCapsuleComponent;
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FPickupSpawned);
@@ -38,7 +39,7 @@ protected:
 
 private:
 	UPROPERTY(VisibleAnywhere)
-		UStaticMeshComponent* MeshComp = nullptr;
+		USkeletalMeshComponent* SkeletalMeshComp = nullptr;
 	UPROPERTY(VisibleAnywhere)
 		UCapsuleComponent* CollisionComp = nullptr;
 	UPROPERTY(ReplicatedUsing = OnRep_IsAvailableChanged)

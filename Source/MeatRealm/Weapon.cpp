@@ -4,6 +4,7 @@
 #include "Weapon.h"
 #include "Engine/World.h"
 #include "Components/ArrowComponent.h"
+#include "Components/SkeletalMeshComponent.h"
 #include "Components/StaticMeshComponent.h"
 #include "Components/PointLightComponent.h"
 #include "DrawDebugHelpers.h"
@@ -26,11 +27,11 @@ AWeapon::AWeapon()
 	RootComp = CreateDefaultSubobject<USceneComponent>(TEXT("Root"));
 	RootComponent = RootComp;
 
-	MeshComp = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("Mesh"));
-	MeshComp->SetupAttachment(RootComponent);
-	MeshComp->SetGenerateOverlapEvents(false);
-	MeshComp->SetCollisionProfileName(TEXT("NoCollision"));
-	MeshComp->CanCharacterStepUpOn = ECB_No;
+	SkeletalMeshComp = CreateDefaultSubobject<USkeletalMeshComponent>(TEXT("SkeletalMesh"));
+	SkeletalMeshComp->SetupAttachment(RootComponent);
+	SkeletalMeshComp->SetGenerateOverlapEvents(false);
+	SkeletalMeshComp->SetCollisionProfileName(TEXT("NoCollision"));
+	SkeletalMeshComp->CanCharacterStepUpOn = ECB_No;
 
 	MuzzleLocationComp = CreateDefaultSubobject<UArrowComponent>(TEXT("MuzzleLocationComp"));
 	MuzzleLocationComp->SetupAttachment(RootComponent);

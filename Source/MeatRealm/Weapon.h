@@ -10,6 +10,7 @@
 
 class UArrowComponent;
 class USceneComponent;
+class USkeletalMeshComponent;
 class UStaticMeshComponent;
 class UPointLightComponent;
 
@@ -33,7 +34,7 @@ protected:
 		USceneComponent* RootComp = nullptr;
 
 	UPROPERTY(VisibleAnywhere)
-		UStaticMeshComponent* MeshComp = nullptr;
+		USkeletalMeshComponent* SkeletalMeshComp = nullptr;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
 		UArrowComponent* MuzzleLocationComp = nullptr;
