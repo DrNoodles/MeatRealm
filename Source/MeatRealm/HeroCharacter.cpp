@@ -3,6 +3,7 @@
 #include "Camera/CameraComponent.h"
 #include "Components/CapsuleComponent.h"
 #include "Components/StaticMeshComponent.h"
+#include "Components/SkeletalMeshComponent.h"
 #include "Components/ArrowComponent.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "GameFramework/Controller.h"
@@ -395,26 +396,33 @@ AWeapon* AHeroCharacter::AuthSpawnAndAttachWeapon(TSubclassOf<AWeapon> weaponCla
 	if (!GetWorld()) return nullptr;
 
 
-	// Spawn the weapon at the anchor
+	const char* SocketName = "Cunt";
+
+	const auto TF = GetMesh()->GetSocketTransform(SocketName, RTS_World);
+
+	// Spawn the weapon at the weapon socket
 	auto* Weapon = GetWorld()->SpawnActorDeferred<AWeapon>(
 		weaponClass,
-		WeaponAnchor->GetComponentTransform(),
+		TF,
 		this,
 		this,
 		ESpawnActorCollisionHandlingMethod::AlwaysSpawn);
 	
-	if (Weapon == nullptr) { return nullptr; }
+	//if (Weapon == nullptr) { return nullptr; }
 
 
-	// Configure it
-	Weapon->AttachToComponent(WeaponAnchor, FAttachmentTransformRules{ EAttachmentRule::KeepWorld, true });
+	//// Configure it
+	//auto rules = FAttachmentTransformRules{ EAttachmentRule::KeepRelative, true };
+	//Weapon->AttachToComponent(
+	//	GetMesh(), 
+	//	rules,
+	//	SocketName);
+
 	Weapon->SetHeroControllerId(GetHeroController()->PlayerState->PlayerId);
 
 
 	// Finish him!
-	UGameplayStatics::FinishSpawningActor(
-		Weapon,
-		WeaponAnchor->GetComponentTransform());
+	UGameplayStatics::FinishSpawningActor(Weapon, TF);
 
 	return Weapon;
 }
@@ -454,25 +462,41 @@ void AHeroCharacter::EquipWeapon(const EWeaponSlots Slot)
 
 	float HolsterDuration = 0;
 
-	// Hide old weapon
+	const char* HandSocket = "HandSocket";
+	const char* HolsterSocket = "HolsterSocket";
+	auto rules = FAttachmentTransformRules{ EAttachmentRule::SnapToTarget, true };
+	
+	
+	
+	//const auto TF = GetMesh()->GetSocketTransform(WeaponSocket, RTS_World);
+	//Weapon->AttachToComponent(
+	//	GetMesh(), 
+	//	rules,
+	//	SocketName);
+
+
+
+	// Holster old weapon
 	auto OldWeapon = GetWeapon(OldSlot);
 	if (OldWeapon)
 	{
 		//OldWeapon->SetActorHiddenInGame(true);
 		OldWeapon->QueueHolster();
-		OldWeapon->AttachToComponent(HolsteredweaponAnchor, 
-			FAttachmentTransformRules{ EAttachmentRule::SnapToTarget, true });
+		OldWeapon->AttachToComponent(GetMesh(), rules, HolsterSocket);
+		/*OldWeapon->AttachToComponent(HolsteredweaponAnchor, 
+			FAttachmentTransformRules{ EAttachmentRule::SnapToTarget, true });*/
 		HolsterDuration = OldWeapon->GetHolsterDuration();
 	}
 
 
-	// Show new weapon
+	// Hold new weapon
 	if (NewWeapon)
 	{
 		//NewWeapon->SetActorHiddenInGame(false);
 		NewWeapon->Draw();
-		NewWeapon->AttachToComponent(WeaponAnchor,
-			FAttachmentTransformRules{ EAttachmentRule::SnapToTarget, true });
+		NewWeapon->AttachToComponent(GetMesh(), rules, HandSocket);
+		/*NewWeapon->AttachToComponent(WeaponAnchor,
+			FAttachmentTransformRules{ EAttachmentRule::SnapToTarget, true });*/
 	}
 
 
