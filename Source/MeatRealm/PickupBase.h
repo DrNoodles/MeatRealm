@@ -39,8 +39,6 @@ protected:
 
 private:
 	UPROPERTY(VisibleAnywhere)
-		UStaticMeshComponent* MeshComp = nullptr;
-	UPROPERTY(VisibleAnywhere)
 		USkeletalMeshComponent* SkeletalMeshComp = nullptr;
 	UPROPERTY(VisibleAnywhere)
 		UCapsuleComponent* CollisionComp = nullptr;

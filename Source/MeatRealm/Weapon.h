@@ -34,9 +34,6 @@ protected:
 		USceneComponent* RootComp = nullptr;
 
 	UPROPERTY(VisibleAnywhere)
-		UStaticMeshComponent* MeshComp = nullptr;
-
-	UPROPERTY(VisibleAnywhere)
 		USkeletalMeshComponent* SkeletalMeshComp = nullptr;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)

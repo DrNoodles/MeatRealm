@@ -25,12 +25,6 @@ APickupBase::APickupBase()
 	CollisionComp->SetCollisionProfileName(FName("Pickup"));
 	RootComponent = CollisionComp;
 
-	MeshComp = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("Mesh"));
-	MeshComp->SetupAttachment(RootComponent);
-	MeshComp->SetGenerateOverlapEvents(false);
-	MeshComp->SetCollisionProfileName(TEXT("NoCollision"));
-	MeshComp->CanCharacterStepUpOn = ECB_No;
-
 	SkeletalMeshComp = CreateDefaultSubobject<USkeletalMeshComponent>(TEXT("SkeletalMesh"));
 	SkeletalMeshComp->SetupAttachment(RootComponent);
 	SkeletalMeshComp->SetGenerateOverlapEvents(false);
