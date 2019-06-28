@@ -30,7 +30,6 @@ void UWeaponReceiverComponent::BeginPlay()
 
 
 
-
 // Input state 
 
 void UWeaponReceiverComponent::RequestResume()
