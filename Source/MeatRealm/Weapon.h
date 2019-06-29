@@ -105,7 +105,8 @@ public:
 	bool SpawnAProjectile(const FVector& Direction) override;
 	FVector GetBarrelDirection() override;
 	FVector GetBarrelLocation() override;
-
+	AActor* GetOwningPawn() override;
+	FString GetWeaponName() override;
 	/* End IReceiverComponentDelegate */
 
 
