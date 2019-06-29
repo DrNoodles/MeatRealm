@@ -219,7 +219,7 @@ void UWeaponReceiverComponent::TickReady(float DT)
 void UWeaponReceiverComponent::TickPaused(float DeltaTime)
 {
 	auto str = FString::Printf(TEXT("EWeaponModes::TickPaused %s"), *WeaponState.ToString());
-	LogMsgWithRole(str);
+	//LogMsgWithRole(str);
 
 	if (WeaponState.IsAdsing) WeaponState.IsAdsing = false;
 

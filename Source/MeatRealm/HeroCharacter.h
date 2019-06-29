@@ -159,7 +159,7 @@ public:
 	UFUNCTION()
 	bool AuthTryGiveWeapon(const TSubclassOf<AWeapon>& Class) override;
 	UFUNCTION()
-	float GetGiveWeaponDelay() override;
+	bool CanGiveWeapon(const TSubclassOf<AWeapon>& Class, float& OutDelay) override;
 	/* End IAffectableInterface */
 
 
@@ -192,6 +192,10 @@ public:
 
 	UFUNCTION(BlueprintCallable)
 		AWeapon* GetCurrentWeapon() const;
+	
+	AWeapon* GetHolsteredWeapon() const;
+
+
 private:
 
 	virtual void Tick(float DeltaSeconds) override;

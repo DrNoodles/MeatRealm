@@ -379,6 +379,12 @@ AWeapon* AHeroCharacter::GetCurrentWeapon() const
 {
 	return GetWeapon(CurrentWeaponSlot);
 }
+AWeapon* AHeroCharacter::GetHolsteredWeapon() const
+{
+	if (CurrentWeaponSlot == EWeaponSlots::Primary) return GetWeapon(EWeaponSlots::Secondary);
+	if (CurrentWeaponSlot == EWeaponSlots::Secondary) return GetWeapon(EWeaponSlots::Primary);
+	return nullptr;
+}
 
 
 void AHeroCharacter::GiveWeaponToPlayer(TSubclassOf<class AWeapon> WeaponClass)
@@ -753,10 +759,20 @@ bool AHeroCharacter::AuthTryGiveAmmo()
 	//LogMsgWithRole("AHeroCharacter::TryGiveAmmo");
 	if (!HasAuthority()) return false;
 
-	if (GetCurrentWeapon() != nullptr)
+	// Try give ammo to equipped weapon
+	AWeapon* CurrentWeapon = GetCurrentWeapon();
+	if (CurrentWeapon && CurrentWeapon->TryGiveAmmo())
 	{
-		return GetCurrentWeapon()->TryGiveAmmo();
+		return true; // ammo given to main weapon
 	}
+
+	// Try give ammo to alternate weapon!
+	AWeapon* AltWeapon = GetHolsteredWeapon();
+	if (AltWeapon && AltWeapon->TryGiveAmmo())
+	{
+		return true; // ammo given to alt weapon
+	}
+
 
 	return false;
 }
@@ -778,26 +794,29 @@ bool AHeroCharacter::AuthTryGiveWeapon(const TSubclassOf<AWeapon>& Class)
 
 	//LogMsgWithRole("AHeroCharacter::TryGiveWeapon");
 
-	if (GetCurrentWeapon() && GetCurrentWeapon()->IsA(Class))
-	{
-		// If we already have the gun equipped, treat it as an ammo pickup!
-		return AuthTryGiveAmmo();
-	}
+	float OutDelay;
+	if (!CanGiveWeapon(Class, OUT OutDelay)) return false;
 
 	GiveWeaponToPlayer(Class);
-
 	return true;
 }
-
-float AHeroCharacter::GetGiveWeaponDelay()
+bool AHeroCharacter::CanGiveWeapon(const TSubclassOf<AWeapon>& Class, OUT float& OutDelay)
 {
-	const bool bIdealSlotAlreadyContainsWeapon = GetWeapon(FindGoodSlot()) != nullptr;
-	if (bIdealSlotAlreadyContainsWeapon)
-	{
-		return 2.; // delay pickup
-	}
+	EWeaponSlots GoodSlot = FindGoodSlot();
 
-	return 0.f;
+	// Get pickup delay
+	const bool bIdealSlotAlreadyContainsWeapon = GetWeapon(GoodSlot) != nullptr;
+	OutDelay = bIdealSlotAlreadyContainsWeapon ? 2 : 0;
+
+	
+	//// Dont pickup the weapon if it's the same as the one we're already holding
+	//if (GoodSlot == CurrentWeaponSlot && GetCurrentWeapon() && GetCurrentWeapon()->IsA(Class))
+	//{
+	//	return false; // Don't pick up weapon of same type
+	//}
+
+	// Always allow pickup of weapon - for now
+	return true;
 }
 
 
