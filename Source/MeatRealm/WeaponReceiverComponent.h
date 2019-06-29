@@ -182,12 +182,7 @@ protected:
 
 	UPROPERTY(BlueprintReadOnly, Replicated)
 		FWeaponState WeaponState {};
-
-	//UPROPERTY(BlueprintReadOnly, ReplicatedUsing=OnRep_WeaponState)
-	//	FWeaponState WeaponState {};
-	//UFUNCTION()
-	//	void OnRep_WeaponState();
-
+	
 private:
 	UPROPERTY(EditAnywhere)
 		float AdsLineLength = 1500; // cm
@@ -226,7 +221,7 @@ public:
 protected:
 
 private:
-	//bool HasAuthority() const { return GetOwnerRole() == ROLE_Authority; }
+	bool HasAuthority() const { return GetOwnerRole() == ROLE_Authority; }
 	virtual void BeginPlay() override;
 	virtual void TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction) override;
 

@@ -11,11 +11,6 @@ void UWeaponReceiverComponent::GetLifetimeReplicatedProps(TArray< FLifetimePrope
 	DOREPLIFETIME(UWeaponReceiverComponent, WeaponState);
 }
 
-//void UWeaponReceiverComponent::OnRep_WeaponState()
-//{
-//	LogMsgWithRole("UWeaponReceiverComponent::OnRep_WeaponState()");
-//}
-
 UWeaponReceiverComponent::UWeaponReceiverComponent()
 {
 	PrimaryComponentTick.bCanEverTick = true;
@@ -79,11 +74,6 @@ bool UWeaponReceiverComponent::TryGiveAmmo()
 	return true;
 }
 
-
-
-
-
-
 void UWeaponReceiverComponent::TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction)
 {
 	Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
@@ -117,16 +107,14 @@ void UWeaponReceiverComponent::TickComponent(float DeltaTime, ELevelTick TickTyp
 			LogMsgWithRole(FString::Printf(TEXT("TickComponent() - WeaponMode unimplemented %d"), *EWeaponModesStr(WeaponState.Mode)));
 		}
 	//}
-//	else
-	//{
-		//// Draw ADS line for self or others // TODO Remove this from ReceiverComp, back into Weapon
-		/*if (WeaponState.IsAdsing)
-		{
-			const auto Color = GetOwnerOwnerLocalRole() == ROLE_AutonomousProxy ? AdsLineColor : EnemyAdsLineColor;
-			const auto Length = GetOwnerOwnerLocalRole() == ROLE_AutonomousProxy ? AdsLineLength : EnemyAdsLineLength;
-			DrawAdsLine(Color, Length);
-		}
-	}*/
+
+	if (!HasAuthority() && WeaponState.IsAdsing)
+	{
+		// Draw ADS line for self or others // TODO Remove this from ReceiverComp, back into Weapon
+		const auto Color = GetOwnerOwnerLocalRole() == ROLE_AutonomousProxy ? AdsLineColor : EnemyAdsLineColor;
+		const auto Length = GetOwnerOwnerLocalRole() == ROLE_AutonomousProxy ? AdsLineLength : EnemyAdsLineLength;
+		DrawAdsLine(Color, Length);
+	}
 }
 
 
