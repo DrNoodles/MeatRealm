@@ -199,8 +199,10 @@ bool AWeapon::SpawnAProjectile(const FVector& Direction)
 }
 FVector AWeapon::GetBarrelDirection()
 {
+	AActor* OwningPawn = GetOwningPawn();
+
 	// We are using the actor facing direction so that animation doesn't affect the weapon's firing mechanics
-	return GetActorForwardVector();
+	return OwningPawn ? OwningPawn->GetActorForwardVector() : FVector::ZeroVector;
 
 	//return MuzzleLocationComp->GetForwardVector();
 }
