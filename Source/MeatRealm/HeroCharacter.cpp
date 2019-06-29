@@ -464,7 +464,7 @@ void AHeroCharacter::EquipWeapon(const EWeaponSlots Slot)
 	// If desired slot is empty, do nothing.
 	auto NewWeapon = GetWeapon(Slot);
 	
-	bool CanEquipEmptyWeaponSlot = true;
+	bool CanEquipEmptyWeaponSlot = false;
 	if (!NewWeapon && !CanEquipEmptyWeaponSlot) return;
 
 	const auto OldSlot = CurrentWeaponSlot;
