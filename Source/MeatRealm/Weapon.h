@@ -84,8 +84,11 @@ private:
 	
 public:
 	AWeapon();
+
+	/// [Server, Local]
 	void Draw();
-	void QueueHolster();
+
+	void Holster();
 	void Input_PullTrigger();
 	void Input_ReleaseTrigger();
 	void Input_Reload();
@@ -113,6 +116,31 @@ public:
 protected:
 
 private:
+
+	UFUNCTION(Server, Reliable, WithValidation)
+		void ServerRPC_Draw();
+	
+	UFUNCTION(Server, Reliable, WithValidation)
+		void ServerRPC_Holster();
+
+	UFUNCTION(Server, Reliable, WithValidation)
+		void ServerRPC_PullTrigger();
+
+	UFUNCTION(Server, Reliable, WithValidation)
+		void ServerRPC_ReleaseTrigger();
+
+	UFUNCTION(Server, Reliable, WithValidation)
+		void ServerRPC_Reload();
+
+	UFUNCTION(Server, Reliable, WithValidation)
+		void ServerRPC_AdsPressed();
+
+	UFUNCTION(Server, Reliable, WithValidation)
+		void ServerRPC_AdsReleased();
+
+
+
+
 	UFUNCTION(NetMulticast, Reliable)
 		void MultiRPC_NotifyOnShotFired();
 

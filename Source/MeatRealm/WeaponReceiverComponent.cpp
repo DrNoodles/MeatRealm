@@ -26,8 +26,6 @@ void UWeaponReceiverComponent::BeginPlay()
 {
 	Super::BeginPlay();
 
-	if (!HasAuthority()) return;
-
 	WeaponState.AmmoInClip = ClipSizeGiven;
 	WeaponState.AmmoInPool = AmmoPoolGiven;
 
@@ -38,37 +36,39 @@ void UWeaponReceiverComponent::BeginPlay()
 
 // Input state 
 
-void UWeaponReceiverComponent::RequestResume()
+void UWeaponReceiverComponent::DrawWeapon()
 {
-	check(HasAuthority());
 	LogMsgWithRole(FString::Printf(TEXT("InputState.DrawRequested = true")));
 	InputState.DrawRequested = true;
 }
-void UWeaponReceiverComponent::RequestPause()
+void UWeaponReceiverComponent::HolsterWeapon()
 {
-	check(HasAuthority());
 	LogMsgWithRole(FString::Printf(TEXT("InputState.HolsterRequested = true")));
 	InputState.HolsterRequested = true;
 }
-void UWeaponReceiverComponent::Input_PullTrigger()
+void UWeaponReceiverComponent::PullTrigger()
 {
-	ServerRPC_PullTrigger();
+	InputState.FireRequested = true;
+	WeaponState.HasFired = false;
 }
-void UWeaponReceiverComponent::Input_ReleaseTrigger()
+void UWeaponReceiverComponent::ReleaseTrigger()
 {
-	ServerRPC_ReleaseTrigger();
+	InputState.FireRequested = false;
+	WeaponState.HasFired = false;
 }
-void UWeaponReceiverComponent::Input_Reload()
+void UWeaponReceiverComponent::Reload()
 {
-	ServerRPC_Reload();
+	InputState.ReloadRequested = true;
 }
-void UWeaponReceiverComponent::Input_AdsPressed()
+void UWeaponReceiverComponent::AdsPressed()
 {
-	ServerRPC_AdsPressed();
+	InputState.AdsRequested = true;
+	WeaponState.IsAdsing = InputState.AdsRequested;
 }
-void UWeaponReceiverComponent::Input_AdsReleased()
+void UWeaponReceiverComponent::AdsReleased()
 {
-	ServerRPC_AdsReleased();
+	InputState.AdsRequested = false;
+	WeaponState.IsAdsing = InputState.AdsRequested;
 }
 bool UWeaponReceiverComponent::TryGiveAmmo()
 {
@@ -78,43 +78,6 @@ bool UWeaponReceiverComponent::TryGiveAmmo()
 
 	return true;
 }
-
-// This info can be used to simulate commands onto state in a replayable way!
-
-
-void UWeaponReceiverComponent::ServerRPC_PullTrigger_Implementation()
-{
-	InputState.FirePressed = true;
-	WeaponState.HasFired = false;
-}
-void UWeaponReceiverComponent::ServerRPC_ReleaseTrigger_Implementation()
-{
-	InputState.FirePressed = false;
-	WeaponState.HasFired = false;
-}
-void UWeaponReceiverComponent::ServerRPC_Reload_Implementation()
-{
-	InputState.ReloadRequested = true;
-}
-void UWeaponReceiverComponent::ServerRPC_AdsPressed_Implementation()
-{
-	//LogMsgWithRole("UWeaponReceiverComponent::ServerRPC_AdsPressed_Implementation()");
-	InputState.AdsPressed = true;
-	WeaponState.IsAdsing = InputState.AdsPressed;
-
-}
-void UWeaponReceiverComponent::ServerRPC_AdsReleased_Implementation()
-{
-	InputState.AdsPressed = false;
-	WeaponState.IsAdsing = InputState.AdsPressed;
-}
-
-
-bool UWeaponReceiverComponent::ServerRPC_PullTrigger_Validate() { return true; }
-bool UWeaponReceiverComponent::ServerRPC_ReleaseTrigger_Validate(){ return true; }
-bool UWeaponReceiverComponent::ServerRPC_Reload_Validate() { return true; }
-bool UWeaponReceiverComponent::ServerRPC_AdsPressed_Validate() { return true; }
-bool UWeaponReceiverComponent::ServerRPC_AdsReleased_Validate() { return true; }
 
 
 
@@ -126,8 +89,8 @@ void UWeaponReceiverComponent::TickComponent(float DeltaTime, ELevelTick TickTyp
 	Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
 
 
-	if (HasAuthority())
-	{
+	//if (HasAuthority())
+	//{
 		// TODO These ticks might only do 1 operation per tick. Maybe return a bool from each TickFunction if a state was changed so we can reprocess it right away?
 
 		switch (WeaponState.Mode)
@@ -153,17 +116,17 @@ void UWeaponReceiverComponent::TickComponent(float DeltaTime, ELevelTick TickTyp
 		default:
 			LogMsgWithRole(FString::Printf(TEXT("TickComponent() - WeaponMode unimplemented %d"), *EWeaponModesStr(WeaponState.Mode)));
 		}
-	}
-	else
-	{
-		// Draw ADS line for self or others // TODO Remove this from ReceiverComp, back into Weapon
-		if (WeaponState.IsAdsing)
+	//}
+//	else
+	//{
+		//// Draw ADS line for self or others // TODO Remove this from ReceiverComp, back into Weapon
+		/*if (WeaponState.IsAdsing)
 		{
 			const auto Color = GetOwnerOwnerLocalRole() == ROLE_AutonomousProxy ? AdsLineColor : EnemyAdsLineColor;
 			const auto Length = GetOwnerOwnerLocalRole() == ROLE_AutonomousProxy ? AdsLineLength : EnemyAdsLineLength;
 			DrawAdsLine(Color, Length);
 		}
-	}
+	}*/
 }
 
 
@@ -187,7 +150,7 @@ void UWeaponReceiverComponent::TickReady(float DT)
 	}
 
 	// Ready > Firing
-	if (InputState.FirePressed)
+	if (InputState.FireRequested)
 	{
 		LogMsgWithRole("EWeaponModes::TickReady - Processing FirePressed");
 
@@ -253,7 +216,7 @@ void UWeaponReceiverComponent::TickFiring(float DT)
 
 	// Process State Transitions
 	{
-		if (!InputState.FirePressed)
+		if (!InputState.FireRequested)
 		{ 
 			WeaponState = ChangeState(EWeaponCommands::FireEnd, WeaponState);
 			return;

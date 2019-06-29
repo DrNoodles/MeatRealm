@@ -67,8 +67,8 @@ struct FWeaponInputState
 {
 	GENERATED_BODY()
 
-	bool FirePressed = false; // 0 nothing, 1, pressed, 2 held, 3 released
-	bool AdsPressed = false; // 0 nothing, 1, pressed, 2 held, 3 released
+	bool FireRequested = false;
+	bool AdsRequested = false;
 	bool ReloadRequested = false;
 	bool HolsterRequested = false;
 	bool DrawRequested = false;
@@ -176,9 +176,13 @@ public:
 
 	EWeaponCommands LastCommand;
 
+
+
 protected:
+
 	UPROPERTY(BlueprintReadOnly, Replicated)
 		FWeaponState WeaponState {};
+
 	//UPROPERTY(BlueprintReadOnly, ReplicatedUsing=OnRep_WeaponState)
 	//	FWeaponState WeaponState {};
 	//UFUNCTION()
@@ -210,36 +214,22 @@ private:
 public:	
 	UWeaponReceiverComponent();
 	void SetDelegate(IReceiverComponentDelegate* TheDelegate) { Delegate = TheDelegate; }
-	void RequestResume();
-	void RequestPause();
-	void Input_PullTrigger();
-	void Input_ReleaseTrigger();
-	void Input_Reload();
-	void Input_AdsPressed();
-	void Input_AdsReleased();
+	void DrawWeapon();
+	void HolsterWeapon();
+	void PullTrigger();
+	void ReleaseTrigger();
+	void Reload();
+	void AdsPressed();
+	void AdsReleased();
 	bool TryGiveAmmo();
 
 protected:
 
 private:
-	bool HasAuthority() const { return GetOwnerRole() == ROLE_Authority; }
+	//bool HasAuthority() const { return GetOwnerRole() == ROLE_Authority; }
 	virtual void BeginPlay() override;
 	virtual void TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction) override;
 
-	UFUNCTION(Server, Reliable, WithValidation)
-		void ServerRPC_Reload();
-
-	UFUNCTION(Server, Reliable, WithValidation)
-		void ServerRPC_PullTrigger();
-
-	UFUNCTION(Server, Reliable, WithValidation)
-		void ServerRPC_ReleaseTrigger();
-
-	UFUNCTION(Server, Reliable, WithValidation)
-		void ServerRPC_AdsPressed();
-
-	UFUNCTION(Server, Reliable, WithValidation)
-		void ServerRPC_AdsReleased();
 
 	// All the states!
 	void TickReady(float DT);

@@ -490,7 +490,7 @@ void AHeroCharacter::EquipWeapon(const EWeaponSlots Slot)
 	auto OldWeapon = GetWeapon(OldSlot);
 	if (OldWeapon)
 	{
-		OldWeapon->QueueHolster();
+		OldWeapon->Holster();
 		OldWeapon->AttachToComponent(GetMesh(), Rules, HolsterSocket);
 		HolsterDuration = OldWeapon->GetHolsterDuration();
 	}
