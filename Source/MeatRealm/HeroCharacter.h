@@ -133,9 +133,7 @@ public:
 	AHeroCharacter();
 	void Restart() override;
 	void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
-
 	
-
 	void SetTint(FColor bCond)
 	{
 		TeamTint = bCond;
@@ -161,7 +159,7 @@ public:
 	UFUNCTION()
 	bool AuthTryGiveWeapon(const TSubclassOf<AWeapon>& Class) override;
 	UFUNCTION()
-	float GetGiveWeaponDelay() override;
+	bool CanGiveWeapon(const TSubclassOf<AWeapon>& Class, float& OutDelay) override;
 	/* End IAffectableInterface */
 
 
@@ -194,15 +192,19 @@ public:
 
 	UFUNCTION(BlueprintCallable)
 		AWeapon* GetCurrentWeapon() const;
+	
+	AWeapon* GetHolsteredWeapon() const;
+
+
 private:
 
 	virtual void Tick(float DeltaSeconds) override;
 
-	
-	void SetWeapon(AWeapon* Weapon, EWeaponSlots Slot);
-	AWeapon* AuthSpawnAndAttachWeapon(TSubclassOf<AWeapon> weaponClass);
+
+	void GiveWeaponToPlayer(TSubclassOf<class AWeapon> WeaponClass);
+	AWeapon* AuthSpawnWeapon(TSubclassOf<AWeapon> weaponClass);
 	EWeaponSlots FindGoodSlot() const;
-	void AssignWeaponToSlot(AWeapon* Weapon, EWeaponSlots Slot);
+	AWeapon* AssignWeaponToInventorySlot(AWeapon* Weapon, EWeaponSlots Slot);
 	void EquipWeapon(EWeaponSlots Slot);
 
 	static FVector2D GetGameViewportSize();

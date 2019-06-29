@@ -3,6 +3,7 @@
 #include "Camera/CameraComponent.h"
 #include "Components/CapsuleComponent.h"
 #include "Components/StaticMeshComponent.h"
+#include "Components/SkeletalMeshComponent.h"
 #include "Components/ArrowComponent.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "GameFramework/Controller.h"
@@ -107,11 +108,7 @@ void AHeroCharacter::Restart()
 		if (HasAuthority())
 		{
 			const auto Choice = FMath::RandRange(0, DefaultWeaponClass.Num() - 1);
-
-			const auto Weapon = AuthSpawnAndAttachWeapon(DefaultWeaponClass[Choice]);
-			const auto Slot = FindGoodSlot();
-			AssignWeaponToSlot(Weapon, Slot);
-			EquipWeapon(Slot);
+			GiveWeaponToPlayer(DefaultWeaponClass[Choice]);
 		}
 	}
 }
@@ -364,6 +361,7 @@ void AHeroCharacter::Input_Reload() const
 
 
 // Weapon spawning
+
 AWeapon* AHeroCharacter::GetWeapon(EWeaponSlots Slot) const
 {
 	switch (Slot) 
@@ -376,45 +374,69 @@ AWeapon* AHeroCharacter::GetWeapon(EWeaponSlots Slot) const
 		return nullptr; 
 	}
 }
-void AHeroCharacter::SetWeapon(AWeapon* Weapon, EWeaponSlots Slot)
-{
-	// This does not free up resources by design! If needed, first get the weapon before overwriting it
-	if (Slot == EWeaponSlots::Primary) Slot1 = Weapon;
-	if (Slot == EWeaponSlots::Secondary) Slot2 = Weapon;
-}
 
 AWeapon* AHeroCharacter::GetCurrentWeapon() const
 {
 	return GetWeapon(CurrentWeaponSlot);
 }
+AWeapon* AHeroCharacter::GetHolsteredWeapon() const
+{
+	if (CurrentWeaponSlot == EWeaponSlots::Primary) return GetWeapon(EWeaponSlots::Secondary);
+	if (CurrentWeaponSlot == EWeaponSlots::Secondary) return GetWeapon(EWeaponSlots::Primary);
+	return nullptr;
+}
 
-AWeapon* AHeroCharacter::AuthSpawnAndAttachWeapon(TSubclassOf<AWeapon> weaponClass)
+
+void AHeroCharacter::GiveWeaponToPlayer(TSubclassOf<class AWeapon> WeaponClass)
+{
+	const auto Weapon = AuthSpawnWeapon(WeaponClass);
+	const auto Slot = FindGoodSlot();
+	const auto RemovedWeapon = AssignWeaponToInventorySlot(Weapon, Slot);
+
+	if (RemovedWeapon)
+	{
+		// If it's the same slot, replay the equip weapon
+		RemovedWeapon->Destroy();
+		CurrentWeaponSlot = EWeaponSlots::Undefined;
+	}
+
+	EquipWeapon(Slot);
+}
+
+AWeapon* AHeroCharacter::AuthSpawnWeapon(TSubclassOf<AWeapon> weaponClass)
 {
 	//LogMsgWithRole("AHeroCharacter::ServerRPC_SpawnWeapon");
 	check(HasAuthority())
 	if (!GetWorld()) return nullptr;
 
 
-	// Spawn the weapon at the anchor
+	const char* SocketName = "Cunt";
+
+	const auto TF = GetMesh()->GetSocketTransform(SocketName, RTS_World);
+
+	// Spawn the weapon at the weapon socket
 	auto* Weapon = GetWorld()->SpawnActorDeferred<AWeapon>(
 		weaponClass,
-		WeaponAnchor->GetComponentTransform(),
+		TF,
 		this,
 		this,
 		ESpawnActorCollisionHandlingMethod::AlwaysSpawn);
 	
-	if (Weapon == nullptr) { return nullptr; }
+	//if (Weapon == nullptr) { return nullptr; }
 
 
-	// Configure it
-	Weapon->AttachToComponent(WeaponAnchor, FAttachmentTransformRules{ EAttachmentRule::KeepWorld, true });
+	//// Configure it
+	//auto rules = FAttachmentTransformRules{ EAttachmentRule::KeepRelative, true };
+	//Weapon->AttachToComponent(
+	//	GetMesh(), 
+	//	rules,
+	//	SocketName);
+
 	Weapon->SetHeroControllerId(GetHeroController()->PlayerState->PlayerId);
 
 
 	// Finish him!
-	UGameplayStatics::FinishSpawningActor(
-		Weapon,
-		WeaponAnchor->GetComponentTransform());
+	UGameplayStatics::FinishSpawningActor(Weapon, TF);
 
 	return Weapon;
 }
@@ -426,13 +448,19 @@ EWeaponSlots AHeroCharacter::FindGoodSlot() const
 	if (!Slot2) return EWeaponSlots::Secondary;
 	return CurrentWeaponSlot;
 }
-void AHeroCharacter::AssignWeaponToSlot(AWeapon* Weapon, EWeaponSlots Slot)
+AWeapon* AHeroCharacter::AssignWeaponToInventorySlot(AWeapon* Weapon, EWeaponSlots Slot)
 {
-	auto Removed = GetWeapon(Slot);
-	SetWeapon(Weapon, Slot);
+	const auto Removed = GetWeapon(Slot);
 
-	// Cleanup previous weapon // TODO Drop this on ground
-	if (Removed) Removed->Destroy();
+	//SetWeapon(Weapon, Slot);
+	// This does not free up resources by design! If needed, first get the weapon before overwriting it
+	if (Slot == EWeaponSlots::Primary) Slot1 = Weapon;
+	if (Slot == EWeaponSlots::Secondary) Slot2 = Weapon;
+
+
+	//// Cleanup previous weapon // TODO Drop this on ground
+	//if (Removed) Removed->Destroy();
+	return Removed;
 }
 
 void AHeroCharacter::EquipWeapon(const EWeaponSlots Slot)
@@ -442,8 +470,7 @@ void AHeroCharacter::EquipWeapon(const EWeaponSlots Slot)
 	// If desired slot is empty, do nothing.
 	auto NewWeapon = GetWeapon(Slot);
 	
-	bool CanEquipEmptyWeaponSlot = true; 
-
+	bool CanEquipEmptyWeaponSlot = false;
 	if (!NewWeapon && !CanEquipEmptyWeaponSlot) return;
 
 	const auto OldSlot = CurrentWeaponSlot;
@@ -454,30 +481,32 @@ void AHeroCharacter::EquipWeapon(const EWeaponSlots Slot)
 
 	float HolsterDuration = 0;
 
-	// Hide old weapon
+	const char* HandSocket = "HandSocket"; // TODO field?
+	const char* HolsterSocket = "HolsterSocket"; // TODO field?
+	const auto Rules = FAttachmentTransformRules{ EAttachmentRule::SnapToTarget, true };
+	
+
+	// Holster old weapon
 	auto OldWeapon = GetWeapon(OldSlot);
 	if (OldWeapon)
 	{
-		//OldWeapon->SetActorHiddenInGame(true);
 		OldWeapon->QueueHolster();
-		OldWeapon->AttachToComponent(HolsteredweaponAnchor, 
-			FAttachmentTransformRules{ EAttachmentRule::SnapToTarget, true });
+		OldWeapon->AttachToComponent(GetMesh(), Rules, HolsterSocket);
 		HolsterDuration = OldWeapon->GetHolsterDuration();
 	}
 
 
-	// Show new weapon
+	// Hold new weapon
 	if (NewWeapon)
 	{
-		//NewWeapon->SetActorHiddenInGame(false);
 		NewWeapon->Draw();
-		NewWeapon->AttachToComponent(WeaponAnchor,
-			FAttachmentTransformRules{ EAttachmentRule::SnapToTarget, true });
+		NewWeapon->AttachToComponent(GetMesh(), Rules, HandSocket);
 	}
 
 
 	// TODO Swap attatchment points (eg, new gun in hands, old gun on back)
 }
+
 
 
 // Camera tracks aim
@@ -730,10 +759,20 @@ bool AHeroCharacter::AuthTryGiveAmmo()
 	//LogMsgWithRole("AHeroCharacter::TryGiveAmmo");
 	if (!HasAuthority()) return false;
 
-	if (GetCurrentWeapon() != nullptr)
+	// Try give ammo to equipped weapon
+	AWeapon* CurrentWeapon = GetCurrentWeapon();
+	if (CurrentWeapon && CurrentWeapon->TryGiveAmmo())
 	{
-		return GetCurrentWeapon()->TryGiveAmmo();
+		return true; // ammo given to main weapon
 	}
+
+	// Try give ammo to alternate weapon!
+	AWeapon* AltWeapon = GetHolsteredWeapon();
+	if (AltWeapon && AltWeapon->TryGiveAmmo())
+	{
+		return true; // ammo given to alt weapon
+	}
+
 
 	return false;
 }
@@ -755,29 +794,29 @@ bool AHeroCharacter::AuthTryGiveWeapon(const TSubclassOf<AWeapon>& Class)
 
 	//LogMsgWithRole("AHeroCharacter::TryGiveWeapon");
 
-	if (GetCurrentWeapon() && GetCurrentWeapon()->IsA(Class))
-	{
-		// If we already have the gun equipped, treat it as an ammo pickup!
-		return AuthTryGiveAmmo();
-	}
+	float OutDelay;
+	if (!CanGiveWeapon(Class, OUT OutDelay)) return false;
 
-	const auto Weapon = AuthSpawnAndAttachWeapon(Class);
-	const auto Slot = FindGoodSlot();
-	AssignWeaponToSlot(Weapon, Slot);
-	EquipWeapon(Slot);
-
+	GiveWeaponToPlayer(Class);
 	return true;
 }
-
-float AHeroCharacter::GetGiveWeaponDelay()
+bool AHeroCharacter::CanGiveWeapon(const TSubclassOf<AWeapon>& Class, OUT float& OutDelay)
 {
-	const bool bIdealSlotAlreadyContainsWeapon = GetWeapon(FindGoodSlot()) != nullptr;
-	if (bIdealSlotAlreadyContainsWeapon)
-	{
-		return 2.; // delay pickup
-	}
+	EWeaponSlots GoodSlot = FindGoodSlot();
 
-	return 0.f;
+	// Get pickup delay
+	const bool bIdealSlotAlreadyContainsWeapon = GetWeapon(GoodSlot) != nullptr;
+	OutDelay = bIdealSlotAlreadyContainsWeapon ? 2 : 0;
+
+	
+	//// Dont pickup the weapon if it's the same as the one we're already holding
+	//if (GoodSlot == CurrentWeaponSlot && GetCurrentWeapon() && GetCurrentWeapon()->IsA(Class))
+	//{
+	//	return false; // Don't pick up weapon of same type
+	//}
+
+	// Always allow pickup of weapon - for now
+	return true;
 }
 
 

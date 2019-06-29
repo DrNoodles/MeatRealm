@@ -41,7 +41,8 @@ public:
 	UPROPERTY(BlueprintReadOnly)
 		bool IsAdsing = false;
 
-	bool HasFired = false; // For Firing state
+	UPROPERTY(BlueprintReadOnly)
+		bool HasFired = false; // For Firing state
 
 	FWeaponState Clone() const
 	{
@@ -53,6 +54,11 @@ public:
 		Clone.IsAdsing = this->IsAdsing;
 		Clone.HasFired = this->HasFired;
 		return Clone;
+	}
+
+	FString ToString() const
+	{
+		return FString::Printf(TEXT("IsAdsing %s"),(IsAdsing?"T":"F"));
 	}
 };
 
@@ -80,6 +86,9 @@ public:
 	virtual bool SpawnAProjectile(const FVector& Direction) = 0;
 	virtual FVector GetBarrelDirection() = 0;
 	virtual FVector GetBarrelLocation() = 0;
+	virtual AActor* GetOwningPawn() = 0;
+	virtual FString GetWeaponName() = 0;
+
 };
 
 
@@ -168,8 +177,12 @@ public:
 	EWeaponCommands LastCommand;
 
 protected:
-	UPROPERTY(Replicated, BlueprintReadOnly)
+	UPROPERTY(BlueprintReadOnly, Replicated)
 		FWeaponState WeaponState {};
+	//UPROPERTY(BlueprintReadOnly, ReplicatedUsing=OnRep_WeaponState)
+	//	FWeaponState WeaponState {};
+	//UFUNCTION()
+	//	void OnRep_WeaponState();
 
 private:
 	UPROPERTY(EditAnywhere)

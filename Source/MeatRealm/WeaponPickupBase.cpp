@@ -5,10 +5,10 @@
 
 bool AWeaponPickupBase::CanInteract(IAffectableInterface* const Affectable, float& OutDelay)
 {
-	const bool bCanInteract = Super::CanInteract(Affectable, OutDelay);
+	bool bCanInteract = Super::CanInteract(Affectable, OutDelay);
 	if (bCanInteract)
 	{
-		OutDelay = Affectable->GetGiveWeaponDelay();
+		bCanInteract = Affectable->CanGiveWeapon(WeaponClass, OUT OutDelay);
 	}
 	return bCanInteract;
 }

@@ -10,6 +10,12 @@ void UWeaponReceiverComponent::GetLifetimeReplicatedProps(TArray< FLifetimePrope
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
 	DOREPLIFETIME(UWeaponReceiverComponent, WeaponState);
 }
+
+//void UWeaponReceiverComponent::OnRep_WeaponState()
+//{
+//	LogMsgWithRole("UWeaponReceiverComponent::OnRep_WeaponState()");
+//}
+
 UWeaponReceiverComponent::UWeaponReceiverComponent()
 {
 	PrimaryComponentTick.bCanEverTick = true;
@@ -94,10 +100,13 @@ void UWeaponReceiverComponent::ServerRPC_AdsPressed_Implementation()
 {
 	//LogMsgWithRole("UWeaponReceiverComponent::ServerRPC_AdsPressed_Implementation()");
 	InputState.AdsPressed = true;
+	WeaponState.IsAdsing = InputState.AdsPressed;
+
 }
 void UWeaponReceiverComponent::ServerRPC_AdsReleased_Implementation()
 {
 	InputState.AdsPressed = false;
+	WeaponState.IsAdsing = InputState.AdsPressed;
 }
 
 
@@ -166,7 +175,7 @@ void UWeaponReceiverComponent::TickReady(float DT)
 	//LogMsgWithRole("EWeaponModes::Ready");
 
 	// Allow fluid enter/exit of ADS state
-	WeaponState.IsAdsing = InputState.AdsPressed;
+	//WeaponState.IsAdsing = InputState.AdsPressed;
 
 	if (InputState.HolsterRequested)
 	{
@@ -209,7 +218,10 @@ void UWeaponReceiverComponent::TickReady(float DT)
 
 void UWeaponReceiverComponent::TickPaused(float DeltaTime)
 {
-	//LogMsgWithRole("EWeaponModes::TickPaused");
+	auto str = FString::Printf(TEXT("EWeaponModes::TickPaused %s"), *WeaponState.ToString());
+	//LogMsgWithRole(str);
+
+	if (WeaponState.IsAdsing) WeaponState.IsAdsing = false;
 
 	if (InputState.DrawRequested)
 	{
@@ -233,7 +245,6 @@ void UWeaponReceiverComponent::TickFiring(float DT)
 
 
 	// Allow ADS on/off any timestate
-	WeaponState.IsAdsing = InputState.AdsPressed;
 
 
 	if (bIsBusy) return;
@@ -321,7 +332,6 @@ void UWeaponReceiverComponent::TickFiring(float DT)
 
 
 
-
 void UWeaponReceiverComponent::TickReloading(float DT)
 {
 	//LogMsgWithRole("EWeaponModes::Reloading");
@@ -385,47 +395,6 @@ void UWeaponReceiverComponent::TickReloading(float DT)
 }
 
 
-
-
-void UWeaponReceiverComponent::DoTransitionAction(const EWeaponModes OldMode, const EWeaponModes NewMode)
-{
-	// None/Paused > Ready
-	if ((OldMode == EWeaponModes::None || OldMode == EWeaponModes::Paused) && NewMode == EWeaponModes::Ready)
-	{
-		// Stop any actions - should never be true.. TODO Convert these to asserts to make sure we've good elsewhere
-		bIsBusy = false;
-		if (BusyTimerHandle.IsValid()) GetWorld()->GetTimerManager().ClearTimer(BusyTimerHandle);
-
-		// Remove all input
-		InputState = FWeaponInputState{};
-
-		// Forget all unimportant state
-		bIsMidReload = false;
-		WeaponState.ReloadProgress = false;
-		WeaponState.IsAdsing = false;
-		WeaponState.HasFired = false;
-	}
-	
-
-	// Any > Paused
-	if (NewMode == EWeaponModes::Paused)
-	{
-		// NEW HERE
-
-		bIsBusy = false;
-		if (BusyTimerHandle.IsValid()) GetWorld()->GetTimerManager().ClearTimer(BusyTimerHandle);
-		
-		InputState = FWeaponInputState{};
-
-		// Leave Reload alone! We might want to resume it
-		WeaponState.IsAdsing = false;
-		WeaponState.HasFired = false;
-	}
-}
-
-
-
-
 FWeaponState UWeaponReceiverComponent::ChangeState(EWeaponCommands Cmd, const FWeaponState& InState)
 {
 	FWeaponState OutState = InState.Clone();
@@ -477,6 +446,48 @@ FWeaponState UWeaponReceiverComponent::ChangeState(EWeaponCommands Cmd, const FW
 
 	return OutState;
 }
+
+
+void UWeaponReceiverComponent::DoTransitionAction(const EWeaponModes OldMode, const EWeaponModes NewMode)
+{
+	// None/Paused > Ready
+	if ((OldMode == EWeaponModes::None || OldMode == EWeaponModes::Paused) && NewMode == EWeaponModes::Ready)
+	{
+		// Stop any actions - should never be true.. TODO Convert these to asserts to make sure we've good elsewhere
+		bIsBusy = false;
+		if (BusyTimerHandle.IsValid()) GetWorld()->GetTimerManager().ClearTimer(BusyTimerHandle);
+
+		// Remove all input
+		InputState = FWeaponInputState{};
+
+		// Forget all unimportant state
+		bIsMidReload = false;
+		WeaponState.ReloadProgress = false;
+		WeaponState.IsAdsing = false;
+		WeaponState.HasFired = false;
+	}
+
+
+	// Any > Paused
+	if (NewMode == EWeaponModes::Paused)
+	{
+		// NEW HERE
+
+		bIsBusy = false;
+		if (BusyTimerHandle.IsValid()) GetWorld()->GetTimerManager().ClearTimer(BusyTimerHandle);
+
+		InputState = FWeaponInputState{};
+
+		// Leave Reload alone! We might want to resume it
+		WeaponState.IsAdsing = false;
+		WeaponState.HasFired = false;
+
+		LogMsgWithRole("NewMode == Paused");
+		LogMsgWithRole(WeaponState.ToString());
+	}
+}
+
+
 
 
 
@@ -560,7 +571,7 @@ void UWeaponReceiverComponent::DrawAdsLine(const FColor& Color, float LineLength
 		Start,
 		End,
 		ECC_Visibility,
-		FCollisionQueryParams{ FName(""), false, GetOwner()}
+		FCollisionQueryParams{ FName(""), false, Delegate->GetOwningPawn()}
 	);
 
 	if (bIsHit) End = HitResult.ImpactPoint;
@@ -570,7 +581,7 @@ void UWeaponReceiverComponent::DrawAdsLine(const FColor& Color, float LineLength
 
 void UWeaponReceiverComponent::LogMsgWithRole(FString message)
 {
-	FString m = GetRoleText() + ": " + message;
+	FString m = GetRoleText() + " " + Delegate->GetWeaponName() + ": " + message;
 	UE_LOG(LogTemp, Warning, TEXT("%s"), *m);
 }
 FString UWeaponReceiverComponent::GetEnumText(ENetRole role)

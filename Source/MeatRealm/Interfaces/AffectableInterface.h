@@ -33,5 +33,7 @@ public: // NOTE This interface breaks the I in SOLID. But it'll do for now.
 	UFUNCTION()
 		virtual bool AuthTryGiveWeapon(const TSubclassOf<AWeapon>& Class) = 0;
 	UFUNCTION()
-		virtual float GetGiveWeaponDelay() = 0;
+		virtual bool CanGiveWeapon(const TSubclassOf<AWeapon>& Class, float& OutDelay) = 0;
+	//UFUNCTION()
+	//	virtual float GetGiveWeaponDelay() = 0;
 };
