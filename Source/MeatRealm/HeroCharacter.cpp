@@ -108,11 +108,7 @@ void AHeroCharacter::Restart()
 		if (HasAuthority())
 		{
 			const auto Choice = FMath::RandRange(0, DefaultWeaponClass.Num() - 1);
-
-			const auto Weapon = AuthSpawnAndAttachWeapon(DefaultWeaponClass[Choice]);
-			const auto Slot = FindGoodSlot();
-			AssignWeaponToSlot(Weapon, Slot);
-			EquipWeapon(Slot);
+			GiveWeaponToPlayer(DefaultWeaponClass[Choice]);
 		}
 	}
 }
@@ -365,6 +361,7 @@ void AHeroCharacter::Input_Reload() const
 
 
 // Weapon spawning
+
 AWeapon* AHeroCharacter::GetWeapon(EWeaponSlots Slot) const
 {
 	switch (Slot) 
@@ -377,19 +374,30 @@ AWeapon* AHeroCharacter::GetWeapon(EWeaponSlots Slot) const
 		return nullptr; 
 	}
 }
-void AHeroCharacter::SetWeapon(AWeapon* Weapon, EWeaponSlots Slot)
-{
-	// This does not free up resources by design! If needed, first get the weapon before overwriting it
-	if (Slot == EWeaponSlots::Primary) Slot1 = Weapon;
-	if (Slot == EWeaponSlots::Secondary) Slot2 = Weapon;
-}
 
 AWeapon* AHeroCharacter::GetCurrentWeapon() const
 {
 	return GetWeapon(CurrentWeaponSlot);
 }
 
-AWeapon* AHeroCharacter::AuthSpawnAndAttachWeapon(TSubclassOf<AWeapon> weaponClass)
+
+void AHeroCharacter::GiveWeaponToPlayer(TSubclassOf<class AWeapon> WeaponClass)
+{
+	const auto Weapon = AuthSpawnWeapon(WeaponClass);
+	const auto Slot = FindGoodSlot();
+	const auto RemovedWeapon = AssignWeaponToInventorySlot(Weapon, Slot);
+
+	if (RemovedWeapon)
+	{
+		// If it's the same slot, replay the equip weapon
+		RemovedWeapon->Destroy();
+		CurrentWeaponSlot = EWeaponSlots::Undefined;
+	}
+
+	EquipWeapon(Slot);
+}
+
+AWeapon* AHeroCharacter::AuthSpawnWeapon(TSubclassOf<AWeapon> weaponClass)
 {
 	//LogMsgWithRole("AHeroCharacter::ServerRPC_SpawnWeapon");
 	check(HasAuthority())
@@ -434,13 +442,19 @@ EWeaponSlots AHeroCharacter::FindGoodSlot() const
 	if (!Slot2) return EWeaponSlots::Secondary;
 	return CurrentWeaponSlot;
 }
-void AHeroCharacter::AssignWeaponToSlot(AWeapon* Weapon, EWeaponSlots Slot)
+AWeapon* AHeroCharacter::AssignWeaponToInventorySlot(AWeapon* Weapon, EWeaponSlots Slot)
 {
-	auto Removed = GetWeapon(Slot);
-	SetWeapon(Weapon, Slot);
+	const auto Removed = GetWeapon(Slot);
 
-	// Cleanup previous weapon // TODO Drop this on ground
-	if (Removed) Removed->Destroy();
+	//SetWeapon(Weapon, Slot);
+	// This does not free up resources by design! If needed, first get the weapon before overwriting it
+	if (Slot == EWeaponSlots::Primary) Slot1 = Weapon;
+	if (Slot == EWeaponSlots::Secondary) Slot2 = Weapon;
+
+
+	//// Cleanup previous weapon // TODO Drop this on ground
+	//if (Removed) Removed->Destroy();
+	return Removed;
 }
 
 void AHeroCharacter::EquipWeapon(const EWeaponSlots Slot)
@@ -450,8 +464,7 @@ void AHeroCharacter::EquipWeapon(const EWeaponSlots Slot)
 	// If desired slot is empty, do nothing.
 	auto NewWeapon = GetWeapon(Slot);
 	
-	bool CanEquipEmptyWeaponSlot = true; 
-
+	bool CanEquipEmptyWeaponSlot = true;
 	if (!NewWeapon && !CanEquipEmptyWeaponSlot) return;
 
 	const auto OldSlot = CurrentWeaponSlot;
@@ -462,29 +475,17 @@ void AHeroCharacter::EquipWeapon(const EWeaponSlots Slot)
 
 	float HolsterDuration = 0;
 
-	const char* HandSocket = "HandSocket";
-	const char* HolsterSocket = "HolsterSocket";
-	auto rules = FAttachmentTransformRules{ EAttachmentRule::SnapToTarget, true };
+	const char* HandSocket = "HandSocket"; // TODO field?
+	const char* HolsterSocket = "HolsterSocket"; // TODO field?
+	const auto Rules = FAttachmentTransformRules{ EAttachmentRule::SnapToTarget, true };
 	
-	
-	
-	//const auto TF = GetMesh()->GetSocketTransform(WeaponSocket, RTS_World);
-	//Weapon->AttachToComponent(
-	//	GetMesh(), 
-	//	rules,
-	//	SocketName);
-
-
 
 	// Holster old weapon
 	auto OldWeapon = GetWeapon(OldSlot);
 	if (OldWeapon)
 	{
-		//OldWeapon->SetActorHiddenInGame(true);
 		OldWeapon->QueueHolster();
-		OldWeapon->AttachToComponent(GetMesh(), rules, HolsterSocket);
-		/*OldWeapon->AttachToComponent(HolsteredweaponAnchor, 
-			FAttachmentTransformRules{ EAttachmentRule::SnapToTarget, true });*/
+		OldWeapon->AttachToComponent(GetMesh(), Rules, HolsterSocket);
 		HolsterDuration = OldWeapon->GetHolsterDuration();
 	}
 
@@ -492,16 +493,14 @@ void AHeroCharacter::EquipWeapon(const EWeaponSlots Slot)
 	// Hold new weapon
 	if (NewWeapon)
 	{
-		//NewWeapon->SetActorHiddenInGame(false);
 		NewWeapon->Draw();
-		NewWeapon->AttachToComponent(GetMesh(), rules, HandSocket);
-		/*NewWeapon->AttachToComponent(WeaponAnchor,
-			FAttachmentTransformRules{ EAttachmentRule::SnapToTarget, true });*/
+		NewWeapon->AttachToComponent(GetMesh(), Rules, HandSocket);
 	}
 
 
 	// TODO Swap attatchment points (eg, new gun in hands, old gun on back)
 }
+
 
 
 // Camera tracks aim
@@ -785,10 +784,7 @@ bool AHeroCharacter::AuthTryGiveWeapon(const TSubclassOf<AWeapon>& Class)
 		return AuthTryGiveAmmo();
 	}
 
-	const auto Weapon = AuthSpawnAndAttachWeapon(Class);
-	const auto Slot = FindGoodSlot();
-	AssignWeaponToSlot(Weapon, Slot);
-	EquipWeapon(Slot);
+	GiveWeaponToPlayer(Class);
 
 	return true;
 }

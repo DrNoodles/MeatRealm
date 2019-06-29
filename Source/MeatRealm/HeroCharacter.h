@@ -133,9 +133,7 @@ public:
 	AHeroCharacter();
 	void Restart() override;
 	void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
-
 	
-
 	void SetTint(FColor bCond)
 	{
 		TeamTint = bCond;
@@ -198,11 +196,11 @@ private:
 
 	virtual void Tick(float DeltaSeconds) override;
 
-	
-	void SetWeapon(AWeapon* Weapon, EWeaponSlots Slot);
-	AWeapon* AuthSpawnAndAttachWeapon(TSubclassOf<AWeapon> weaponClass);
+
+	void GiveWeaponToPlayer(TSubclassOf<class AWeapon> WeaponClass);
+	AWeapon* AuthSpawnWeapon(TSubclassOf<AWeapon> weaponClass);
 	EWeaponSlots FindGoodSlot() const;
-	void AssignWeaponToSlot(AWeapon* Weapon, EWeaponSlots Slot);
+	AWeapon* AssignWeaponToInventorySlot(AWeapon* Weapon, EWeaponSlots Slot);
 	void EquipWeapon(EWeaponSlots Slot);
 
 	static FVector2D GetGameViewportSize();
