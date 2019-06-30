@@ -10,13 +10,13 @@ enum class EWeaponCommands : uint8
 {
 	FireStart, FireEnd,
 	ReloadStart, ReloadEnd,
-	DrawWeapon, HolsterWeapon,
+	Equip, UnEquip,
 };
 
 UENUM(BlueprintType)
 enum class EWeaponModes : uint8
 {
-	None = 0, Ready, Firing, Reloading, Paused,
+	UnEquipped = 0, Equipping, Idle, Firing, Reloading,
 };
 
 
@@ -27,7 +27,7 @@ struct FWeaponState
 
 public:
 	UPROPERTY(BlueprintReadOnly)
-		EWeaponModes Mode = EWeaponModes::None;
+		EWeaponModes Mode = EWeaponModes::UnEquipped;
 
 	UPROPERTY(BlueprintReadOnly)
 		int AmmoInClip = 0;
@@ -72,6 +72,14 @@ struct FWeaponInputState
 	bool ReloadRequested = false;
 	bool HolsterRequested = false;
 	bool DrawRequested = false;
+	void Reset()
+	{
+		FireRequested = false;
+		AdsRequested = false;
+		ReloadRequested = false;
+		HolsterRequested = false;
+		DrawRequested = false;
+	}
 };
 
 class IReceiverComponentDelegate
@@ -96,12 +104,12 @@ inline FString EWeaponCommandsStr(const EWeaponCommands Cmd)
 {
 	switch (Cmd)
 	{
-	case EWeaponCommands::FireStart: return "FireStart";
-	case EWeaponCommands::FireEnd: return "FireEnd";
-	case EWeaponCommands::ReloadStart: return "ReloadStart";
-	case EWeaponCommands::ReloadEnd: return "ReloadEnd";
-	case EWeaponCommands::DrawWeapon: return "DrawWeapon";
-	case EWeaponCommands::HolsterWeapon: return "HolsterWeapon";
+	case EWeaponCommands::FireStart: return "DoFireStart";
+	case EWeaponCommands::FireEnd: return "DoFireEnd";
+	case EWeaponCommands::ReloadStart: return "DoReloadStart";
+	case EWeaponCommands::ReloadEnd: return "DoReloadEnd";
+	case EWeaponCommands::Equip: return "DoEquip";
+	case EWeaponCommands::UnEquip: return "DoUnEquip";
 	default: return "Unknown";
 	}
 }
@@ -109,11 +117,11 @@ inline FString EWeaponModesStr(const EWeaponModes Mode)
 {
 	switch (Mode)
 	{
-	case EWeaponModes::None: return "None";
-	case EWeaponModes::Ready: return "Ready";
+	case EWeaponModes::UnEquipped: return "UnEquipped";
+	case EWeaponModes::Equipping: return "Equipping";
+	case EWeaponModes::Idle: return "Idle";
 	case EWeaponModes::Firing: return "Firing";
 	case EWeaponModes::Reloading: return "Reloading";
-	case EWeaponModes::Paused: return "Paused";
 	default: return "Unknown";
 	}
 }
@@ -174,9 +182,6 @@ public:
 	UPROPERTY(EditAnywhere, meta = (EditCondition = "bEvenSpread"))
 		bool bSpreadClumping = true;
 
-	EWeaponCommands LastCommand;
-
-
 
 protected:
 
@@ -227,12 +232,13 @@ private:
 
 
 	// All the states!
-	void TickReady(float DT);
-	void TickPaused(float DeltaTime);
-	void TickFiring(float DT);
-	void TickReloading(float DT);
+	bool TickIdle(float DT);
+	bool TickUnEquipped(float DeltaTime);
+	bool TickFiring(float DT);
+	bool TickReloading(float DT);
+	void ReloadEnd();
 	void DoTransitionAction(const EWeaponModes OldMode, const EWeaponModes NewMode);
-	FWeaponState ChangeState(EWeaponCommands Cmd, const FWeaponState& InState);
+	bool ChangeState(EWeaponCommands Cmd, const FWeaponState& InState);
 
 	TArray<FVector> CalcShotPattern() const;
 	bool CanReload() const;
