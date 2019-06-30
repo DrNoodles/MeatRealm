@@ -10,13 +10,14 @@ enum class EWeaponCommands : uint8
 {
 	FireStart, FireEnd,
 	ReloadStart, ReloadEnd,
-	DrawWeapon, HolsterWeapon,
+	EquipStart, EquipEnd,
+	UnEquip,
 };
 
 UENUM(BlueprintType)
 enum class EWeaponModes : uint8
 {
-	None = 0, Ready, Firing, Reloading, Paused,
+	UnEquipped = 0, Equipping, Idle, Firing, Reloading,
 };
 
 
@@ -27,7 +28,7 @@ struct FWeaponState
 
 public:
 	UPROPERTY(BlueprintReadOnly)
-		EWeaponModes Mode = EWeaponModes::None;
+		EWeaponModes Mode = EWeaponModes::UnEquipped;
 
 	UPROPERTY(BlueprintReadOnly)
 		int AmmoInClip = 0;
@@ -67,11 +68,19 @@ struct FWeaponInputState
 {
 	GENERATED_BODY()
 
-	bool FirePressed = false; // 0 nothing, 1, pressed, 2 held, 3 released
-	bool AdsPressed = false; // 0 nothing, 1, pressed, 2 held, 3 released
+	bool FireRequested = false;
+	bool AdsRequested = false;
 	bool ReloadRequested = false;
 	bool HolsterRequested = false;
 	bool DrawRequested = false;
+	void Reset()
+	{
+		FireRequested = false;
+		AdsRequested = false;
+		ReloadRequested = false;
+		HolsterRequested = false;
+		DrawRequested = false;
+	}
 };
 
 class IReceiverComponentDelegate
@@ -88,7 +97,7 @@ public:
 	virtual FVector GetBarrelLocation() = 0;
 	virtual AActor* GetOwningPawn() = 0;
 	virtual FString GetWeaponName() = 0;
-
+	virtual float GetDrawDuration() = 0;
 };
 
 
@@ -96,12 +105,13 @@ inline FString EWeaponCommandsStr(const EWeaponCommands Cmd)
 {
 	switch (Cmd)
 	{
-	case EWeaponCommands::FireStart: return "FireStart";
-	case EWeaponCommands::FireEnd: return "FireEnd";
-	case EWeaponCommands::ReloadStart: return "ReloadStart";
-	case EWeaponCommands::ReloadEnd: return "ReloadEnd";
-	case EWeaponCommands::DrawWeapon: return "DrawWeapon";
-	case EWeaponCommands::HolsterWeapon: return "HolsterWeapon";
+	case EWeaponCommands::FireStart: return "DoFireStart";
+	case EWeaponCommands::FireEnd: return "DoFireEnd";
+	case EWeaponCommands::ReloadStart: return "DoReloadStart";
+	case EWeaponCommands::ReloadEnd: return "DoReloadEnd";
+	case EWeaponCommands::EquipStart: return "DoEquipStart";
+	case EWeaponCommands::EquipEnd: return "DoEquipEnd";
+	case EWeaponCommands::UnEquip: return "DoUnEquip";
 	default: return "Unknown";
 	}
 }
@@ -109,11 +119,11 @@ inline FString EWeaponModesStr(const EWeaponModes Mode)
 {
 	switch (Mode)
 	{
-	case EWeaponModes::None: return "None";
-	case EWeaponModes::Ready: return "Ready";
+	case EWeaponModes::UnEquipped: return "UnEquipped";
+	case EWeaponModes::Equipping: return "Equipping";
+	case EWeaponModes::Idle: return "Idle";
 	case EWeaponModes::Firing: return "Firing";
 	case EWeaponModes::Reloading: return "Reloading";
-	case EWeaponModes::Paused: return "Paused";
 	default: return "Unknown";
 	}
 }
@@ -174,16 +184,12 @@ public:
 	UPROPERTY(EditAnywhere, meta = (EditCondition = "bEvenSpread"))
 		bool bSpreadClumping = true;
 
-	EWeaponCommands LastCommand;
 
 protected:
+
 	UPROPERTY(BlueprintReadOnly, Replicated)
 		FWeaponState WeaponState {};
-	//UPROPERTY(BlueprintReadOnly, ReplicatedUsing=OnRep_WeaponState)
-	//	FWeaponState WeaponState {};
-	//UFUNCTION()
-	//	void OnRep_WeaponState();
-
+	
 private:
 	UPROPERTY(EditAnywhere)
 		float AdsLineLength = 1500; // cm
@@ -210,13 +216,13 @@ private:
 public:	
 	UWeaponReceiverComponent();
 	void SetDelegate(IReceiverComponentDelegate* TheDelegate) { Delegate = TheDelegate; }
-	void RequestResume();
-	void RequestPause();
-	void Input_PullTrigger();
-	void Input_ReleaseTrigger();
-	void Input_Reload();
-	void Input_AdsPressed();
-	void Input_AdsReleased();
+	void DrawWeapon();
+	void HolsterWeapon();
+	void PullTrigger();
+	void ReleaseTrigger();
+	void Reload();
+	void AdsPressed();
+	void AdsReleased();
 	bool TryGiveAmmo();
 
 protected:
@@ -226,28 +232,15 @@ private:
 	virtual void BeginPlay() override;
 	virtual void TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction) override;
 
-	UFUNCTION(Server, Reliable, WithValidation)
-		void ServerRPC_Reload();
-
-	UFUNCTION(Server, Reliable, WithValidation)
-		void ServerRPC_PullTrigger();
-
-	UFUNCTION(Server, Reliable, WithValidation)
-		void ServerRPC_ReleaseTrigger();
-
-	UFUNCTION(Server, Reliable, WithValidation)
-		void ServerRPC_AdsPressed();
-
-	UFUNCTION(Server, Reliable, WithValidation)
-		void ServerRPC_AdsReleased();
 
 	// All the states!
-	void TickReady(float DT);
-	void TickPaused(float DeltaTime);
-	void TickFiring(float DT);
-	void TickReloading(float DT);
+	bool TickIdle(float DT);
+	bool TickUnEquipped(float DeltaTime);
+	bool TickFiring(float DT);
+	bool TickReloading(float DT);
+	void ReloadEnd();
 	void DoTransitionAction(const EWeaponModes OldMode, const EWeaponModes NewMode);
-	FWeaponState ChangeState(EWeaponCommands Cmd, const FWeaponState& InState);
+	bool ChangeState(EWeaponCommands Cmd, const FWeaponState& InState);
 
 	TArray<FVector> CalcShotPattern() const;
 	bool CanReload() const;

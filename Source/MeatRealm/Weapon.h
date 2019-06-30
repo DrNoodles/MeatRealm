@@ -53,8 +53,11 @@ protected:
 	//// Configure the gun
 
 	// Time (seconds) to holster the weapon
+	//UPROPERTY(EditAnywhere)
+	//	float HolsterDuration = 0.5;
+
 	UPROPERTY(EditAnywhere)
-		float HolsterDuration = 1;
+		float DrawDuration = 1;
 
 	UPROPERTY(EditAnywhere)
 		float AdsMovementScale = 0.70;
@@ -84,8 +87,11 @@ private:
 	
 public:
 	AWeapon();
+
+	/// [Server, Local]
 	void Draw();
-	void QueueHolster();
+
+	void Holster();
 	void Input_PullTrigger();
 	void Input_ReleaseTrigger();
 	void Input_Reload();
@@ -94,7 +100,8 @@ public:
 	bool TryGiveAmmo();
 	void SetHeroControllerId(uint32 HeroControllerUid) { this->HeroControllerId = HeroControllerUid; }
 	float GetAdsMovementScale() const { return AdsMovementScale; }
-	float GetHolsterDuration() const { return HolsterDuration; }
+	float GetDrawDuration() override; 
+	//float GetHolsterDuration() const { return HolsterDuration; }
 
 	/* IReceiverComponentDelegate */
 	void ShotFired() override;
@@ -113,6 +120,31 @@ public:
 protected:
 
 private:
+
+	UFUNCTION(Server, Reliable, WithValidation)
+		void ServerRPC_Draw();
+	
+	UFUNCTION(Server, Reliable, WithValidation)
+		void ServerRPC_Holster();
+
+	UFUNCTION(Server, Reliable, WithValidation)
+		void ServerRPC_PullTrigger();
+
+	UFUNCTION(Server, Reliable, WithValidation)
+		void ServerRPC_ReleaseTrigger();
+
+	UFUNCTION(Server, Reliable, WithValidation)
+		void ServerRPC_Reload();
+
+	UFUNCTION(Server, Reliable, WithValidation)
+		void ServerRPC_AdsPressed();
+
+	UFUNCTION(Server, Reliable, WithValidation)
+		void ServerRPC_AdsReleased();
+
+
+
+
 	UFUNCTION(NetMulticast, Reliable)
 		void MultiRPC_NotifyOnShotFired();
 

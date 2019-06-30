@@ -14,6 +14,11 @@
 #include "Projectile.h"
 
 
+//void AWeapon::GetLifetimeReplicatedProps(TArray< FLifetimeProperty >& OutLifetimeProps) const
+//{
+//	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
+//	//DOREPLIFETIME(AWeapon, ReceiverComp);
+//}
 void AWeapon::BeginPlay()
 {
 	Super::BeginPlay();
@@ -52,21 +57,144 @@ AWeapon::AWeapon()
 
 }
 
+
+// INPUT //////////////////////
+
+
 void AWeapon::Draw()
 {
-	ReceiverComp->RequestResume();
+	if (!HasAuthority())
+	{
+		ServerRPC_Draw();
+		return; // TODO Remove return to enable client preditiction (currently broken)
+	}
+	ReceiverComp->DrawWeapon();
 }
-
-void AWeapon::QueueHolster()
+void AWeapon::ServerRPC_Draw_Implementation()
 {
-	ReceiverComp->RequestPause();
+	Draw();
+}
+bool AWeapon::ServerRPC_Draw_Validate()
+{
+	return true;
 }
 
-//
-//void AWeapon::GetLifetimeReplicatedProps(TArray< FLifetimeProperty >& OutLifetimeProps) const
-//{
-//	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
-//}
+void AWeapon::Holster()
+{
+	if (!HasAuthority())
+	{
+		ServerRPC_Holster();
+		return; // TODO Remove return to enable client preditiction (currently broken)
+	}
+	ReceiverComp->HolsterWeapon();
+}
+void AWeapon::ServerRPC_Holster_Implementation()
+{
+	Holster();
+}
+bool AWeapon::ServerRPC_Holster_Validate()
+{
+	return true;
+}
+
+void AWeapon::Input_PullTrigger()
+{
+	if (!HasAuthority())
+	{
+		ServerRPC_PullTrigger();
+		return; // TODO Remove return to enable client preditiction (currently broken)
+	}
+	ReceiverComp->PullTrigger();
+}
+void AWeapon::ServerRPC_PullTrigger_Implementation()
+{
+	Input_PullTrigger();
+}
+bool AWeapon::ServerRPC_PullTrigger_Validate()
+{
+	return true;
+}
+
+void AWeapon::Input_ReleaseTrigger()
+{
+	if (!HasAuthority())
+	{
+		ServerRPC_ReleaseTrigger();
+		return; // TODO Remove return to enable client preditiction (currently broken)
+	}
+	ReceiverComp->ReleaseTrigger();
+}
+void AWeapon::ServerRPC_ReleaseTrigger_Implementation()
+{
+	Input_ReleaseTrigger();
+}
+bool AWeapon::ServerRPC_ReleaseTrigger_Validate()
+{
+	return true;
+}
+
+void AWeapon::Input_Reload()
+{
+	if (!HasAuthority())
+	{
+		ServerRPC_Reload();
+		return; // TODO Remove return to enable client preditiction (currently broken)
+	}
+	ReceiverComp->Reload();
+}
+void AWeapon::ServerRPC_Reload_Implementation()
+{
+	Input_Reload();
+}
+bool AWeapon::ServerRPC_Reload_Validate()
+{
+	return true;
+}
+
+void AWeapon::Input_AdsPressed()
+{
+	if (!HasAuthority()) 
+	{
+		ServerRPC_AdsPressed();
+		return; // TODO Remove return to enable client preditiction (currently broken)
+	}
+	ReceiverComp->AdsPressed();
+}
+void AWeapon::ServerRPC_AdsPressed_Implementation()
+{
+	Input_AdsPressed();
+}
+bool AWeapon::ServerRPC_AdsPressed_Validate()
+{
+	return true;
+}
+
+void AWeapon::Input_AdsReleased()
+{
+	if (!HasAuthority())
+	{
+		ServerRPC_AdsReleased();
+		return; // TODO Remove return to enable client preditiction (currently broken)
+	}
+	ReceiverComp->AdsReleased();
+}
+void AWeapon::ServerRPC_AdsReleased_Implementation()
+{
+	Input_AdsReleased();
+}
+bool AWeapon::ServerRPC_AdsReleased_Validate()
+{
+	return true;
+}
+
+bool AWeapon::TryGiveAmmo()
+{
+	return ReceiverComp->TryGiveAmmo();
+}
+
+
+
+
 
 void AWeapon::MultiRPC_NotifyOnShotFired_Implementation()
 {
@@ -83,40 +211,6 @@ void AWeapon::ClientRPC_NotifyOnAmmoWarning_Implementation()
 {
 	LogMsgWithRole("AWeapon::ClientRPC_NotifyOnAmmoWarning_Implementation()");
 	if (OnAmmoWarning.IsBound()) OnAmmoWarning.Broadcast();
-}
-
-
-
-/// INPUT
-
-void AWeapon::Input_PullTrigger()
-{
-	ReceiverComp->Input_PullTrigger();
-}
-
-void AWeapon::Input_ReleaseTrigger()
-{
-	ReceiverComp->Input_ReleaseTrigger();
-}
-
-void AWeapon::Input_Reload()
-{
-	ReceiverComp->Input_Reload();
-}
-
-void AWeapon::Input_AdsPressed()
-{
-	ReceiverComp->Input_AdsPressed();
-}
-
-void AWeapon::Input_AdsReleased()
-{
-	ReceiverComp->Input_AdsReleased();
-}
-
-bool AWeapon::TryGiveAmmo()
-{
-	return ReceiverComp->TryGiveAmmo();
 }
 
 
@@ -218,6 +312,11 @@ FString AWeapon::GetWeaponName()
 {
 	return WeaponName;
 }
+float AWeapon::GetDrawDuration()
+{
+	return DrawDuration;
+}
+
 /* End IReceiverComponentDelegate */
 
 void AWeapon::LogMsgWithRole(FString message)
