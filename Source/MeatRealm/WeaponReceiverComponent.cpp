@@ -184,8 +184,11 @@ bool UWeaponReceiverComponent::TickFiring(float DT)
 {
 	//LogMsgWithRole("EWeaponModes::Firing");
 
+	if (InputState.HolsterRequested)
+	{
+		return ChangeState(EWeaponCommands::UnEquip, WeaponState);
+	}
 
-	// Allow ADS on/off any timestate
 
 
 	if (bIsBusy) return false;
@@ -198,10 +201,7 @@ bool UWeaponReceiverComponent::TickFiring(float DT)
 		{ 
 			return ChangeState(EWeaponCommands::FireEnd, WeaponState);
 		}
-		if (InputState.HolsterRequested)
-		{
-			return ChangeState(EWeaponCommands::UnEquip, WeaponState);
-		}
+		
 		if (bReceiverCanCycle && NeedsReload() && CanReload())
 		{
 			// Reload instead
