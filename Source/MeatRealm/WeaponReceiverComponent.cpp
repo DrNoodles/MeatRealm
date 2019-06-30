@@ -23,8 +23,6 @@ void UWeaponReceiverComponent::BeginPlay()
 
 	WeaponState.AmmoInClip = ClipSizeGiven;
 	WeaponState.AmmoInPool = AmmoPoolGiven;
-
-	ChangeState(EWeaponCommands::Equip, WeaponState);
 }
 
 
