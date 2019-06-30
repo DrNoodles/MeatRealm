@@ -119,6 +119,7 @@ private:
 	FVector2D AimPos_ScreenSpace = FVector2D::ZeroVector;
 	FVector AimPos_WorldSpace = FVector::ZeroVector;
 
+	FTimerHandle DrawWeaponTimerHandle;
 
 	UPROPERTY(Replicated)
 		EWeaponSlots CurrentWeaponSlot = EWeaponSlots::Undefined;

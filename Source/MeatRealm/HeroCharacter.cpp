@@ -18,7 +18,8 @@
 #include "WeaponPickupBase.h"
 #include "Kismet/GameplayStatics.h"
 #include "Weapon.h"
-
+#include "TimerManager.h"
+#include "Engine/World.h"
 
 /// Lifecycle
 
@@ -479,11 +480,8 @@ void AHeroCharacter::EquipWeapon(const EWeaponSlots Slot)
 
 	// TODO Some management code here to delay for the duration of holster/draw and cancel if certain things happen
 
-	float HolsterDuration = 0;
-
-	const char* HandSocket = "HandSocket"; // TODO field?
-	const char* HolsterSocket = "HolsterSocket"; // TODO field?
-	const auto Rules = FAttachmentTransformRules{ EAttachmentRule::SnapToTarget, true };
+	
+	
 	
 
 	// Holster old weapon
@@ -491,18 +489,36 @@ void AHeroCharacter::EquipWeapon(const EWeaponSlots Slot)
 	if (OldWeapon)
 	{
 		OldWeapon->Holster();
+
+		const char* HolsterSocket = "HolsterSocket";
+		const auto Rules = FAttachmentTransformRules{ EAttachmentRule::SnapToTarget, true };
 		OldWeapon->AttachToComponent(GetMesh(), Rules, HolsterSocket);
-		HolsterDuration = OldWeapon->GetHolsterDuration();
 	}
 
 
 	// Hold new weapon
 	if (NewWeapon)
 	{
+		LogMsgWithRole("DrawNewWeapon");
 		NewWeapon->Draw();
-		NewWeapon->AttachToComponent(GetMesh(), Rules, HandSocket);
-	}
+		NewWeapon->SetActorHiddenInGame(true);
 
+		auto ShowWeaponInHands = [&]
+		{
+			LogMsgWithRole("ShowWeapon");
+			auto W = GetWeapon(CurrentWeaponSlot);
+			if (W)
+			{
+				const char* HandSocket = "HandSocket"; // TODO field?
+				const auto Rules = FAttachmentTransformRules{ EAttachmentRule::SnapToTarget, true };
+				W->AttachToComponent(GetMesh(), Rules, HandSocket);
+				W->SetActorHiddenInGame(false);
+			}
+		};
+
+		const auto DrawDuration = NewWeapon->GetDrawDuration();
+		GetWorld()->GetTimerManager().SetTimer(DrawWeaponTimerHandle, ShowWeaponInHands, DrawDuration, false);
+	}
 
 	// TODO Swap attatchment points (eg, new gun in hands, old gun on back)
 }

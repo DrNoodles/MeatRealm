@@ -214,9 +214,6 @@ void AWeapon::ClientRPC_NotifyOnAmmoWarning_Implementation()
 }
 
 
-
-
-
 /* IReceiverComponentDelegate */
 void AWeapon::ShotFired()
 {
@@ -314,6 +311,10 @@ AActor* AWeapon::GetOwningPawn()
 FString AWeapon::GetWeaponName()
 {
 	return WeaponName;
+}
+float AWeapon::GetDrawDuration()
+{
+	return DrawDuration;
 }
 
 /* End IReceiverComponentDelegate */

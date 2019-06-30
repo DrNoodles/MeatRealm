@@ -103,15 +103,19 @@ void UWeaponReceiverComponent::TickComponent(float DeltaTime, ELevelTick TickTyp
 			TickUnEquipped(DeltaTime);
 			break;
 
+		//case EWeaponModes::Equipping:
+			//break;
+
 		default:
-			LogMsgWithRole(FString::Printf(TEXT("TickComponent() - WeaponMode unimplemented %d"), *EWeaponModesStr(WeaponState.Mode)));
+			LogMsgWithRole(FString::Printf(TEXT("TickComponent() - WeaponMode unimplemented %s"), *EWeaponModesStr(WeaponState.Mode)));
 		}
 	}
 
 
 	// Draw ADS line for self or others 
 	// TODO Remove this from ReceiverComp, back into Weapon
-	if (!HasAuthority() && WeaponState.IsAdsing)
+	if (!HasAuthority() && WeaponState.IsAdsing 
+		&& (WeaponState.Mode == EWeaponModes::Idle || WeaponState.Mode == EWeaponModes::Firing))
 	{
 		const bool IsAutonomous = GetOwnerOwnerLocalRole() == ROLE_AutonomousProxy;
 		const auto Color = IsAutonomous ? AdsLineColor : EnemyAdsLineColor;
@@ -171,7 +175,7 @@ bool UWeaponReceiverComponent::TickUnEquipped(float DeltaTime)
 		LogMsgWithRole("EWeaponModes::TickPaused - Processed Draw Request");
 		InputState.DrawRequested = false;
 
-		const auto Command = bIsMidReload ? EWeaponCommands::ReloadStart : EWeaponCommands::Equip;
+		const auto Command = bIsMidReload ? EWeaponCommands::ReloadStart : EWeaponCommands::EquipStart;
 		return ChangeState(Command, WeaponState);
 	}
 
@@ -361,7 +365,11 @@ bool UWeaponReceiverComponent::ChangeState(EWeaponCommands Cmd, const FWeaponSta
 		OutState.Mode = EWeaponModes::UnEquipped;
 	}
 
-	if (Cmd == EWeaponCommands::Equip) {
+	if (Cmd == EWeaponCommands::EquipStart) {
+		OutState.Mode = EWeaponModes::Equipping;
+	}
+
+	if (Cmd == EWeaponCommands::EquipEnd) {
 		OutState.Mode = EWeaponModes::Idle;
 	}
 
@@ -381,9 +389,11 @@ bool UWeaponReceiverComponent::ChangeState(EWeaponCommands Cmd, const FWeaponSta
 
 void UWeaponReceiverComponent::DoTransitionAction(const EWeaponModes OldMode, const EWeaponModes NewMode)
 {
-	// UnEquipped > Idle
-	if (OldMode == EWeaponModes::UnEquipped && NewMode == EWeaponModes::Idle)
+	// Any > Equipping
+	if (NewMode == EWeaponModes::Equipping)
 	{
+		LogMsgWithRole("EquipStart");
+
 		// Stop any actions - should never be true.. TODO Convert these to asserts to make sure we've good elsewhere
 		bIsBusy = false;
 		GetWorld()->GetTimerManager().ClearTimer(BusyTimerHandle);
@@ -396,6 +406,14 @@ void UWeaponReceiverComponent::DoTransitionAction(const EWeaponModes OldMode, co
 		WeaponState.ReloadProgress = false;
 		WeaponState.IsAdsing = false;
 		WeaponState.HasFired = false;
+
+		auto EndEquip = [&]
+		{
+			LogMsgWithRole("EquipEnd");
+			ChangeState(EWeaponCommands::EquipEnd, WeaponState);
+		};
+
+		GetWorld()->GetTimerManager().SetTimer(BusyTimerHandle, EndEquip, Delegate->GetDrawDuration(), false);
 	}
 
 

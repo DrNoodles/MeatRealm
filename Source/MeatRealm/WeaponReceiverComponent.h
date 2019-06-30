@@ -10,7 +10,8 @@ enum class EWeaponCommands : uint8
 {
 	FireStart, FireEnd,
 	ReloadStart, ReloadEnd,
-	Equip, UnEquip,
+	EquipStart, EquipEnd,
+	UnEquip,
 };
 
 UENUM(BlueprintType)
@@ -96,7 +97,7 @@ public:
 	virtual FVector GetBarrelLocation() = 0;
 	virtual AActor* GetOwningPawn() = 0;
 	virtual FString GetWeaponName() = 0;
-
+	virtual float GetDrawDuration() = 0;
 };
 
 
@@ -108,7 +109,8 @@ inline FString EWeaponCommandsStr(const EWeaponCommands Cmd)
 	case EWeaponCommands::FireEnd: return "DoFireEnd";
 	case EWeaponCommands::ReloadStart: return "DoReloadStart";
 	case EWeaponCommands::ReloadEnd: return "DoReloadEnd";
-	case EWeaponCommands::Equip: return "DoEquip";
+	case EWeaponCommands::EquipStart: return "DoEquipStart";
+	case EWeaponCommands::EquipEnd: return "DoEquipEnd";
 	case EWeaponCommands::UnEquip: return "DoUnEquip";
 	default: return "Unknown";
 	}
