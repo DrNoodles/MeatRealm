@@ -13,10 +13,10 @@ float UMeatyCharacterMovementComponent::GetMaxSpeed() const
 
 	if (HeroChar)
 	{
-		/*if (HeroChar->IsTargeting())
+		if (HeroChar->IsTargeting())
 		{
 			MaxSpeed *= HeroChar->GetTargetingSpeedModifier();
-		}*/
+		}
 
 		if (HeroChar->IsRunning())
 		{

@@ -124,8 +124,11 @@ void AHeroCharacter::GetLifetimeReplicatedProps(TArray< FLifetimeProperty >& Out
 	DOREPLIFETIME(AHeroCharacter, Health);
 	DOREPLIFETIME(AHeroCharacter, Armour);
 	DOREPLIFETIME(AHeroCharacter, TeamTint);
-	DOREPLIFETIME(AHeroCharacter, bIsAdsing);
+//	DOREPLIFETIME(AHeroCharacter, bIsAdsing);
+
+	// everyone except local owner: flag change is locally instigated
 	DOREPLIFETIME_CONDITION(AHeroCharacter, bWantsToRun, COND_SkipOwner);
+	DOREPLIFETIME_CONDITION(AHeroCharacter, bIsTargeting, COND_SkipOwner);
 
 }
 
@@ -263,11 +266,11 @@ void AHeroCharacter::Tick(float DeltaSeconds)
 
 
 
-	// Draw ADS line
-	if (bIsAdsing) 
-	{
+	//// Draw ADS line
+	//if (bIsAdsing) 
+	//{
 		//DrawAdsLine(AdsLineColor, AdsLineLength);
-	}
+	//}
 }
 
 
@@ -286,10 +289,10 @@ void AHeroCharacter::OnStartRunning()
 	auto* MyPC = Cast<AHeroController>(Controller);
 	if (MyPC /*&& MyPC->IsGameInputAllowed()*/)
 	{
-	/*	if (IsTargeting())
+		if (IsTargeting())
 		{
 			SetTargeting(false);
-		}*/
+		}
 	//	StopWeaponFire();
 		SetRunning(true);
 	}
@@ -329,26 +332,55 @@ bool AHeroCharacter::ServerSetRunning_Validate(bool bNewWantsToRun)
 	return true;
 }
 
+
+
+
 // Ads mode
-
-void AHeroCharacter::SimulateAdsMode(bool IsAdsing)
+bool AHeroCharacter::IsTargeting() const
 {
-	bIsAdsing = IsAdsing;
+	return bIsTargeting;
+}
+void AHeroCharacter::SetTargeting(bool bNewTargeting)
+{
+	bIsTargeting = bNewTargeting;
 
-	float MoveSpeed = WalkSpeed;
-
-	if (IsAdsing)
+	if (GetCurrentWeapon())
 	{
-		const auto Weapon = GetCurrentWeapon();
-		if (Weapon)
-		{
-			MoveSpeed = WalkSpeed * Weapon->GetAdsMovementScale();
-		}
+		if (bNewTargeting)
+			GetCurrentWeapon()->Input_AdsPressed();
+		else
+			GetCurrentWeapon()->Input_AdsReleased();
 	}
 
-	GetCharacterMovement()->MaxWalkSpeed = MoveSpeed;
+
+	//if (TargetingSound)
+	//{
+	//	UGameplayStatics::SpawnSoundAttached(TargetingSound, GetRootComponent());
+	//}
+
+	
+
+	if (Role < ROLE_Authority)
+	{
+		ServerSetTargeting(bNewTargeting);
+	}
 }
-//
+
+bool AHeroCharacter::ServerSetTargeting_Validate(bool bNewTargeting)
+{
+	return true;
+}
+
+void AHeroCharacter::ServerSetTargeting_Implementation(bool bNewTargeting)
+{
+	SetTargeting(bNewTargeting);
+}
+
+
+
+
+
+
 //void AHeroCharacter::DrawAdsLine(const FColor& Color, float LineLength) const
 //{
 //	const FVector Start = WeaponAnchor->GetComponentLocation();
@@ -369,26 +401,6 @@ void AHeroCharacter::SimulateAdsMode(bool IsAdsing)
 //	DrawDebugLine(GetWorld(), Start, End, Color, false, -1., 0, 2.f);
 //}
 
-void AHeroCharacter::ServerRPC_AdsReleased_Implementation()
-{
-	SimulateAdsMode(false);
-}
-
-bool AHeroCharacter::ServerRPC_AdsReleased_Validate()
-{
-	return true;
-}
-
-void AHeroCharacter::ServerRPC_AdsPressed_Implementation()
-{
-	SimulateAdsMode(true);
-}
-
-bool AHeroCharacter::ServerRPC_AdsPressed_Validate()
-{
-	return true;
-}
-
 void AHeroCharacter::Input_FirePressed() const
 {
 	if (GetCurrentWeapon()) GetCurrentWeapon()->Input_PullTrigger();
@@ -401,16 +413,22 @@ void AHeroCharacter::Input_FireReleased() const
 
 void AHeroCharacter::Input_AdsPressed()
 {
-	if (GetCurrentWeapon()) GetCurrentWeapon()->Input_AdsPressed();
-	SimulateAdsMode(true);
-	ServerRPC_AdsPressed();
+	auto* MyPC = Cast<AHeroController>(Controller);
+	if (MyPC/* && MyPC->IsGameInputAllowed()*/)
+	{
+		if (IsRunning())
+		{
+			SetRunning(false);
+		}
+		SetTargeting(true);
+	}
 }
 
 void AHeroCharacter::Input_AdsReleased()
 {
-	if (GetCurrentWeapon()) GetCurrentWeapon()->Input_AdsReleased();
-	SimulateAdsMode(false);
-	ServerRPC_AdsReleased();
+	//SimulateAdsMode(false);
+	//ServerRPC_AdsReleased();
+	SetTargeting(false);
 }
 
 void AHeroCharacter::Input_Reload() const
@@ -1068,6 +1086,11 @@ AHeroState* AHeroCharacter::GetHeroState() const
 AHeroController* AHeroCharacter::GetHeroController() const
 {
 	return GetController<AHeroController>();
+}
+
+float AHeroCharacter::GetTargetingSpeedModifier() const
+{
+	return GetCurrentWeapon() ? GetCurrentWeapon()->GetAdsMovementScale() : 1;
 }
 
 bool AHeroCharacter::IsBackpedaling(const FVector& MoveDir, const FVector& AimDir, int BackpedalAngle)

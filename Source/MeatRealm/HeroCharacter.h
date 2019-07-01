@@ -109,9 +109,8 @@ private:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Camera, meta = (AllowPrivateAccess = "true"))
 		class UCameraComponent* FollowCamera;
 
-	// This is nasty - probably need to work with the official movement states
-	UPROPERTY(Replicated) // Replicated so we can see enemy aim lines
-	bool bIsAdsing = false;
+	//UPROPERTY(Replicated) // Replicated so we can see enemy aim lines
+	//bool bIsAdsing = false;
 
 	bool bUseMouseAim = true;
 	float AxisMoveUp;
@@ -127,6 +126,8 @@ private:
 	UPROPERTY(Transient, Replicated)
 	bool bWantsToRun = false;
 
+	UPROPERTY(Transient, Replicated)
+	bool bIsTargeting = false;
 	
 	const char* HandSocketName = "HandSocket";
 	const char* HolsterSocketName = "HolsterSocket";
@@ -178,6 +179,7 @@ public:
 
 	AHeroState* GetHeroState() const;
 	AHeroController* GetHeroController() const;
+	float GetTargetingSpeedModifier() const;
 
 
 	static bool IsBackpedaling(const FVector& MoveDir, const FVector& AimDir, int BackpedalAngle);
@@ -210,6 +212,7 @@ public:
 	AWeapon* GetHolsteredWeapon() const;
 
 	bool IsRunning() const;
+	bool IsTargeting() const;
 	float GetRunningSpeedModifier() const { return RunningSpeedModifier; }
 
 private:
@@ -218,11 +221,11 @@ private:
 
 	void OnStartRunning();
 	void OnStopRunning();
-	
 	void SetRunning(bool bNewWantsToRun);
 
-	UFUNCTION(Server, Reliable, WithValidation)
-	void ServerSetRunning(bool bNewWantsToRun);
+
+	void SetTargeting(bool bNewTargeting);
+
 
 
 	void GiveWeaponToPlayer(TSubclassOf<class AWeapon> WeaponClass);
@@ -238,19 +241,25 @@ private:
 	FVector2D TrackCameraWithAimGamepad() const;
 	void ExperimentalMouseAimTracking(float DT);
 
-
-	void SimulateAdsMode(bool IsAdsing);
+	//void SimulateAdsMode(bool IsAdsing);
 	//void DrawAdsLine(const FColor& Color, float LineLength) const;
 
+
+
+	UFUNCTION(Server, Reliable, WithValidation)
+		void ServerSetTargeting(bool bNewTargeting);
+
+	UFUNCTION(Server, Reliable, WithValidation)
+		void ServerSetRunning(bool bNewWantsToRun);
 
 	UFUNCTION()
 		void OnRep_TintChanged() const;
 
-	UFUNCTION(Server, Reliable, WithValidation)
-		void ServerRPC_AdsPressed();
+	//UFUNCTION(Server, Reliable, WithValidation)
+	//	void ServerRPC_AdsPressed();
 
-	UFUNCTION(Server, Reliable, WithValidation)
-		void ServerRPC_AdsReleased();
+	//UFUNCTION(Server, Reliable, WithValidation)
+	//	void ServerRPC_AdsReleased();
 
 	UFUNCTION(Server, Reliable, WithValidation)
 		void ServerRPC_TryInteract();
