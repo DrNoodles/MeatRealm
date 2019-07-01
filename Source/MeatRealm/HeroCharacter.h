@@ -121,6 +121,10 @@ private:
 
 	FTimerHandle DrawWeaponTimerHandle;
 
+	
+	const char* HandSocketName = "HandSocket";
+	const char* HolsterSocketName = "HolsterSocket";
+
 	UPROPERTY(Replicated)
 		EWeaponSlots CurrentWeaponSlot = EWeaponSlots::Undefined;
 	UPROPERTY(Replicated)
@@ -168,7 +172,6 @@ public:
 
 	AHeroState* GetHeroState() const;
 	AHeroController* GetHeroController() const;
-	const UArrowComponent* GetWeaponAnchor() const { return WeaponAnchor; }
 
 
 	static bool IsBackpedaling(const FVector& MoveDir, const FVector& AimDir, int BackpedalAngle);

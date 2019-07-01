@@ -275,7 +275,7 @@ bool AWeapon::SpawnAProjectile(const FVector& Direction)
 
 	auto Hero = Cast<AHeroCharacter>(GetOwningPawn());
 	if (!Hero) return false;
-	const auto ProjectileStartTform = Hero->GetWeaponAnchor()->GetComponentTransform();
+	const auto ProjectileStartTform = Hero->GetAimTransform();
 
 
 

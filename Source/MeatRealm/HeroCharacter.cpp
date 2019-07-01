@@ -169,18 +169,7 @@ void AHeroCharacter::Tick(float DeltaSeconds)
 		const auto Success = HeroCont->DeprojectMousePositionToWorld(OUT WorldLocation, OUT WorldDirection);
 		if (Success)
 		{
-			FTransform AimTform = GetAimTransform();
-			FVector AimStart = AimTform.GetLocation();
-			//auto CurrentWeapon = GetCurrentWeapon();
-			//if (CurrentWeapon)
-			//{
-			//	CurrentWeapon->GetBarrelLocation();
-			//}
-			//else
-			//{
-			//	AnchorLoc = WeaponAnchor->GetComponentLocation();
-			//}
-			////const FVector AnchorLoc = WeaponAnchor->GetComponentLocation();
+			const FVector AimStart = GetAimTransform().GetLocation();
 
 			const FVector Hit = FMath::LinePlaneIntersection(
 				WorldLocation,
@@ -423,9 +412,7 @@ AWeapon* AHeroCharacter::AuthSpawnWeapon(TSubclassOf<AWeapon> weaponClass)
 	if (!GetWorld()) return nullptr;
 
 
-	const char* SocketName = "Cunt";
-
-	const auto TF = GetMesh()->GetSocketTransform(SocketName, RTS_World);
+	const auto TF = GetMesh()->GetSocketTransform(HandSocketName, RTS_World);
 
 	// Spawn the weapon at the weapon socket
 	auto* Weapon = GetWorld()->SpawnActorDeferred<AWeapon>(
@@ -502,9 +489,8 @@ void AHeroCharacter::EquipWeapon(const EWeaponSlots Slot)
 	{
 		OldWeapon->Holster();
 
-		const char* HolsterSocket = "HolsterSocket";
 		const auto Rules = FAttachmentTransformRules{ EAttachmentRule::SnapToTarget, true };
-		OldWeapon->AttachToComponent(GetMesh(), Rules, HolsterSocket);
+		OldWeapon->AttachToComponent(GetMesh(), Rules, HolsterSocketName);
 	}
 
 
@@ -521,9 +507,8 @@ void AHeroCharacter::EquipWeapon(const EWeaponSlots Slot)
 			auto W = GetWeapon(CurrentWeaponSlot);
 			if (W)
 			{
-				const char* HandSocket = "HandSocket"; // TODO field?
 				const auto Rules = FAttachmentTransformRules{ EAttachmentRule::SnapToTarget, true };
-				W->AttachToComponent(GetMesh(), Rules, HandSocket);
+				W->AttachToComponent(GetMesh(), Rules, HandSocketName);
 				W->SetActorHiddenInGame(false);
 			}
 		};
@@ -850,9 +835,27 @@ bool AHeroCharacter::CanGiveWeapon(const TSubclassOf<AWeapon>& Class, OUT float&
 
 FTransform AHeroCharacter::GetAimTransform() const
 {
-	// TODO Detect current weapon and use the barrel tform in local space to provide an initial location for aiming/shooting to orient from, but doesn't change based on animation.
+	const auto W = GetCurrentWeapon();
 
-	return WeaponAnchor->GetComponentTransform();
+	if (!W)
+	{
+		// No weapon equipped, just use the weapon anchor for now.
+		return WeaponAnchor->GetComponentTransform();
+	}
+
+	// Detect current weapon and use the barrel tform in local space to provide an initial location for aiming/shooting to orient from, but doesn't change based on animation.
+
+	// Using weapon Anchor as a base because it doesn't move with animations
+	const auto SocketTform = WeaponAnchor->GetComponentTransform();
+
+	// Get Weapon Barrel Relative offset from the hand
+	const auto RelativeMuzzleTform = W->GetMuzzleComponent()->GetRelativeTransform();
+
+	// Combine the transforms to get a decent approximation of where the barrel is, minus the animation movement.
+	const auto CombinedTform = RelativeMuzzleTform * SocketTform;
+
+	// Return it!
+	return CombinedTform;
 }
 
 
