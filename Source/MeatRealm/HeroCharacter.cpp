@@ -169,14 +169,26 @@ void AHeroCharacter::Tick(float DeltaSeconds)
 		const auto Success = HeroCont->DeprojectMousePositionToWorld(OUT WorldLocation, OUT WorldDirection);
 		if (Success)
 		{
-			const FVector AnchorLoc = WeaponAnchor->GetComponentLocation();
+			FTransform AimTform = GetAimTransform();
+			FVector AimStart = AimTform.GetLocation();
+			//auto CurrentWeapon = GetCurrentWeapon();
+			//if (CurrentWeapon)
+			//{
+			//	CurrentWeapon->GetBarrelLocation();
+			//}
+			//else
+			//{
+			//	AnchorLoc = WeaponAnchor->GetComponentLocation();
+			//}
+			////const FVector AnchorLoc = WeaponAnchor->GetComponentLocation();
+
 			const FVector Hit = FMath::LinePlaneIntersection(
 				WorldLocation,
 				WorldLocation + (WorldDirection * 5000),
-				AnchorLoc,
+				AimStart,
 				FVector(0, 0, 1));
 
-			LookVec = Hit - AnchorLoc;
+			LookVec = Hit - AimStart;
 		}
 	}
 	else // Use gamepad
@@ -197,7 +209,7 @@ void AHeroCharacter::Tick(float DeltaSeconds)
 
 
 
-	// Scan for interables in front of player
+	// Scan for interactables in front of player
 
 	auto* const Pickup = ScanForInteractable<AWeaponPickupBase>();
 	
@@ -833,6 +845,14 @@ bool AHeroCharacter::CanGiveWeapon(const TSubclassOf<AWeapon>& Class, OUT float&
 
 	// Always allow pickup of weapon - for now
 	return true;
+}
+
+
+FTransform AHeroCharacter::GetAimTransform() const
+{
+	// TODO Detect current weapon and use the barrel tform in local space to provide an initial location for aiming/shooting to orient from, but doesn't change based on animation.
+
+	return WeaponAnchor->GetComponentTransform();
 }
 
 
