@@ -69,6 +69,8 @@ public:
 
 	//UPROPERTY(EditAnywhere)
 	//	float AdsSpeed = 275;
+	UPROPERTY(EditAnywhere)
+		float RunningSpeedModifier = 1.5;
 
 	UPROPERTY(EditAnywhere)
 		float WalkSpeed = 400;
@@ -82,6 +84,7 @@ public:
 
 	UPROPERTY(EditAnywhere)
 	float BackpedalSpeedMultiplier = 0.6;
+
 
 protected:
 	UPROPERTY(BlueprintReadOnly, ReplicatedUsing = OnRep_TintChanged)
@@ -121,6 +124,9 @@ private:
 
 	FTimerHandle DrawWeaponTimerHandle;
 
+	UPROPERTY(Transient, Replicated)
+	bool bWantsToRun = false;
+
 	
 	const char* HandSocketName = "HandSocket";
 	const char* HolsterSocketName = "HolsterSocket";
@@ -135,7 +141,7 @@ private:
 
 
 public:
-	AHeroCharacter();
+	AHeroCharacter(const FObjectInitializer& ObjectInitializer);
 	void Restart() override;
 	void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
 	
@@ -178,6 +184,8 @@ public:
 
 
 	/// Input
+		/** setup pawn specific input handlers */
+	virtual void SetupPlayerInputComponent(class UInputComponent* InputComponent) override;
 
 	void Input_FirePressed() const;
 	void Input_FireReleased() const;
@@ -201,10 +209,20 @@ public:
 	
 	AWeapon* GetHolsteredWeapon() const;
 
+	bool IsRunning() const;
+	float GetRunningSpeedModifier() const { return RunningSpeedModifier; }
 
 private:
 
 	virtual void Tick(float DeltaSeconds) override;
+
+	void OnStartRunning();
+	void OnStopRunning();
+	
+	void SetRunning(bool bNewWantsToRun);
+
+	UFUNCTION(Server, Reliable, WithValidation)
+	void ServerSetRunning(bool bNewWantsToRun);
 
 
 	void GiveWeaponToPlayer(TSubclassOf<class AWeapon> WeaponClass);

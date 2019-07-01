@@ -15,6 +15,7 @@
 #include "UnrealNetwork.h"
 #include "HeroState.h"
 #include "HeroController.h"
+#include "MeatyCharacterMovementComponent.h"
 #include "WeaponPickupBase.h"
 #include "Kismet/GameplayStatics.h"
 #include "Weapon.h"
@@ -23,7 +24,7 @@
 
 /// Lifecycle
 
-AHeroCharacter::AHeroCharacter()
+AHeroCharacter::AHeroCharacter(const FObjectInitializer& ObjectInitializer) : Super(ObjectInitializer.SetDefaultSubobjectClass<UMeatyCharacterMovementComponent>(ACharacter::CharacterMovementComponentName))
 {
 	// Set size for collision capsule
 	GetCapsuleComponent()->InitCapsuleSize(42.f, 96.0f);
@@ -124,6 +125,8 @@ void AHeroCharacter::GetLifetimeReplicatedProps(TArray< FLifetimeProperty >& Out
 	DOREPLIFETIME(AHeroCharacter, Armour);
 	DOREPLIFETIME(AHeroCharacter, TeamTint);
 	DOREPLIFETIME(AHeroCharacter, bIsAdsing);
+	DOREPLIFETIME_CONDITION(AHeroCharacter, bWantsToRun, COND_SkipOwner);
+
 }
 
 void AHeroCharacter::Tick(float DeltaSeconds)
@@ -269,6 +272,62 @@ void AHeroCharacter::Tick(float DeltaSeconds)
 
 
 
+// Input
+void AHeroCharacter::SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent)
+{
+	check(PlayerInputComponent);
+	
+
+	PlayerInputComponent->BindAction("Run", IE_Pressed, this, &AHeroCharacter::OnStartRunning);
+	PlayerInputComponent->BindAction("Run", IE_Released, this, &AHeroCharacter::OnStopRunning);
+}
+void AHeroCharacter::OnStartRunning()
+{
+	auto* MyPC = Cast<AHeroController>(Controller);
+	if (MyPC /*&& MyPC->IsGameInputAllowed()*/)
+	{
+	/*	if (IsTargeting())
+		{
+			SetTargeting(false);
+		}*/
+	//	StopWeaponFire();
+		SetRunning(true);
+	}
+}
+
+void AHeroCharacter::OnStopRunning()
+{
+	SetRunning(false);
+}
+
+void AHeroCharacter::SetRunning(bool bNewWantsToRun)
+{
+	bWantsToRun = bNewWantsToRun;
+
+	if (Role < ROLE_Authority)
+	{
+		ServerSetRunning(bNewWantsToRun);
+	}
+}
+bool AHeroCharacter::IsRunning() const
+{
+	if (!GetCharacterMovement())
+	{
+		return false;
+	}
+
+	return bWantsToRun && !GetVelocity().IsZero() && (GetVelocity().GetSafeNormal2D() | GetActorForwardVector()) > -0.1;
+}
+
+void AHeroCharacter::ServerSetRunning_Implementation(bool bNewWantsToRun)
+{
+	SetRunning(bNewWantsToRun);
+}
+
+bool AHeroCharacter::ServerSetRunning_Validate(bool bNewWantsToRun)
+{
+	return true;
+}
 
 // Ads mode
 
