@@ -12,6 +12,7 @@
 #include "Kismet/GameplayStatics.h"
 #include "TimerManager.h"
 #include "Projectile.h"
+#include "HeroCharacter.h"
 
 
 //void AWeapon::GetLifetimeReplicatedProps(TArray< FLifetimeProperty >& OutLifetimeProps) const
@@ -268,10 +269,21 @@ bool AWeapon::SpawnAProjectile(const FVector& Direction)
 	UWorld* World = GetWorld();
 	if (World == nullptr) { return false; }
 
+
+
+	//const auto ProjectileStartTform = MuzzleLocationComp->GetComponentTransform();
+
+	auto Hero = Cast<AHeroCharacter>(GetOwningPawn());
+	if (!Hero) return false;
+	const auto ProjectileStartTform = Hero->GetAimTransform();
+
+
+
+
 	// Spawn the projectile at the muzzle.
 	AProjectile* Projectile = World->SpawnActorDeferred<AProjectile>(
 		ProjectileClass,
-		MuzzleLocationComp->GetComponentTransform(),
+		ProjectileStartTform,
 		GetOwner(),
 		Instigator,
 		ESpawnActorCollisionHandlingMethod::AlwaysSpawn);
@@ -285,7 +297,7 @@ bool AWeapon::SpawnAProjectile(const FVector& Direction)
 	// Fire it!
 	UGameplayStatics::FinishSpawningActor(
 		Projectile,
-		MuzzleLocationComp->GetComponentTransform());
+		ProjectileStartTform);
 
 	Projectile->FireInDirection(Direction);
 
@@ -293,15 +305,29 @@ bool AWeapon::SpawnAProjectile(const FVector& Direction)
 }
 FVector AWeapon::GetBarrelDirection()
 {
-	AActor* OwningPawn = GetOwningPawn();
+	//AActor* OwningPawn = GetOwningPawn();
 
+	auto Hero = Cast<AHeroCharacter>(GetOwningPawn());
+	if (Hero)
+		return Hero->GetAimTransform().GetRotation().Vector();
+
+	//return FVector::ZeroVector;
 	// We are using the actor facing direction so that animation doesn't affect the weapon's firing mechanics
-	return OwningPawn ? OwningPawn->GetActorForwardVector() : FVector::ZeroVector;
+//	return OwningPawn ? OwningPawn->GetActorForwardVector() : FVector::ZeroVector;
 
-	//return MuzzleLocationComp->GetForwardVector();
+	// Plan B
+	return MuzzleLocationComp->GetForwardVector();
 }
 FVector AWeapon::GetBarrelLocation()
 {
+	/*auto Hero = Cast<AHeroCharacter>(GetOwningPawn());
+	if (Hero)
+		return Hero->GetWeaponAnchor()->GetComponentLocation();*/
+	auto Hero = Cast<AHeroCharacter>(GetOwningPawn());
+	if (Hero)
+		return Hero->GetAimTransform().GetLocation();
+
+	// Plan B
 	return MuzzleLocationComp->GetComponentLocation();
 }
 AActor* AWeapon::GetOwningPawn()
@@ -316,7 +342,6 @@ float AWeapon::GetDrawDuration()
 {
 	return DrawDuration;
 }
-
 /* End IReceiverComponentDelegate */
 
 void AWeapon::LogMsgWithRole(FString message)
