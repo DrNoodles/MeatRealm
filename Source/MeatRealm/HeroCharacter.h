@@ -127,6 +127,8 @@ private:
 
 	FTimerHandle DrawWeaponTimerHandle;
 
+	bool bIsEquipping;
+
 	bool bWantsToFire;
 
 	UPROPERTY(Transient, Replicated)

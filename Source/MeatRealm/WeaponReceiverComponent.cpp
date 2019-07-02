@@ -103,8 +103,13 @@ void UWeaponReceiverComponent::TickComponent(float DeltaTime, ELevelTick TickTyp
 			TickUnEquipped(DeltaTime);
 			break;
 
-		//case EWeaponModes::Equipping:
-			//break;
+		case EWeaponModes::Equipping:
+			if (InputState.HolsterRequested)
+			{
+				InputState.HolsterRequested = false;
+				ChangeState(EWeaponCommands::UnEquip, WeaponState);
+			}
+			break;
 
 		default:
 			LogMsgWithRole(FString::Printf(TEXT("TickComponent() - WeaponMode unimplemented %s"), *EWeaponModesStr(WeaponState.Mode)));

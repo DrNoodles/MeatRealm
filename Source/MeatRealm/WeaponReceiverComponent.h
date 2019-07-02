@@ -224,6 +224,7 @@ public:
 	void AdsPressed();
 	void AdsReleased();
 	bool TryGiveAmmo();
+	bool IsEquipping() const { return WeaponState.Mode == EWeaponModes::Equipping; }
 
 protected:
 

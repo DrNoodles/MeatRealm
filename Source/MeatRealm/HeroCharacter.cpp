@@ -211,6 +211,15 @@ void AHeroCharacter::Tick(float DeltaSeconds)
 	}
 
 
+	// Draw drawing weapon debug text
+
+	if (GetCurrentWeapon() && GetCurrentWeapon()->IsEquipping())
+	{
+		auto str = FString::Printf(TEXT("Equipping %s"),*GetCurrentWeapon()->GetWeaponName());
+		DrawDebugString(GetWorld(), FVector{ 70, -50, 50 }, str, this, FColor::White, DeltaSeconds * 0.7);
+	}
+
+
 	// Scan for interactables in front of player
 
 	auto* const Pickup = ScanForInteractable<AWeaponPickupBase>();
@@ -601,19 +610,27 @@ AWeapon* AHeroCharacter::AssignWeaponToInventorySlot(AWeapon* Weapon, EWeaponSlo
 
 void AHeroCharacter::EquipWeapon(const EWeaponSlots Slot)
 {
+	/*if (bIsEquipping) return;
+	bIsEquipping = true;*/
+
+
+	// Already selected?
 	if (CurrentWeaponSlot == Slot) return;
 
-	// If desired slot is empty, do nothing.
+	// Desired slot is empty?
 	auto NewWeapon = GetWeapon(Slot);
+	if (!NewWeapon) return;
 
-	bool CanEquipEmptyWeaponSlot = false;
-	if (!NewWeapon && !CanEquipEmptyWeaponSlot) return;
 
 	const auto OldSlot = CurrentWeaponSlot;
 	CurrentWeaponSlot = Slot;
 
 
 	// TODO Some management code here to delay for the duration of holster/draw and cancel if certain things happen
+
+
+	// Clear any existing Equip timer
+	GetWorld()->GetTimerManager().ClearTimer(DrawWeaponTimerHandle);
 
 
 	// Holster old weapon
@@ -624,6 +641,7 @@ void AHeroCharacter::EquipWeapon(const EWeaponSlots Slot)
 
 		const auto Rules = FAttachmentTransformRules{EAttachmentRule::SnapToTarget, true};
 		OldWeapon->AttachToComponent(GetMesh(), Rules, HolsterSocketName);
+		OldWeapon->SetActorHiddenInGame(false); // make sure old weapon is visible
 	}
 
 
@@ -643,6 +661,8 @@ void AHeroCharacter::EquipWeapon(const EWeaponSlots Slot)
 				const auto Rules = FAttachmentTransformRules{EAttachmentRule::SnapToTarget, true};
 				W->AttachToComponent(GetMesh(), Rules, HandSocketName);
 				W->SetActorHiddenInGame(false);
+
+				//bIsEquipping = false;
 			}
 		};
 
