@@ -247,6 +247,7 @@ private:
 	EWeaponSlots FindGoodSlot() const;
 	AWeapon* AssignWeaponToInventorySlot(AWeapon* Weapon, EWeaponSlots Slot);
 	void EquipWeapon(EWeaponSlots Slot);
+	void MakeCurrentWeaponVisible() const;
 	void RefereshWeaponAttachments() const;
 
 	static FVector2D GetGameViewportSize();

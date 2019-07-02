@@ -199,10 +199,13 @@ bool AWeapon::TryGiveAmmo()
 
 void AWeapon::MultiRPC_NotifyOnShotFired_Implementation()
 {
-	MuzzleLightComp->SetVisibility(true);
+	if (MuzzleLightComp) MuzzleLightComp->SetVisibility(true);
 
 	FTimerHandle Handle;
-	GetWorld()->GetTimerManager().SetTimer(Handle, [&] { MuzzleLightComp->SetVisibility(false); }, 0.05, false, -1);
+	GetWorld()->GetTimerManager().SetTimer(Handle, [&]
+	{
+		if (MuzzleLightComp) MuzzleLightComp->SetVisibility(false);
+	}, 0.05, false, -1);
 
 	if (OnShotFired.IsBound()) OnShotFired.Broadcast();
 }

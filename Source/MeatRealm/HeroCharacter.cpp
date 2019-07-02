@@ -227,7 +227,7 @@ void AHeroCharacter::Tick(float DeltaSeconds)
 	float PickupDelay;
 	if (Pickup && Pickup->CanInteract(this, OUT PickupDelay))
 	{
-		LogMsgWithRole(FString::Printf(TEXT("Can Interact with delay! %f "), PickupDelay));
+		//LogMsgWithRole(FString::Printf(TEXT("Can Interact with delay! %f "), PickupDelay));
 		auto World = GetWorld();
 
 		auto* InputSettings = UInputSettings::GetInputSettings();
@@ -649,21 +649,20 @@ void AHeroCharacter::EquipWeapon(const EWeaponSlots Slot)
 		NewWeapon->Draw();
 		NewWeapon->SetActorHiddenInGame(true);
 
-
-		auto ShowWeaponInHands = [&]
-		{
-			LogMsgWithRole("ShowWeapon");
-			if (GetCurrentWeapon()) GetCurrentWeapon()->SetActorHiddenInGame(false);
-			RefereshWeaponAttachments();
-		};
-
 		const auto DrawDuration = NewWeapon->GetDrawDuration();
-		GetWorld()->GetTimerManager().SetTimer(DrawWeaponTimerHandle, ShowWeaponInHands, DrawDuration, false);
+		GetWorld()->GetTimerManager().SetTimer(DrawWeaponTimerHandle, this, &AHeroCharacter::MakeCurrentWeaponVisible, DrawDuration, false);
 	}
 
 	RefereshWeaponAttachments();
 }
 
+
+void AHeroCharacter::MakeCurrentWeaponVisible() const
+{
+	LogMsgWithRole("ShowWeapon");
+	if (GetCurrentWeapon()) GetCurrentWeapon()->SetActorHiddenInGame(false);
+	RefereshWeaponAttachments();
+}
 
 void AHeroCharacter::RefereshWeaponAttachments() const
 {

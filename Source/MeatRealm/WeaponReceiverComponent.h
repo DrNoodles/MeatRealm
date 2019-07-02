@@ -238,10 +238,12 @@ private:
 	bool TickIdle(float DT);
 	//bool TickUnEquipped(float DeltaTime);
 	bool TickFiring(float DT);
+	void FireEnd();
 	bool TickReloading(float DT);
 	void ReloadEnd();
 	void DoTransitionAction(const EWeaponModes OldMode, const EWeaponModes NewMode);
 	bool ChangeState(EWeaponCommands Cmd, const FWeaponState& InState);
+	void EquipEnd();
 
 	TArray<FVector> CalcShotPattern() const;
 	bool CanReload() const;
