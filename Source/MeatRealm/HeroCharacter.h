@@ -121,6 +121,10 @@ private:
 
 	FTimerHandle DrawWeaponTimerHandle;
 
+	
+	const char* HandSocketName = "HandSocket";
+	const char* HolsterSocketName = "HolsterSocket";
+
 	UPROPERTY(Replicated)
 		EWeaponSlots CurrentWeaponSlot = EWeaponSlots::Undefined;
 	UPROPERTY(Replicated)
@@ -164,6 +168,7 @@ public:
 	/* End IAffectableInterface */
 
 
+	FTransform GetAimTransform() const;
 
 	AHeroState* GetHeroState() const;
 	AHeroController* GetHeroController() const;
