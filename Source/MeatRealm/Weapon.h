@@ -116,6 +116,7 @@ public:
 
 	AActor* GetOwningPawn() override;
 	FString GetWeaponName() override;
+	bool IsEquipping() const { return ReceiverComp->IsEquipping(); };
 	/* End IReceiverComponentDelegate */
 
 

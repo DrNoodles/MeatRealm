@@ -69,12 +69,18 @@ public:
 
 	//UPROPERTY(EditAnywhere)
 	//	float AdsSpeed = 275;
+	UPROPERTY(EditAnywhere)
+		float RunningSpeed = 500;
 
 	UPROPERTY(EditAnywhere)
-		float WalkSpeed = 400;
+		float WalkSpeed = 375;
 
 	UPROPERTY(BlueprintAssignable, Category = "Event Dispatchers")
 		FPlayerTintChanged OnPlayerTintChanged;
+
+	// 
+	UPROPERTY(EditAnywhere)
+		int SprintMaxAngle = 70;
 
 	// An angle between 0 and 180 degrees. 
 	UPROPERTY(EditAnywhere)
@@ -82,6 +88,7 @@ public:
 
 	UPROPERTY(EditAnywhere)
 	float BackpedalSpeedMultiplier = 0.6;
+
 
 protected:
 	UPROPERTY(BlueprintReadOnly, ReplicatedUsing = OnRep_TintChanged)
@@ -106,9 +113,8 @@ private:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Camera, meta = (AllowPrivateAccess = "true"))
 		class UCameraComponent* FollowCamera;
 
-	// This is nasty - probably need to work with the official movement states
-	UPROPERTY(Replicated) // Replicated so we can see enemy aim lines
-	bool bIsAdsing = false;
+	//UPROPERTY(Replicated) // Replicated so we can see enemy aim lines
+	//bool bIsAdsing = false;
 
 	bool bUseMouseAim = true;
 	float AxisMoveUp;
@@ -121,6 +127,15 @@ private:
 
 	FTimerHandle DrawWeaponTimerHandle;
 
+	bool bIsEquipping;
+
+	bool bWantsToFire;
+
+	UPROPERTY(Transient, Replicated)
+	bool bWantsToRun = false;
+
+	UPROPERTY(Transient, Replicated)
+	bool bIsTargeting = false;
 	
 	const char* HandSocketName = "HandSocket";
 	const char* HolsterSocketName = "HolsterSocket";
@@ -135,7 +150,7 @@ private:
 
 
 public:
-	AHeroCharacter();
+	AHeroCharacter(const FObjectInitializer& ObjectInitializer);
 	void Restart() override;
 	void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
 	
@@ -172,15 +187,24 @@ public:
 
 	AHeroState* GetHeroState() const;
 	AHeroController* GetHeroController() const;
+	float GetTargetingSpeedModifier() const;
 
 
 	static bool IsBackpedaling(const FVector& MoveDir, const FVector& AimDir, int BackpedalAngle);
 
 
 	/// Input
+		/** setup pawn specific input handlers */
+	virtual void SetupPlayerInputComponent(class UInputComponent* InputComponent) override;
 
-	void Input_FirePressed() const;
-	void Input_FireReleased() const;
+	void StartWeaponFire() const;
+	void StopWeaponFire() const;
+	void StartWeaponFire();
+	void StopWeaponFire();
+	bool IsFiring() const;
+
+	void Input_FirePressed();
+	void Input_FireReleased();
 	void Input_AdsPressed();
 	void Input_AdsReleased();
 	void Input_Reload() const;
@@ -201,10 +225,21 @@ public:
 	
 	AWeapon* GetHolsteredWeapon() const;
 
+	bool IsRunning() const;
+	bool IsTargeting() const;
+	float GetRunningSpeed() const { return RunningSpeed; }
 
 private:
 
 	virtual void Tick(float DeltaSeconds) override;
+
+	void OnStartRunning();
+	void OnStopRunning();
+	void SetRunning(bool bNewWantsToRun);
+
+
+	void SetTargeting(bool bNewTargeting);
+
 
 
 	void GiveWeaponToPlayer(TSubclassOf<class AWeapon> WeaponClass);
@@ -212,6 +247,8 @@ private:
 	EWeaponSlots FindGoodSlot() const;
 	AWeapon* AssignWeaponToInventorySlot(AWeapon* Weapon, EWeaponSlots Slot);
 	void EquipWeapon(EWeaponSlots Slot);
+	void MakeCurrentWeaponVisible() const;
+	void RefereshWeaponAttachments() const;
 
 	static FVector2D GetGameViewportSize();
 	static FVector2D CalcLinearLeanVectorUnclipped(const FVector2D& CursorLoc, const FVector2D& ViewportSize);
@@ -220,19 +257,25 @@ private:
 	FVector2D TrackCameraWithAimGamepad() const;
 	void ExperimentalMouseAimTracking(float DT);
 
-
-	void SimulateAdsMode(bool IsAdsing);
+	//void SimulateAdsMode(bool IsAdsing);
 	//void DrawAdsLine(const FColor& Color, float LineLength) const;
 
+
+
+	UFUNCTION(Server, Reliable, WithValidation)
+		void ServerSetTargeting(bool bNewTargeting);
+
+	UFUNCTION(Server, Reliable, WithValidation)
+		void ServerSetRunning(bool bNewWantsToRun);
 
 	UFUNCTION()
 		void OnRep_TintChanged() const;
 
-	UFUNCTION(Server, Reliable, WithValidation)
-		void ServerRPC_AdsPressed();
+	//UFUNCTION(Server, Reliable, WithValidation)
+	//	void ServerRPC_AdsPressed();
 
-	UFUNCTION(Server, Reliable, WithValidation)
-		void ServerRPC_AdsReleased();
+	//UFUNCTION(Server, Reliable, WithValidation)
+	//	void ServerRPC_AdsReleased();
 
 	UFUNCTION(Server, Reliable, WithValidation)
 		void ServerRPC_TryInteract();

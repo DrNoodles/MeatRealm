@@ -100,11 +100,26 @@ void UWeaponReceiverComponent::TickComponent(float DeltaTime, ELevelTick TickTyp
 			break;
 
 		case EWeaponModes::UnEquipped:
-			TickUnEquipped(DeltaTime);
-			break;
+		{
+			//auto str = FString::Printf(TEXT("EWeaponModes::TickPaused %s"), *WeaponState.ToString());
 
-		//case EWeaponModes::Equipping:
-			//break;
+			if (InputState.DrawRequested)
+			{
+				InputState.DrawRequested = false;
+				ChangeState(EWeaponCommands::EquipStart, WeaponState);
+			}
+		}
+		break;
+
+		case EWeaponModes::Equipping:
+		{
+			if (InputState.HolsterRequested)
+			{
+				InputState.HolsterRequested = false;
+				ChangeState(EWeaponCommands::UnEquip, WeaponState);
+			}
+			break;
+		}
 
 		default:
 			LogMsgWithRole(FString::Printf(TEXT("TickComponent() - WeaponMode unimplemented %s"), *EWeaponModesStr(WeaponState.Mode)));
@@ -138,11 +153,22 @@ bool UWeaponReceiverComponent::TickIdle(float DT)
 		return ChangeState(EWeaponCommands::UnEquip, WeaponState);
 	}
 
+
+
+
 	// Ready > Firing
 	if (InputState.FireRequested)
 	{
 		LogMsgWithRole("EWeaponModes::TickReady - Processing FirePressed");
 		return ChangeState(EWeaponCommands::FireStart, WeaponState);
+	}
+
+
+	// Ready > Reloading (forced when clip empty)
+	if (NeedsReload() && CanReload())
+	{
+		// Reload instead
+		return ChangeState(EWeaponCommands::ReloadStart, WeaponState);
 	}
 
 
@@ -163,24 +189,10 @@ bool UWeaponReceiverComponent::TickIdle(float DT)
 	return false;
 }
 
-bool UWeaponReceiverComponent::TickUnEquipped(float DeltaTime)
-{
-	auto str = FString::Printf(TEXT("EWeaponModes::TickPaused %s"), *WeaponState.ToString());
-	//LogMsgWithRole(str);
-
-	if (WeaponState.IsAdsing) WeaponState.IsAdsing = false;
-
-	if (InputState.DrawRequested)
-	{
-		LogMsgWithRole("EWeaponModes::TickPaused - Processed Draw Request");
-		InputState.DrawRequested = false;
-
-		const auto Command = bIsMidReload ? EWeaponCommands::ReloadStart : EWeaponCommands::EquipStart;
-		return ChangeState(Command, WeaponState);
-	}
-
-	return false;
-}
+//bool UWeaponReceiverComponent::TickUnEquipped(float DeltaTime)
+//{
+//	
+//}
 
 bool UWeaponReceiverComponent::TickFiring(float DT)
 {
@@ -248,14 +260,8 @@ bool UWeaponReceiverComponent::TickFiring(float DT)
 
 	// Start the busy timer
 	{
-		auto DoFireEnd = [&]
-		{
-			bIsBusy = false;
-			GetWorld()->GetTimerManager().ClearTimer(BusyTimerHandle);
-		};
-
 		bIsBusy = true;
-		GetWorld()->GetTimerManager().SetTimer(BusyTimerHandle, DoFireEnd, 1.f / ShotsPerSecond, false);
+		GetWorld()->GetTimerManager().SetTimer(BusyTimerHandle, this, &UWeaponReceiverComponent::FireEnd, 1.f / ShotsPerSecond, false);
 	}
 
 
@@ -270,6 +276,12 @@ bool UWeaponReceiverComponent::TickFiring(float DT)
 	}
 
 	return false;
+}
+void UWeaponReceiverComponent::FireEnd()
+{
+	LogMsgWithRole("FireEnd");
+	bIsBusy = false;
+	GetWorld()->GetTimerManager().ClearTimer(BusyTimerHandle);
 }
 
 bool UWeaponReceiverComponent::TickReloading(float DT)
@@ -290,8 +302,8 @@ bool UWeaponReceiverComponent::TickReloading(float DT)
 	{
 		const auto ElapsedReloadTime = (FDateTime::Now() - ReloadStartTime).GetTotalSeconds();
 		WeaponState.ReloadProgress = ElapsedReloadTime / ReloadTime;
-		auto str = FString::Printf(TEXT("InProgress %f"), WeaponState.ReloadProgress);
-		LogMsgWithRole(str);
+		//auto str = FString::Printf(TEXT("InProgress %f"), WeaponState.ReloadProgress);
+		//LogMsgWithRole(str);
 	}
 
 	if (bIsBusy) 
@@ -304,6 +316,8 @@ bool UWeaponReceiverComponent::TickReloading(float DT)
 	{
 		return ChangeState(EWeaponCommands::ReloadEnd, WeaponState);
 	}
+
+	LogMsgWithRole("Starting Reload");
 
 	// Start Reloading!
 	bIsMidReload = true;
@@ -386,13 +400,17 @@ bool UWeaponReceiverComponent::ChangeState(EWeaponCommands Cmd, const FWeaponSta
 
 	return bWeChangedStates;
 }
-
+void UWeaponReceiverComponent::EquipEnd()
+{
+	LogMsgWithRole("EquipEnd()");
+	ChangeState(EWeaponCommands::EquipEnd, WeaponState);
+}
 void UWeaponReceiverComponent::DoTransitionAction(const EWeaponModes OldMode, const EWeaponModes NewMode)
 {
 	// Any > Equipping
 	if (NewMode == EWeaponModes::Equipping)
 	{
-		LogMsgWithRole("EquipStart");
+		LogMsgWithRole("NewMode == Equipping");
 
 		// Stop any actions - should never be true.. TODO Convert these to asserts to make sure we've good elsewhere
 		bIsBusy = false;
@@ -402,36 +420,33 @@ void UWeaponReceiverComponent::DoTransitionAction(const EWeaponModes OldMode, co
 		InputState.Reset();
 
 		// Forget all unimportant state
-		bIsMidReload = false;
-		WeaponState.ReloadProgress = false;
+		WeaponState.ReloadProgress = 0;
 		WeaponState.IsAdsing = false;
 		WeaponState.HasFired = false;
 
-		auto EndEquip = [&]
-		{
-			LogMsgWithRole("EquipEnd");
-			ChangeState(EWeaponCommands::EquipEnd, WeaponState);
-		};
 
-		GetWorld()->GetTimerManager().SetTimer(BusyTimerHandle, EndEquip, Delegate->GetDrawDuration(), false);
+		GetWorld()->GetTimerManager().SetTimer(BusyTimerHandle, this, &UWeaponReceiverComponent::EquipEnd, Delegate->GetDrawDuration(), false);
 	}
 
 
 	// Any > UnEquipped
 	if (NewMode == EWeaponModes::UnEquipped)
 	{
+		LogMsgWithRole("NewMode == UnEquipped");
+
 		// NEW HERE
 
 		bIsBusy = false;
 		GetWorld()->GetTimerManager().ClearTimer(BusyTimerHandle);
+
 		InputState.Reset();
 
 		// Leave Reload alone! We might want to resume it
+		WeaponState.ReloadProgress = 0;
 		WeaponState.IsAdsing = false;
 		WeaponState.HasFired = false;
 
-		LogMsgWithRole("NewMode == Paused");
-		LogMsgWithRole(WeaponState.ToString());
+		//LogMsgWithRole(WeaponState.ToString());
 	}
 }
 
