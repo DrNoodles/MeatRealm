@@ -224,6 +224,7 @@ public:
 	void AdsPressed();
 	void AdsReleased();
 	bool TryGiveAmmo();
+	bool IsEquipping() const { return WeaponState.Mode == EWeaponModes::Equipping; }
 
 protected:
 
@@ -235,7 +236,7 @@ private:
 
 	// All the states!
 	bool TickIdle(float DT);
-	bool TickUnEquipped(float DeltaTime);
+	//bool TickUnEquipped(float DeltaTime);
 	bool TickFiring(float DT);
 	bool TickReloading(float DT);
 	void ReloadEnd();

@@ -204,10 +204,19 @@ void AHeroCharacter::Tick(float DeltaSeconds)
 
 
 	// Draw running debug text
-
 	if (IsRunning() && GetWorld())
 	{
 		DrawDebugString(GetWorld(), FVector{ -50, -50, -50 }, "Running!", this, FColor::White, DeltaSeconds * 0.7);
+	}
+
+
+	// Draw drawing weapon debug text
+
+	if (GetCurrentWeapon() && GetCurrentWeapon()->IsEquipping())
+	{
+		auto str = FString::Printf(TEXT("Equipping %s"),*GetCurrentWeapon()->GetWeaponName());
+		const auto YOffset = -5.f * str.Len();
+		DrawDebugString(GetWorld(), FVector{ 70, YOffset, 50 }, str, this, FColor::White, DeltaSeconds * 0.7);
 	}
 
 
@@ -332,7 +341,7 @@ bool AHeroCharacter::IsRunning() const
 		&& (Velocity | Facing) > FMath::Cos(FMath::DegreesToRadians(SprintMaxAngle));
 
 	// Debug
-	if (true && bIsRunning)
+	if (false && bIsRunning)
 	{
 		const float Angle = FMath::RadiansToDegrees(FMath::Acos(Velocity | Facing));
 		UE_LOG(LogTemp, Warning, TEXT("Sprinting! %fd"), Angle);
@@ -419,7 +428,7 @@ void AHeroCharacter::Input_FirePressed()
 	auto* MyPC = Cast<AHeroController>(Controller);
 	if (MyPC && MyPC->IsGameInputAllowed())
 	{
-		if (IsRunning())
+		if (bWantsToRun || IsRunning())
 		{
 			SetRunning(false);
 		}
@@ -438,7 +447,7 @@ void AHeroCharacter::Input_AdsPressed()
 	auto* MyPC = Cast<AHeroController>(Controller);
 	if (MyPC && MyPC->IsGameInputAllowed())
 	{
-		if (IsRunning())
+		if (bWantsToRun || IsRunning())
 		{
 			SetRunning(false);
 		}
@@ -601,13 +610,17 @@ AWeapon* AHeroCharacter::AssignWeaponToInventorySlot(AWeapon* Weapon, EWeaponSlo
 
 void AHeroCharacter::EquipWeapon(const EWeaponSlots Slot)
 {
+	/*if (bIsEquipping) return;
+	bIsEquipping = true;*/
+
+
+	// Already selected?
 	if (CurrentWeaponSlot == Slot) return;
 
-	// If desired slot is empty, do nothing.
+	// Desired slot is empty?
 	auto NewWeapon = GetWeapon(Slot);
+	if (!NewWeapon) return;
 
-	bool CanEquipEmptyWeaponSlot = false;
-	if (!NewWeapon && !CanEquipEmptyWeaponSlot) return;
 
 	const auto OldSlot = CurrentWeaponSlot;
 	CurrentWeaponSlot = Slot;
@@ -616,14 +629,16 @@ void AHeroCharacter::EquipWeapon(const EWeaponSlots Slot)
 	// TODO Some management code here to delay for the duration of holster/draw and cancel if certain things happen
 
 
+	// Clear any existing Equip timer
+	GetWorld()->GetTimerManager().ClearTimer(DrawWeaponTimerHandle);
+
+
 	// Holster old weapon
 	auto OldWeapon = GetWeapon(OldSlot);
 	if (OldWeapon)
 	{
 		OldWeapon->Holster();
-
-		const auto Rules = FAttachmentTransformRules{EAttachmentRule::SnapToTarget, true};
-		OldWeapon->AttachToComponent(GetMesh(), Rules, HolsterSocketName);
+		OldWeapon->SetActorHiddenInGame(false); // make sure old weapon is visible
 	}
 
 
@@ -634,23 +649,35 @@ void AHeroCharacter::EquipWeapon(const EWeaponSlots Slot)
 		NewWeapon->Draw();
 		NewWeapon->SetActorHiddenInGame(true);
 
+
 		auto ShowWeaponInHands = [&]
 		{
 			LogMsgWithRole("ShowWeapon");
-			auto W = GetWeapon(CurrentWeaponSlot);
-			if (W)
-			{
-				const auto Rules = FAttachmentTransformRules{EAttachmentRule::SnapToTarget, true};
-				W->AttachToComponent(GetMesh(), Rules, HandSocketName);
-				W->SetActorHiddenInGame(false);
-			}
+			if (GetCurrentWeapon()) GetCurrentWeapon()->SetActorHiddenInGame(false);
+			RefereshWeaponAttachments();
 		};
 
 		const auto DrawDuration = NewWeapon->GetDrawDuration();
 		GetWorld()->GetTimerManager().SetTimer(DrawWeaponTimerHandle, ShowWeaponInHands, DrawDuration, false);
 	}
 
-	// TODO Swap attatchment points (eg, new gun in hands, old gun on back)
+	RefereshWeaponAttachments();
+}
+
+
+void AHeroCharacter::RefereshWeaponAttachments() const
+{
+	const FAttachmentTransformRules Rules{ EAttachmentRule::SnapToTarget, true };
+
+	if (GetHolsteredWeapon())
+	{
+		GetHolsteredWeapon()->AttachToComponent(GetMesh(), Rules, HolsterSocketName);
+	}
+
+	if (GetCurrentWeapon())
+	{
+		GetCurrentWeapon()->AttachToComponent(GetMesh(), Rules, HandSocketName);
+	}
 }
 
 

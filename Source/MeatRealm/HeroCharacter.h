@@ -127,6 +127,8 @@ private:
 
 	FTimerHandle DrawWeaponTimerHandle;
 
+	bool bIsEquipping;
+
 	bool bWantsToFire;
 
 	UPROPERTY(Transient, Replicated)
@@ -245,6 +247,7 @@ private:
 	EWeaponSlots FindGoodSlot() const;
 	AWeapon* AssignWeaponToInventorySlot(AWeapon* Weapon, EWeaponSlots Slot);
 	void EquipWeapon(EWeaponSlots Slot);
+	void RefereshWeaponAttachments() const;
 
 	static FVector2D GetGameViewportSize();
 	static FVector2D CalcLinearLeanVectorUnclipped(const FVector2D& CursorLoc, const FVector2D& ViewportSize);
