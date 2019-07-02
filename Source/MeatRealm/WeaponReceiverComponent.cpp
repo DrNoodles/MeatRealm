@@ -153,11 +153,22 @@ bool UWeaponReceiverComponent::TickIdle(float DT)
 		return ChangeState(EWeaponCommands::UnEquip, WeaponState);
 	}
 
+
+
+
 	// Ready > Firing
 	if (InputState.FireRequested)
 	{
 		LogMsgWithRole("EWeaponModes::TickReady - Processing FirePressed");
 		return ChangeState(EWeaponCommands::FireStart, WeaponState);
+	}
+
+
+	// Ready > Reloading (forced when clip empty)
+	if (NeedsReload() && CanReload())
+	{
+		// Reload instead
+		return ChangeState(EWeaponCommands::ReloadStart, WeaponState);
 	}
 
 
