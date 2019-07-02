@@ -19,6 +19,11 @@ void AHeroController::CleanupPlayerState()
 	DestroyHud();
 }
 
+bool AHeroController::IsGameInputAllowed() const
+{
+	return bAllowGameActions;
+}
+
 void AHeroController::OnPossess(APawn* InPawn)
 {
 	// Called on server upon possessing a pawn

@@ -70,13 +70,17 @@ public:
 	//UPROPERTY(EditAnywhere)
 	//	float AdsSpeed = 275;
 	UPROPERTY(EditAnywhere)
-		float RunningSpeedModifier = 1.5;
+		float RunningSpeed = 500;
 
 	UPROPERTY(EditAnywhere)
-		float WalkSpeed = 400;
+		float WalkSpeed = 375;
 
 	UPROPERTY(BlueprintAssignable, Category = "Event Dispatchers")
 		FPlayerTintChanged OnPlayerTintChanged;
+
+	// 
+	UPROPERTY(EditAnywhere)
+		int SprintMaxAngle = 70;
 
 	// An angle between 0 and 180 degrees. 
 	UPROPERTY(EditAnywhere)
@@ -122,6 +126,8 @@ private:
 	FVector AimPos_WorldSpace = FVector::ZeroVector;
 
 	FTimerHandle DrawWeaponTimerHandle;
+
+	bool bWantsToFire;
 
 	UPROPERTY(Transient, Replicated)
 	bool bWantsToRun = false;
@@ -189,8 +195,14 @@ public:
 		/** setup pawn specific input handlers */
 	virtual void SetupPlayerInputComponent(class UInputComponent* InputComponent) override;
 
-	void Input_FirePressed() const;
-	void Input_FireReleased() const;
+	void StartWeaponFire() const;
+	void StopWeaponFire() const;
+	void StartWeaponFire();
+	void StopWeaponFire();
+	bool IsFiring() const;
+
+	void Input_FirePressed();
+	void Input_FireReleased();
 	void Input_AdsPressed();
 	void Input_AdsReleased();
 	void Input_Reload() const;
@@ -213,7 +225,7 @@ public:
 
 	bool IsRunning() const;
 	bool IsTargeting() const;
-	float GetRunningSpeedModifier() const { return RunningSpeedModifier; }
+	float GetRunningSpeed() const { return RunningSpeed; }
 
 private:
 

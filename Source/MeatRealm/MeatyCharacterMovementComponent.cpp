@@ -3,7 +3,7 @@
 
 #include "MeatyCharacterMovementComponent.h"
 #include "HeroCharacter.h"
-
+#include "Engine/Public/DrawDebugHelpers.h"
 
 float UMeatyCharacterMovementComponent::GetMaxSpeed() const
 {
@@ -20,7 +20,7 @@ float UMeatyCharacterMovementComponent::GetMaxSpeed() const
 
 		if (HeroChar->IsRunning())
 		{
-			MaxSpeed *= HeroChar->GetRunningSpeedModifier();
+			MaxSpeed = HeroChar->GetRunningSpeed();
 		}
 	}
 

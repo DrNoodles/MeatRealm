@@ -24,7 +24,9 @@
 
 /// Lifecycle
 
-AHeroCharacter::AHeroCharacter(const FObjectInitializer& ObjectInitializer) : Super(ObjectInitializer.SetDefaultSubobjectClass<UMeatyCharacterMovementComponent>(ACharacter::CharacterMovementComponentName))
+AHeroCharacter::AHeroCharacter(const FObjectInitializer& ObjectInitializer) : Super(
+	ObjectInitializer.SetDefaultSubobjectClass<UMeatyCharacterMovementComponent>(
+		ACharacter::CharacterMovementComponentName))
 {
 	// Set size for collision capsule
 	GetCapsuleComponent()->InitCapsuleSize(42.f, 96.0f);
@@ -60,7 +62,7 @@ AHeroCharacter::AHeroCharacter(const FObjectInitializer& ObjectInitializer) : Su
 
 	// Create a follow camera
 	FollowCamera = CreateDefaultSubobject<UCameraComponent>(TEXT("FollowCamera"));
-	FollowCamera->SetupAttachment(FollowCameraOffsetComp); 
+	FollowCamera->SetupAttachment(FollowCameraOffsetComp);
 	FollowCamera->bAbsoluteRotation = false;
 	FollowCamera->bUsePawnControlRotation = false; // Camera does not rotate relative to arm
 	FollowCamera->SetFieldOfView(38);
@@ -115,7 +117,7 @@ void AHeroCharacter::Restart()
 	}
 }
 
-void AHeroCharacter::GetLifetimeReplicatedProps(TArray< FLifetimeProperty >& OutLifetimeProps) const
+void AHeroCharacter::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
 {
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
 	DOREPLIFETIME(AHeroCharacter, CurrentWeaponSlot);
@@ -124,12 +126,11 @@ void AHeroCharacter::GetLifetimeReplicatedProps(TArray< FLifetimeProperty >& Out
 	DOREPLIFETIME(AHeroCharacter, Health);
 	DOREPLIFETIME(AHeroCharacter, Armour);
 	DOREPLIFETIME(AHeroCharacter, TeamTint);
-//	DOREPLIFETIME(AHeroCharacter, bIsAdsing);
+	//	DOREPLIFETIME(AHeroCharacter, bIsAdsing);
 
 	// everyone except local owner: flag change is locally instigated
 	DOREPLIFETIME_CONDITION(AHeroCharacter, bWantsToRun, COND_SkipOwner);
 	DOREPLIFETIME_CONDITION(AHeroCharacter, bIsTargeting, COND_SkipOwner);
-
 }
 
 void AHeroCharacter::Tick(float DeltaSeconds)
@@ -144,26 +145,25 @@ void AHeroCharacter::Tick(float DeltaSeconds)
 	if (HeroCont == nullptr) return;
 
 
-
 	// Handle Input (move and look)
 
 	const auto deadzoneSquared = 0.25f * 0.25f;
 
 
 	// Move character
-	const auto moveVec = FVector{ AxisMoveUp, AxisMoveRight, 0 };
+	const auto moveVec = FVector{AxisMoveUp, AxisMoveRight, 0};
 
 	// Debuf move speed if backpeddling
 	auto CurrentLookVec = GetActorRotation().Vector();
 	bool bBackpedaling = IsBackpedaling(moveVec.GetSafeNormal(), CurrentLookVec, BackpedalThresholdAngle);
 
 	// TODO This needs to be server side or it's hackable!
-	auto MoveScalar = bBackpedaling ? BackpedalSpeedMultiplier : 1.0f; 
+	auto MoveScalar = bBackpedaling ? BackpedalSpeedMultiplier : 1.0f;
 
 	if (moveVec.SizeSquared() >= deadzoneSquared)
 	{
-		AddMovementInput(FVector{ MoveScalar, 0.f, 0.f }, moveVec.X);
-		AddMovementInput(FVector{ 0.f, MoveScalar, 0.f }, moveVec.Y);
+		AddMovementInput(FVector{MoveScalar, 0.f, 0.f}, moveVec.X);
+		AddMovementInput(FVector{0.f, MoveScalar, 0.f}, moveVec.Y);
 	}
 
 
@@ -188,7 +188,7 @@ void AHeroCharacter::Tick(float DeltaSeconds)
 	}
 	else // Use gamepad
 	{
-		LookVec = FVector{ AxisFaceUp, AxisFaceRight, 0 };
+		LookVec = FVector{AxisFaceUp, AxisFaceRight, 0};
 	}
 
 
@@ -203,15 +203,21 @@ void AHeroCharacter::Tick(float DeltaSeconds)
 	}
 
 
+	// Draw running debug text
+
+	if (IsRunning() && GetWorld())
+	{
+		DrawDebugString(GetWorld(), FVector{ -50, -50, -50 }, "Running!", this, FColor::White, DeltaSeconds * 0.7);
+	}
+
 
 	// Scan for interactables in front of player
 
 	auto* const Pickup = ScanForInteractable<AWeaponPickupBase>();
-	
+
 	float PickupDelay;
 	if (Pickup && Pickup->CanInteract(this, OUT PickupDelay))
 	{
-		
 		LogMsgWithRole(FString::Printf(TEXT("Can Interact with delay! %f "), PickupDelay));
 		auto World = GetWorld();
 
@@ -232,11 +238,11 @@ void AHeroCharacter::Tick(float DeltaSeconds)
 			}
 		}
 		auto asdf = ActionText.ToString();
-		if (World) DrawDebugString(World, Pickup->GetActorLocation() + FVector{ 0,0,200 }, "Equip (" + asdf + ")", nullptr, FColor::White, DeltaSeconds * 0.5);
+		if (World)
+			DrawDebugString(World, Pickup->GetActorLocation() + FVector{0, 0, 200}, "Equip (" + asdf + ")", nullptr, FColor::White, DeltaSeconds * 0.5);
 
 		//LogMsgWithRole("Can Interact! ");
 	}
-
 
 
 	// Track camera with aim
@@ -265,25 +271,24 @@ void AHeroCharacter::Tick(float DeltaSeconds)
 	}
 
 
-
 	//// Draw ADS line
 	//if (bIsAdsing) 
 	//{
-		//DrawAdsLine(AdsLineColor, AdsLineLength);
+	//DrawAdsLine(AdsLineColor, AdsLineLength);
 	//}
 }
-
 
 
 // Input
 void AHeroCharacter::SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent)
 {
 	check(PlayerInputComponent);
-	
+
 
 	PlayerInputComponent->BindAction("Run", IE_Pressed, this, &AHeroCharacter::OnStartRunning);
 	PlayerInputComponent->BindAction("Run", IE_Released, this, &AHeroCharacter::OnStopRunning);
 }
+
 void AHeroCharacter::OnStartRunning()
 {
 	auto* MyPC = Cast<AHeroController>(Controller);
@@ -293,7 +298,7 @@ void AHeroCharacter::OnStartRunning()
 		{
 			SetTargeting(false);
 		}
-	//	StopWeaponFire();
+		//	StopWeaponFire();
 		SetRunning(true);
 	}
 }
@@ -312,6 +317,7 @@ void AHeroCharacter::SetRunning(bool bNewWantsToRun)
 		ServerSetRunning(bNewWantsToRun);
 	}
 }
+
 bool AHeroCharacter::IsRunning() const
 {
 	if (!GetCharacterMovement())
@@ -319,7 +325,20 @@ bool AHeroCharacter::IsRunning() const
 		return false;
 	}
 
-	return bWantsToRun && !GetVelocity().IsZero() && (GetVelocity().GetSafeNormal2D() | GetActorForwardVector()) > -0.1;
+	FVector Velocity = GetVelocity().GetSafeNormal2D();
+	FVector Facing = GetActorForwardVector();
+
+	bool bIsRunning = bWantsToRun && !GetVelocity().IsZero() 
+		&& (Velocity | Facing) > FMath::Cos(FMath::DegreesToRadians(SprintMaxAngle));
+
+	// Debug
+	if (true && bIsRunning)
+	{
+		const float Angle = FMath::RadiansToDegrees(FMath::Acos(Velocity | Facing));
+		UE_LOG(LogTemp, Warning, TEXT("Sprinting! %fd"), Angle);
+	}
+
+	return bIsRunning;
 }
 
 void AHeroCharacter::ServerSetRunning_Implementation(bool bNewWantsToRun)
@@ -333,13 +352,12 @@ bool AHeroCharacter::ServerSetRunning_Validate(bool bNewWantsToRun)
 }
 
 
-
-
 // Ads mode
 bool AHeroCharacter::IsTargeting() const
 {
 	return bIsTargeting;
 }
+
 void AHeroCharacter::SetTargeting(bool bNewTargeting)
 {
 	bIsTargeting = bNewTargeting;
@@ -358,7 +376,6 @@ void AHeroCharacter::SetTargeting(bool bNewTargeting)
 	//	UGameplayStatics::SpawnSoundAttached(TargetingSound, GetRootComponent());
 	//}
 
-	
 
 	if (Role < ROLE_Authority)
 	{
@@ -375,10 +392,6 @@ void AHeroCharacter::ServerSetTargeting_Implementation(bool bNewTargeting)
 {
 	SetTargeting(bNewTargeting);
 }
-
-
-
-
 
 
 //void AHeroCharacter::DrawAdsLine(const FColor& Color, float LineLength) const
@@ -401,20 +414,29 @@ void AHeroCharacter::ServerSetTargeting_Implementation(bool bNewTargeting)
 //	DrawDebugLine(GetWorld(), Start, End, Color, false, -1., 0, 2.f);
 //}
 
-void AHeroCharacter::Input_FirePressed() const
+void AHeroCharacter::Input_FirePressed()
 {
-	if (GetCurrentWeapon()) GetCurrentWeapon()->Input_PullTrigger();
+	auto* MyPC = Cast<AHeroController>(Controller);
+	if (MyPC && MyPC->IsGameInputAllowed())
+	{
+		if (IsRunning())
+		{
+			SetRunning(false);
+		}
+		StartWeaponFire();
+	}
 }
 
-void AHeroCharacter::Input_FireReleased() const
+void AHeroCharacter::Input_FireReleased()
 {
-	if (GetCurrentWeapon()) GetCurrentWeapon()->Input_ReleaseTrigger();
+	StopWeaponFire();
+	//if (GetCurrentWeapon()) GetCurrentWeapon()->Input_ReleaseTrigger();
 }
 
 void AHeroCharacter::Input_AdsPressed()
 {
 	auto* MyPC = Cast<AHeroController>(Controller);
-	if (MyPC/* && MyPC->IsGameInputAllowed()*/)
+	if (MyPC && MyPC->IsGameInputAllowed())
 	{
 		if (IsRunning())
 		{
@@ -433,24 +455,59 @@ void AHeroCharacter::Input_AdsReleased()
 
 void AHeroCharacter::Input_Reload() const
 {
-	if (GetCurrentWeapon()) GetCurrentWeapon()->Input_Reload();
+	auto* MyPC = Cast<AHeroController>(Controller);
+	if (MyPC && MyPC->IsGameInputAllowed())
+	{
+		if (GetCurrentWeapon())
+		{
+			GetCurrentWeapon()->Input_Reload();
+		}
+	}
 }
 
 
+void AHeroCharacter::StartWeaponFire()
+{
+	if (!bWantsToFire)
+	{
+		bWantsToFire = true;
+		if (GetCurrentWeapon())
+		{
+			GetCurrentWeapon()->Input_PullTrigger();
+		}
+	}
+}
+
+void AHeroCharacter::StopWeaponFire()
+{
+	if (bWantsToFire)
+	{
+		bWantsToFire = false;
+		if (GetCurrentWeapon())
+		{
+			GetCurrentWeapon()->Input_ReleaseTrigger();
+		}
+	}
+}
+
+bool AHeroCharacter::IsFiring() const
+{
+	return bWantsToFire;
+};
 
 
 // Weapon spawning
 
 AWeapon* AHeroCharacter::GetWeapon(EWeaponSlots Slot) const
 {
-	switch (Slot) 
-	{ 
+	switch (Slot)
+	{
 	case EWeaponSlots::Primary: return Slot1;
 	case EWeaponSlots::Secondary: return Slot2;
-	
+
 	case EWeaponSlots::Undefined:
 	default:
-		return nullptr; 
+		return nullptr;
 	}
 }
 
@@ -458,6 +515,7 @@ AWeapon* AHeroCharacter::GetCurrentWeapon() const
 {
 	return GetWeapon(CurrentWeaponSlot);
 }
+
 AWeapon* AHeroCharacter::GetHolsteredWeapon() const
 {
 	if (CurrentWeaponSlot == EWeaponSlots::Primary) return GetWeapon(EWeaponSlots::Secondary);
@@ -498,7 +556,7 @@ AWeapon* AHeroCharacter::AuthSpawnWeapon(TSubclassOf<AWeapon> weaponClass)
 		this,
 		this,
 		ESpawnActorCollisionHandlingMethod::AlwaysSpawn);
-	
+
 	//if (Weapon == nullptr) { return nullptr; }
 
 
@@ -525,6 +583,7 @@ EWeaponSlots AHeroCharacter::FindGoodSlot() const
 	if (!Slot2) return EWeaponSlots::Secondary;
 	return CurrentWeaponSlot;
 }
+
 AWeapon* AHeroCharacter::AssignWeaponToInventorySlot(AWeapon* Weapon, EWeaponSlots Slot)
 {
 	const auto Removed = GetWeapon(Slot);
@@ -546,7 +605,7 @@ void AHeroCharacter::EquipWeapon(const EWeaponSlots Slot)
 
 	// If desired slot is empty, do nothing.
 	auto NewWeapon = GetWeapon(Slot);
-	
+
 	bool CanEquipEmptyWeaponSlot = false;
 	if (!NewWeapon && !CanEquipEmptyWeaponSlot) return;
 
@@ -556,9 +615,6 @@ void AHeroCharacter::EquipWeapon(const EWeaponSlots Slot)
 
 	// TODO Some management code here to delay for the duration of holster/draw and cancel if certain things happen
 
-	
-	
-	
 
 	// Holster old weapon
 	auto OldWeapon = GetWeapon(OldSlot);
@@ -566,7 +622,7 @@ void AHeroCharacter::EquipWeapon(const EWeaponSlots Slot)
 	{
 		OldWeapon->Holster();
 
-		const auto Rules = FAttachmentTransformRules{ EAttachmentRule::SnapToTarget, true };
+		const auto Rules = FAttachmentTransformRules{EAttachmentRule::SnapToTarget, true};
 		OldWeapon->AttachToComponent(GetMesh(), Rules, HolsterSocketName);
 	}
 
@@ -584,7 +640,7 @@ void AHeroCharacter::EquipWeapon(const EWeaponSlots Slot)
 			auto W = GetWeapon(CurrentWeaponSlot);
 			if (W)
 			{
-				const auto Rules = FAttachmentTransformRules{ EAttachmentRule::SnapToTarget, true };
+				const auto Rules = FAttachmentTransformRules{EAttachmentRule::SnapToTarget, true};
 				W->AttachToComponent(GetMesh(), Rules, HandSocketName);
 				W->SetActorHiddenInGame(false);
 			}
@@ -598,13 +654,12 @@ void AHeroCharacter::EquipWeapon(const EWeaponSlots Slot)
 }
 
 
-
 // Camera tracks aim
 
 void AHeroCharacter::MoveCameraByOffsetVector(const FVector2D& OffsetVec, float DeltaSeconds) const
 {
 	// Calculate a world space offset based on LeanVector
-	const FVector Offset_WorldSpace = FVector{ OffsetVec.Y, OffsetVec.X, 0.f };
+	const FVector Offset_WorldSpace = FVector{OffsetVec.Y, OffsetVec.X, 0.f};
 
 	// Find the origin of our camera offset node
 	const FTransform CompTform = FollowCameraOffsetComp->GetComponentTransform();
@@ -621,8 +676,8 @@ void AHeroCharacter::MoveCameraByOffsetVector(const FVector2D& OffsetVec, float 
 	const auto Diff = GoalLocation_LocalSpace - Current;
 
 	float Rate = bUseMouseAim && !bUseExperimentalMouseTracking
-		? 1// Trying no cushion //LeanCushionRateMouse * DeltaSeconds
-		: LeanCushionRateGamepad * DeltaSeconds;
+		             ? 1 // Trying no cushion //LeanCushionRateMouse * DeltaSeconds
+		             : LeanCushionRateGamepad * DeltaSeconds;
 	Rate = FMath::Clamp(Rate, 0.0f, 1.f);
 
 	const FVector Change = Diff * Rate;
@@ -647,14 +702,14 @@ FVector2D AHeroCharacter::TrackCameraWithAimMouse() const
 	FVector2D ClippedLinearLeanVector;
 
 	// Clip LeanVector
-	
+
 	if (ClippingModeMouse == 0)
 	{
 		// Circle
 		ClippedLinearLeanVector = LinearLeanVector.SizeSquared() > 1
-			? LinearLeanVector.GetSafeNormal()
-			: LinearLeanVector;
-	} 
+			                          ? LinearLeanVector.GetSafeNormal()
+			                          : LinearLeanVector;
+	}
 	else if (ClippingModeMouse == 1)
 	{
 		// Square
@@ -676,13 +731,13 @@ FVector2D AHeroCharacter::TrackCameraWithAimMouse() const
 
 FVector2D AHeroCharacter::TrackCameraWithAimGamepad() const
 {
-	FVector2D LinearLeanVector = FVector2D{ AxisFaceRight, AxisFaceUp };
+	FVector2D LinearLeanVector = FVector2D{AxisFaceRight, AxisFaceUp};
 	return LinearLeanVector;
 }
 
 void AHeroCharacter::ExperimentalMouseAimTracking(float DT)
 {
-	auto*const Hero = GetHeroController();
+	auto* const Hero = GetHeroController();
 	if (!Hero) return;
 
 	// Hide the cursor - NOTE the cursor still exists and works nicely, just cant see it!
@@ -717,8 +772,8 @@ void AHeroCharacter::ExperimentalMouseAimTracking(float DT)
 	const FVector AimVec = AimPos_WorldSpace - AnchorPos;
 
 	// Face the player at this
-	Controller->SetControlRotation((AimVec*-1).Rotation()); // reverse aim vec just to help see setcontrolrotation works here
-
+	Controller->SetControlRotation((AimVec * -1).Rotation());
+	// reverse aim vec just to help see setcontrolrotation works here
 
 
 	const auto ViewportSize = GetGameViewportSize();
@@ -747,7 +802,7 @@ void AHeroCharacter::ExperimentalMouseAimTracking(float DT)
 		NormalizedAimVec_Screen = AimVec_Screen / (Viewport.Y / 2)
 
 	*/
-//	FVector2D{ AimVec.X, AimVec.Y };
+	//	FVector2D{ AimVec.X, AimVec.Y };
 }
 
 FVector2D AHeroCharacter::CalcLinearLeanVectorUnclipped(const FVector2D& CursorLoc, const FVector2D& ViewportSize)
@@ -760,9 +815,9 @@ FVector2D AHeroCharacter::CalcLinearLeanVectorUnclipped(const FVector2D& CursorL
 	// Create a vector from the middle to the cursor that has a length ratio relative to the radius
 	const auto CursorVecFromMid = CursorLoc - Mid;
 	const auto CursorVecRelative = CursorVecFromMid / HalfSideLen;
-	
+
 	// Flip Y
-	return CursorVecRelative * FVector2D{ 1, -1 };
+	return CursorVecRelative * FVector2D{1, -1};
 }
 
 FVector2D AHeroCharacter::GetGameViewportSize()
@@ -776,8 +831,6 @@ FVector2D AHeroCharacter::GetGameViewportSize()
 
 	return Result;
 }
-
-
 
 
 // Affect the character
@@ -810,7 +863,7 @@ void AHeroCharacter::AuthApplyDamage(uint32 InstigatorHeroControllerId, float Da
 		Health -= Damage;
 	}
 
-	
+
 	FString S = FString::Printf(TEXT("%fhp"), Health);
 	//LogMsgWithRole(S);
 
@@ -830,7 +883,6 @@ void AHeroCharacter::AuthApplyDamage(uint32 InstigatorHeroControllerId, float Da
 
 		HC->TakeDamage2(Hit);
 	}
-	
 }
 
 bool AHeroCharacter::AuthTryGiveHealth(float Hp)
@@ -839,7 +891,7 @@ bool AHeroCharacter::AuthTryGiveHealth(float Hp)
 	if (!HasAuthority()) return false;
 
 	if (Health == MaxHealth) return false;
-	
+
 	Health = FMath::Min(Health + Hp, MaxHealth);
 	return true;
 }
@@ -890,6 +942,7 @@ bool AHeroCharacter::AuthTryGiveWeapon(const TSubclassOf<AWeapon>& Class)
 	GiveWeaponToPlayer(Class);
 	return true;
 }
+
 bool AHeroCharacter::CanGiveWeapon(const TSubclassOf<AWeapon>& Class, OUT float& OutDelay)
 {
 	EWeaponSlots GoodSlot = FindGoodSlot();
@@ -898,7 +951,7 @@ bool AHeroCharacter::CanGiveWeapon(const TSubclassOf<AWeapon>& Class, OUT float&
 	const bool bIdealSlotAlreadyContainsWeapon = GetWeapon(GoodSlot) != nullptr;
 	OutDelay = bIdealSlotAlreadyContainsWeapon ? 2 : 0;
 
-	
+
 	//// Dont pickup the weapon if it's the same as the one we're already holding
 	//if (GoodSlot == CurrentWeaponSlot && GetCurrentWeapon() && GetCurrentWeapon()->IsA(Class))
 	//{
@@ -948,10 +1001,12 @@ void AHeroCharacter::Input_PrimaryWeapon()
 {
 	ServerRPC_EquipPrimaryWeapon();
 }
+
 void AHeroCharacter::Input_SecondaryWeapon()
 {
 	ServerRPC_EquipSecondaryWeapon();
 }
+
 void AHeroCharacter::Input_ToggleWeapon()
 {
 	ServerRPC_ToggleWeapon();
@@ -1036,9 +1091,9 @@ FHitResult AHeroCharacter::GetFirstPhysicsBodyInReach() const
 
 	FVector traceStart, traceEnd;
 	GetReachLine(OUT traceStart, OUT traceEnd);
-	
+
 	bool bDrawDebug = false;
-	if (bDrawDebug) DrawDebugLine(GetWorld(), traceStart, traceEnd, FColor{ 255,0,0 }, false, -1., 0, 3.f);
+	if (bDrawDebug) DrawDebugLine(GetWorld(), traceStart, traceEnd, FColor{255, 0, 0}, false, -1., 0, 3.f);
 
 	// Raycast along line to find intersecting physics object
 	FHitResult hitResult;
@@ -1046,26 +1101,25 @@ FHitResult AHeroCharacter::GetFirstPhysicsBodyInReach() const
 		OUT hitResult,
 		traceStart,
 		traceEnd,
-		FCollisionObjectQueryParams{ ECollisionChannel::ECC_GameTraceChannel2 },
-		FCollisionQueryParams{ FName(""), false, GetOwner() }
+		FCollisionObjectQueryParams{ECollisionChannel::ECC_GameTraceChannel2},
+		FCollisionQueryParams{FName(""), false, GetOwner()}
 	);
 
 	if (isHit && bDrawDebug)
 	{
-		DrawDebugLine(GetWorld(), traceStart, hitResult.ImpactPoint, FColor{ 0,0,255 }, false, -1., 0, 5.f);
+		DrawDebugLine(GetWorld(), traceStart, hitResult.ImpactPoint, FColor{0, 0, 255}, false, -1., 0, 5.f);
 	}
 
 	return hitResult;
 }
+
 void AHeroCharacter::GetReachLine(OUT FVector& outStart, OUT FVector& outEnd) const
 {
 	outStart = GetActorLocation();
-	
+
 	outStart.Z -= 60; // check about ankle height
 	outEnd = outStart + GetActorRotation().Vector() * InteractableSearchDistance;
 }
-
-
 
 
 // Other
@@ -1095,7 +1149,8 @@ float AHeroCharacter::GetTargetingSpeedModifier() const
 
 bool AHeroCharacter::IsBackpedaling(const FVector& MoveDir, const FVector& AimDir, int BackpedalAngle)
 {
-	const bool bBackpedaling = FVector::DotProduct(MoveDir, AimDir) < FMath::Cos(FMath::DegreesToRadians(BackpedalAngle));
+	const bool bBackpedaling = FVector::DotProduct(MoveDir, AimDir) < FMath::
+		Cos(FMath::DegreesToRadians(BackpedalAngle));
 
 	// Debug
 	if (true && bBackpedaling)
@@ -1103,7 +1158,7 @@ bool AHeroCharacter::IsBackpedaling(const FVector& MoveDir, const FVector& AimDi
 		const float Angle = FMath::RadiansToDegrees(FMath::Acos(FVector::DotProduct(MoveDir, AimDir)));
 		UE_LOG(LogTemp, Warning, TEXT("Backpedaling! %f"), Angle);
 	}
-		
+
 
 	return bBackpedaling;
 }
@@ -1116,13 +1171,16 @@ void AHeroCharacter::LogMsgWithRole(FString message) const
 	FString m = GetRoleText() + ": " + message;
 	UE_LOG(LogTemp, Warning, TEXT("%s"), *m);
 }
+
 FString AHeroCharacter::GetRoleText() const
 {
 	return GetEnumText(Role) + " " + GetEnumText(GetRemoteRole());
 }
+
 FString AHeroCharacter::GetEnumText(ENetRole role)
 {
-	switch (role) {
+	switch (role)
+	{
 	case ROLE_None:
 		return "None";
 	case ROLE_SimulatedProxy:
