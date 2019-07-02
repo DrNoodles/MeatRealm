@@ -78,6 +78,8 @@ AHeroCharacter::AHeroCharacter(const FObjectInitializer& ObjectInitializer) : Su
 	// Create TEMP aim pos comp to help visualise aiming target
 	AimPosComp = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("AimPosComp"));
 	AimPosComp->SetupAttachment(RootComponent);
+
+	LastRunEnded = FDateTime::Now();
 }
 
 void AHeroCharacter::EndPlay(const EEndPlayReason::Type EndPlayReason)
@@ -131,6 +133,8 @@ void AHeroCharacter::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLi
 	// everyone except local owner: flag change is locally instigated
 	DOREPLIFETIME_CONDITION(AHeroCharacter, bWantsToRun, COND_SkipOwner);
 	DOREPLIFETIME_CONDITION(AHeroCharacter, bIsTargeting, COND_SkipOwner);
+
+	// Just the owner
 }
 
 void AHeroCharacter::Tick(float DeltaSeconds)
@@ -150,8 +154,24 @@ void AHeroCharacter::Tick(float DeltaSeconds)
 	const auto deadzoneSquared = 0.25f * 0.25f;
 
 
+	FVector moveVec;
+
 	// Move character
-	const auto moveVec = FVector{AxisMoveUp, AxisMoveRight, 0};
+	//bool bMoveWithFacing = false;
+	if (IsRunning() && bUseMouseAim)
+	{
+		// horrible attempt at a diff movement control scheme. 
+		auto ForwardVec =  GetActorForwardVector();
+		//auto RightVec = FVector::CrossProduct(GetActorForwardVector(), FVector{ 0,0,1 });
+		moveVec = ForwardVec;// *AxisMoveUp;// +RightVec * -AxisMoveRight;
+	}
+	else
+	{
+		moveVec = FVector{ AxisMoveUp, AxisMoveRight, 0 };
+	}
+
+	moveVec = moveVec.GetClampedToMaxSize(1);
+
 
 	// Debuf move speed if backpeddling
 	auto CurrentLookVec = GetActorRotation().Vector();
@@ -169,6 +189,7 @@ void AHeroCharacter::Tick(float DeltaSeconds)
 
 	// Calculate Look Vector for mouse or gamepad
 	FVector LookVec;
+
 	if (bUseMouseAim)
 	{
 		FVector WorldLocation, WorldDirection;
@@ -185,21 +206,59 @@ void AHeroCharacter::Tick(float DeltaSeconds)
 
 			LookVec = Hit - AimStart;
 		}
-	}
-	else // Use gamepad
-	{
-		LookVec = FVector{AxisFaceUp, AxisFaceRight, 0};
-	}
 
 
-	// Apply Look Vector - Aim character with look, if look is below deadzone then try use move vec
-	if (LookVec.SizeSquared() >= deadzoneSquared)
-	{
-		Controller->SetControlRotation(LookVec.Rotation());
+		if (IsRunning())
+		{
+			int v = RunTurnMode;
+
+			if (v == 1)
+			{
+				FVector LookUnit = LookVec.GetSafeNormal();
+				float Dot = moveVec | LookUnit;
+				float SideDot = moveVec.X * -LookUnit.Y + moveVec.Y * LookUnit.X;
+				bool IsLeft = SideDot > 0;
+				float Yaw = (1 - FMath::Abs(Dot)) * v1RunTurnFactor * DeltaSeconds;
+				//Constrain look vec!
+				AddControllerYawInput(IsLeft ? -Yaw : Yaw);
+			}
+
+			if (v == 2)
+			{
+				auto RightVec = FVector::CrossProduct(GetActorForwardVector(), FVector{ 0,0,1 });
+				if (FMath::Abs(AxisMoveRight) > 0.2)
+				{
+					bool IsLeft = AxisMoveRight < 0;
+					float YawSpeed = v2RunTurnFactor * DeltaSeconds;
+					AddControllerYawInput(IsLeft ? -YawSpeed : YawSpeed);
+				}
+			}
+
+
+
+			//auto str = FString::Printf(TEXT("Dot:%f SideDot:%f IsLeft:%s Yaw:%f"), Dot, SideDot, IsLeft?"Y":"N", Yaw);
+			//LogMsgWithRole(str);
+		}
+
 	}
-	else if (moveVec.SizeSquared() >= deadzoneSquared)
+	else if (!IsRunning()) // TODO Figure out what should happen on gamepad when running
+	// Use gamepad
 	{
-		Controller->SetControlRotation(moveVec.Rotation());
+		LookVec = FVector{ AxisFaceUp, AxisFaceRight, 0 };
+	}
+	
+
+	if (!IsRunning())
+	{
+		// Apply Look Vector - Aim character with look, if look is below deadzone then try use move vec
+		if (LookVec.SizeSquared() >= deadzoneSquared)
+		{
+			Controller->SetControlRotation(LookVec.Rotation());
+		}
+		else if (moveVec.SizeSquared() >= deadzoneSquared)
+		{
+			Controller->SetControlRotation(moveVec.Rotation());
+		}
 	}
 
 
@@ -319,6 +378,11 @@ void AHeroCharacter::OnStopRunning()
 
 void AHeroCharacter::SetRunning(bool bNewWantsToRun)
 {
+	if (!bNewWantsToRun)
+	{
+		LastRunEnded = FDateTime::Now();
+	}
+
 	bWantsToRun = bNewWantsToRun;
 
 	if (Role < ROLE_Authority)
@@ -333,6 +397,8 @@ bool AHeroCharacter::IsRunning() const
 	{
 		return false;
 	}
+
+	return bWantsToRun;
 
 	FVector Velocity = GetVelocity().GetSafeNormal2D();
 	FVector Facing = GetActorForwardVector();
@@ -480,7 +546,27 @@ void AHeroCharacter::StartWeaponFire()
 	if (!bWantsToFire)
 	{
 		bWantsToFire = true;
-		if (GetCurrentWeapon())
+
+
+		const FTimespan TimeSinceRun = FDateTime::Now() - LastRunEnded;
+		const FTimespan RemainingTime = FTimespan::FromSeconds(RunCooldown) - TimeSinceRun;
+		if (RemainingTime > 0)
+		{
+			// Delay fire!
+			auto DelayFire = [&]
+			{
+				if (bWantsToFire && GetCurrentWeapon())
+				{
+					GetCurrentWeapon()->Input_PullTrigger();
+				}
+			};
+
+			GetWorld()->GetTimerManager().SetTimer(RunEndTimerHandle, DelayFire, RemainingTime.GetTotalSeconds(), false);
+			return;
+		}
+
+		// Fire now!
+		else if (GetCurrentWeapon())
 		{
 			GetCurrentWeapon()->Input_PullTrigger();
 		}
@@ -492,6 +578,9 @@ void AHeroCharacter::StopWeaponFire()
 	if (bWantsToFire)
 	{
 		bWantsToFire = false;
+
+		GetWorld()->GetTimerManager().ClearTimer(RunEndTimerHandle);
+
 		if (GetCurrentWeapon())
 		{
 			GetCurrentWeapon()->Input_ReleaseTrigger();
@@ -987,7 +1076,6 @@ bool AHeroCharacter::CanGiveWeapon(const TSubclassOf<AWeapon>& Class, OUT float&
 	// Always allow pickup of weapon - for now
 	return true;
 }
-
 
 FTransform AHeroCharacter::GetAimTransform() const
 {

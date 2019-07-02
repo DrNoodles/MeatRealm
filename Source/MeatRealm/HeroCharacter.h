@@ -89,6 +89,25 @@ public:
 	UPROPERTY(EditAnywhere)
 	float BackpedalSpeedMultiplier = 0.6;
 
+	UPROPERTY(EditAnywhere)
+		int RunTurnMode = 2;
+
+	// Seconds until an action works after running 
+	UPROPERTY(EditAnywhere)
+		float v1RunTurnFactor = 2;
+
+	UPROPERTY(EditAnywhere)
+		float v2RunTurnFactor = 2;
+
+	// Seconds until an action works after running 
+	UPROPERTY(EditAnywhere)
+		float RunCooldown = 0.5;
+
+	// Not replicated cuz diff local vs server time;
+	FDateTime LastRunEnded;
+
+	FTimerHandle RunEndTimerHandle;
+
 
 protected:
 	UPROPERTY(BlueprintReadOnly, ReplicatedUsing = OnRep_TintChanged)
