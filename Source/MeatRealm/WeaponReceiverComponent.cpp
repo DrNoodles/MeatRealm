@@ -100,16 +100,26 @@ void UWeaponReceiverComponent::TickComponent(float DeltaTime, ELevelTick TickTyp
 			break;
 
 		case EWeaponModes::UnEquipped:
-			TickUnEquipped(DeltaTime);
-			break;
+		{
+			//auto str = FString::Printf(TEXT("EWeaponModes::TickPaused %s"), *WeaponState.ToString());
+
+			if (InputState.DrawRequested)
+			{
+				InputState.DrawRequested = false;
+				ChangeState(EWeaponCommands::EquipStart, WeaponState);
+			}
+		}
+		break;
 
 		case EWeaponModes::Equipping:
+		{
 			if (InputState.HolsterRequested)
 			{
 				InputState.HolsterRequested = false;
 				ChangeState(EWeaponCommands::UnEquip, WeaponState);
 			}
 			break;
+		}
 
 		default:
 			LogMsgWithRole(FString::Printf(TEXT("TickComponent() - WeaponMode unimplemented %s"), *EWeaponModesStr(WeaponState.Mode)));
@@ -168,24 +178,10 @@ bool UWeaponReceiverComponent::TickIdle(float DT)
 	return false;
 }
 
-bool UWeaponReceiverComponent::TickUnEquipped(float DeltaTime)
-{
-	auto str = FString::Printf(TEXT("EWeaponModes::TickPaused %s"), *WeaponState.ToString());
-	//LogMsgWithRole(str);
-
-	if (WeaponState.IsAdsing) WeaponState.IsAdsing = false;
-
-	if (InputState.DrawRequested)
-	{
-		LogMsgWithRole("EWeaponModes::TickPaused - Processed Draw Request");
-		InputState.DrawRequested = false;
-
-		const auto Command = bIsMidReload ? EWeaponCommands::ReloadStart : EWeaponCommands::EquipStart;
-		return ChangeState(Command, WeaponState);
-	}
-
-	return false;
-}
+//bool UWeaponReceiverComponent::TickUnEquipped(float DeltaTime)
+//{
+//	
+//}
 
 bool UWeaponReceiverComponent::TickFiring(float DT)
 {
@@ -407,8 +403,7 @@ void UWeaponReceiverComponent::DoTransitionAction(const EWeaponModes OldMode, co
 		InputState.Reset();
 
 		// Forget all unimportant state
-		bIsMidReload = false;
-		WeaponState.ReloadProgress = false;
+		WeaponState.ReloadProgress = 0;
 		WeaponState.IsAdsing = false;
 		WeaponState.HasFired = false;
 
@@ -429,9 +424,11 @@ void UWeaponReceiverComponent::DoTransitionAction(const EWeaponModes OldMode, co
 
 		bIsBusy = false;
 		GetWorld()->GetTimerManager().ClearTimer(BusyTimerHandle);
+
 		InputState.Reset();
 
 		// Leave Reload alone! We might want to resume it
+		WeaponState.ReloadProgress = 0;
 		WeaponState.IsAdsing = false;
 		WeaponState.HasFired = false;
 
