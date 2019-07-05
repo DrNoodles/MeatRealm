@@ -232,7 +232,7 @@ void AHeroCharacter::Tick(float DeltaSeconds)
 
 void AHeroCharacter::TickWalking(float DT)
 {
-	const auto deadzoneSquared = 0.25f * 0.25f;
+	const auto deadzoneSquared = Deadzone * Deadzone;
 	const auto HeroCont = GetHeroController();
 
 	// Move character
@@ -334,7 +334,7 @@ void AHeroCharacter::TickRunning(float DT)
 	auto Result = (IsLeftTurn ? -TurnSpeed : TurnSpeed) * DT;
 
 
-	const auto deadzoneSquared = 0.25f * 0.25f;
+	const auto deadzoneSquared = Deadzone * Deadzone;
 	if (InputVector.SizeSquared() >= deadzoneSquared)
 	{
 		AddMovementInput(FVector{ 1, 0.f, 0.f }, InputVector.X);

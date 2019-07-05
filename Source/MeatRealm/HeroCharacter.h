@@ -113,6 +113,9 @@ public:
 
 	FTimerHandle RunEndTimerHandle;
 
+	UPROPERTY(EditAnywhere)
+	float Deadzone = 0.3;
+
 
 protected:
 	UPROPERTY(BlueprintReadOnly, ReplicatedUsing = OnRep_TintChanged)
