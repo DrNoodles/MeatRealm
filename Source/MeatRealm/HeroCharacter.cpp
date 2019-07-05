@@ -265,13 +265,31 @@ void AHeroCharacter::TickWalking(float DT)
 		{
 			const FVector AimStart = GetAimTransform().GetLocation();
 
-			const FVector Hit = FMath::LinePlaneIntersection(
+
+
+			const FVector CursorHit = FMath::LinePlaneIntersection(
 				WorldLocation,
 				WorldLocation + (WorldDirection * 5000),
 				AimStart,
 				FVector(0, 0, 1));
 
-			LookVec = Hit - AimStart;
+
+			// TODO FIXME This is a hacky fix to stop the character spazzing out when the cursor is close to the weapon.
+			const FVector PawnLocationOnAimPlane = FVector{ GetActorLocation().X, GetActorLocation().Y, AimStart.Z };
+			const float PawnDistToCursor = FVector::Dist(CursorHit, PawnLocationOnAimPlane);
+			const float PawnDistToBarrel = FVector::Dist(AimStart, PawnLocationOnAimPlane);
+			
+			// If cursor is between our pawn and the barrel, aim from our location, not the gun's.
+			if (PawnDistToCursor < PawnDistToBarrel * 2)
+			{
+				LogMsgWithRole("Short aim");
+				LookVec = CursorHit - PawnLocationOnAimPlane;
+			}
+			else
+			{
+				LookVec = CursorHit - AimStart;
+			}
+
 		}
 	}
 	else // Gamepad
