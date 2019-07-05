@@ -226,6 +226,7 @@ public:
 	bool TryGiveAmmo();
 	bool IsEquipping() const { return WeaponState.Mode == EWeaponModes::Equipping; }
 	void CancelAnyReload();
+	bool IsReloading() const { return WeaponState.Mode == EWeaponModes::Reloading; }
 
 protected:
 

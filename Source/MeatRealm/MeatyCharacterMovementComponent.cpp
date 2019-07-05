@@ -20,7 +20,14 @@ float UMeatyCharacterMovementComponent::GetMaxSpeed() const
 
 		if (HeroChar->IsRunning())
 		{
-			MaxSpeed = HeroChar->GetRunningSpeed();
+			if (HeroChar->IsReloading())
+			{
+				MaxSpeed = HeroChar->GetRunningReloadSpeed();
+			}
+			else
+			{
+				MaxSpeed = HeroChar->GetRunningSpeed();
+			}
 		}
 	}
 

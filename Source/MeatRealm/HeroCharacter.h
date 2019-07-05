@@ -73,6 +73,9 @@ public:
 		float RunningSpeed = 500;
 
 	UPROPERTY(EditAnywhere)
+		float RunningReloadSpeed = 450;
+
+	UPROPERTY(EditAnywhere)
 		float WalkSpeed = 375;
 
 	UPROPERTY(BlueprintAssignable, Category = "Event Dispatchers")
@@ -215,6 +218,13 @@ public:
 	AHeroState* GetHeroState() const;
 	AHeroController* GetHeroController() const;
 	float GetTargetingSpeedModifier() const;
+	bool IsReloading() const
+	{
+		auto W = GetCurrentWeapon();
+		if (W && W->IsReloading()) return true;
+
+		return false;
+	}
 
 
 	static bool IsBackpedaling(const FVector& MoveDir, const FVector& AimDir, int BackpedalAngle);
@@ -255,6 +265,8 @@ public:
 	bool IsRunning() const;
 	bool IsTargeting() const;
 	float GetRunningSpeed() const { return RunningSpeed; }
+	
+	float GetRunningReloadSpeed() const { return RunningReloadSpeed; }
 
 private:
 
