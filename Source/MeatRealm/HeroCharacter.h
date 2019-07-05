@@ -70,10 +70,10 @@ public:
 	//UPROPERTY(EditAnywhere)
 	//	float AdsSpeed = 275;
 	UPROPERTY(EditAnywhere)
-		float RunningSpeed = 500;
+		float RunningSpeed = 525;
 
 	UPROPERTY(EditAnywhere)
-		float RunningReloadSpeed = 450;
+		float RunningReloadSpeed = 425;
 
 	UPROPERTY(EditAnywhere)
 		float WalkSpeed = 375;
