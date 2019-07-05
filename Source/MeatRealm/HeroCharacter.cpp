@@ -43,8 +43,8 @@ AHeroCharacter::AHeroCharacter(const FObjectInitializer& ObjectInitializer) : Su
 
 	// Configure character movement
 	GetCharacterMovement()->MaxWalkSpeed = WalkSpeed;
-	GetCharacterMovement()->bOrientRotationToMovement = false; // Character move independently of facing
-	GetCharacterMovement()->RotationRate = FRotator(0.0f, 540.0f, 0.0f); // ...at this rotation rate
+	//GetCharacterMovement()->bOrientRotationToMovement = false; // Character move independently of facing
+	//GetCharacterMovement()->RotationRate = FRotator(0.0f, 540.0f, 0.0f); // ...at this rotation rate
 	GetCharacterMovement()->AirControl = 0.2f;
 
 	// Create a camera boom (pulls in towards the player if there is a collision)
@@ -86,6 +86,7 @@ void AHeroCharacter::EndPlay(const EEndPlayReason::Type EndPlayReason)
 {
 	if (ROLE_Authority == Role)
 	{
+		LastWeaponSlot = EWeaponSlots::Undefined;
 		CurrentWeaponSlot = EWeaponSlots::Undefined;
 		if (Slot1)
 		{
@@ -135,152 +136,12 @@ void AHeroCharacter::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLi
 	DOREPLIFETIME_CONDITION(AHeroCharacter, bIsTargeting, COND_SkipOwner);
 
 	// Just the owner
+	DOREPLIFETIME_CONDITION(AHeroCharacter, LastWeaponSlot, COND_OwnerOnly);
+
 }
 
-void AHeroCharacter::Tick(float DeltaSeconds)
+void AHeroCharacter::ScanForWeaponPickups(float DeltaSeconds)
 {
-	// No need for server. We're only doing input processing and client effects here.
-	if (HasAuthority()) return;
-
-
-	// Local Client only below
-
-	const auto HeroCont = GetHeroController();
-	if (HeroCont == nullptr) return;
-
-
-	// Handle Input (move and look)
-
-	const auto deadzoneSquared = 0.25f * 0.25f;
-
-
-	FVector moveVec;
-
-	// Move character
-	//bool bMoveWithFacing = false;
-	if (IsRunning() && bUseMouseAim)
-	{
-		// horrible attempt at a diff movement control scheme. 
-		auto ForwardVec =  GetActorForwardVector();
-		//auto RightVec = FVector::CrossProduct(GetActorForwardVector(), FVector{ 0,0,1 });
-		moveVec = ForwardVec;// *AxisMoveUp;// +RightVec * -AxisMoveRight;
-	}
-	else
-	{
-		moveVec = FVector{ AxisMoveUp, AxisMoveRight, 0 };
-	}
-
-	moveVec = moveVec.GetClampedToMaxSize(1);
-
-
-	// Debuf move speed if backpeddling
-	auto CurrentLookVec = GetActorRotation().Vector();
-	bool bBackpedaling = IsBackpedaling(moveVec.GetSafeNormal(), CurrentLookVec, BackpedalThresholdAngle);
-
-	// TODO This needs to be server side or it's hackable!
-	auto MoveScalar = bBackpedaling ? BackpedalSpeedMultiplier : 1.0f;
-
-	if (moveVec.SizeSquared() >= deadzoneSquared)
-	{
-		AddMovementInput(FVector{MoveScalar, 0.f, 0.f}, moveVec.X);
-		AddMovementInput(FVector{0.f, MoveScalar, 0.f}, moveVec.Y);
-	}
-
-
-	// Calculate Look Vector for mouse or gamepad
-	FVector LookVec;
-
-	if (bUseMouseAim)
-	{
-		FVector WorldLocation, WorldDirection;
-		const auto Success = HeroCont->DeprojectMousePositionToWorld(OUT WorldLocation, OUT WorldDirection);
-		if (Success)
-		{
-			const FVector AimStart = GetAimTransform().GetLocation();
-
-			const FVector Hit = FMath::LinePlaneIntersection(
-				WorldLocation,
-				WorldLocation + (WorldDirection * 5000),
-				AimStart,
-				FVector(0, 0, 1));
-
-			LookVec = Hit - AimStart;
-		}
-
-
-		if (IsRunning())
-		{
-			int v = RunTurnMode;
-
-			if (v == 1)
-			{
-				FVector LookUnit = LookVec.GetSafeNormal();
-				float Dot = moveVec | LookUnit;
-				float SideDot = moveVec.X * -LookUnit.Y + moveVec.Y * LookUnit.X;
-				bool IsLeft = SideDot > 0;
-				float Yaw = (1 - FMath::Abs(Dot)) * v1RunTurnFactor * DeltaSeconds;
-				//Constrain look vec!
-				AddControllerYawInput(IsLeft ? -Yaw : Yaw);
-			}
-
-			if (v == 2)
-			{
-				auto RightVec = FVector::CrossProduct(GetActorForwardVector(), FVector{ 0,0,1 });
-				if (FMath::Abs(AxisMoveRight) > 0.2)
-				{
-					bool IsLeft = AxisMoveRight < 0;
-					float YawSpeed = v2RunTurnFactor * DeltaSeconds;
-					AddControllerYawInput(IsLeft ? -YawSpeed : YawSpeed);
-				}
-			}
-
-
-
-			//auto str = FString::Printf(TEXT("Dot:%f SideDot:%f IsLeft:%s Yaw:%f"), Dot, SideDot, IsLeft?"Y":"N", Yaw);
-			//LogMsgWithRole(str);
-		}
-
-	}
-	else if (!IsRunning()) // TODO Figure out what should happen on gamepad when running
-	// Use gamepad
-	{
-		LookVec = FVector{ AxisFaceUp, AxisFaceRight, 0 };
-	}
-	
-
-	if (!IsRunning())
-	{
-		// Apply Look Vector - Aim character with look, if look is below deadzone then try use move vec
-		if (LookVec.SizeSquared() >= deadzoneSquared)
-		{
-			Controller->SetControlRotation(LookVec.Rotation());
-		}
-		else if (moveVec.SizeSquared() >= deadzoneSquared)
-		{
-			Controller->SetControlRotation(moveVec.Rotation());
-		}
-	}
-
-
-	// Draw running debug text
-	if (IsRunning() && GetWorld())
-	{
-		DrawDebugString(GetWorld(), FVector{ -50, -50, -50 }, "Running!", this, FColor::White, DeltaSeconds * 0.7);
-	}
-
-
-	// Draw drawing weapon debug text
-
-	if (GetCurrentWeapon() && GetCurrentWeapon()->IsEquipping())
-	{
-		auto str = FString::Printf(TEXT("Equipping %s"),*GetCurrentWeapon()->GetWeaponName());
-		const auto YOffset = -5.f * str.Len();
-		DrawDebugString(GetWorld(), FVector{ 70, YOffset, 50 }, str, this, FColor::White, DeltaSeconds * 0.7);
-	}
-
-
-	// Scan for interactables in front of player
-
 	auto* const Pickup = ScanForInteractable<AWeaponPickupBase>();
 
 	float PickupDelay;
@@ -311,6 +172,25 @@ void AHeroCharacter::Tick(float DeltaSeconds)
 
 		//LogMsgWithRole("Can Interact! ");
 	}
+}
+
+void AHeroCharacter::Tick(float DeltaSeconds)
+{
+	// No need for server. We're only doing input processing and client effects here.
+	if (HasAuthority()) return;
+	if (GetHeroController() == nullptr) return;
+
+
+	// Local Client only below
+	if (IsRunning())
+	{
+		TickRunning(DeltaSeconds);
+	}
+	else
+	{
+		TickWalking(DeltaSeconds);
+		ScanForWeaponPickups(DeltaSeconds);
+	}
 
 
 	// Track camera with aim
@@ -339,13 +219,123 @@ void AHeroCharacter::Tick(float DeltaSeconds)
 	}
 
 
-	//// Draw ADS line
-	//if (bIsAdsing) 
-	//{
-	//DrawAdsLine(AdsLineColor, AdsLineLength);
-	//}
+	// Draw drawing weapon debug text
+
+	if (GetCurrentWeapon() && GetCurrentWeapon()->IsEquipping())
+	{
+		auto str = FString::Printf(TEXT("Equipping %s"), *GetCurrentWeapon()->GetWeaponName());
+		const auto YOffset = -5.f * str.Len();
+		DrawDebugString(GetWorld(), FVector{ 70, YOffset, 50 }, str, this, FColor::White, DeltaSeconds * 0.7);
+	}
 }
 
+
+void AHeroCharacter::TickWalking(float DT)
+{
+	const auto deadzoneSquared = 0.25f * 0.25f;
+	const auto HeroCont = GetHeroController();
+
+	// Move character
+	auto MoveVec = FVector{ AxisMoveUp, AxisMoveRight, 0 }.GetClampedToMaxSize(1);
+
+
+	// Debuf move speed if backpeddling
+	auto CurrentLookVec = GetActorRotation().Vector();
+	bool bBackpedaling = IsBackpedaling(MoveVec.GetSafeNormal(), CurrentLookVec, BackpedalThresholdAngle);
+
+	// TODO This needs to be server side or it's hackable!
+	auto MoveScalar = bBackpedaling ? BackpedalSpeedMultiplier : 1.0f;
+
+
+	if (MoveVec.SizeSquared() >= deadzoneSquared)
+	{
+		AddMovementInput(FVector{ MoveScalar, 0.f, 0.f }, MoveVec.X);
+		AddMovementInput(FVector{ 0.f, MoveScalar, 0.f }, MoveVec.Y);
+	}
+
+
+	// Calculate Look Vector for mouse or gamepad
+	FVector LookVec;
+
+	if (bUseMouseAim)
+	{
+		FVector WorldLocation, WorldDirection;
+		const auto Success = HeroCont->DeprojectMousePositionToWorld(OUT WorldLocation, OUT WorldDirection);
+		if (Success)
+		{
+			const FVector AimStart = GetAimTransform().GetLocation();
+
+			const FVector Hit = FMath::LinePlaneIntersection(
+				WorldLocation,
+				WorldLocation + (WorldDirection * 5000),
+				AimStart,
+				FVector(0, 0, 1));
+
+			LookVec = Hit - AimStart;
+		}
+	}
+	else // Gamepad
+	{
+		LookVec = FVector{ AxisFaceUp, AxisFaceRight, 0 };
+	}
+
+	// Apply Look Vector - Aim character with look, if look is below deadzone then try use move vec
+	if (LookVec.SizeSquared() >= deadzoneSquared)
+	{
+		Controller->SetControlRotation(LookVec.Rotation());
+	}
+	else if (MoveVec.SizeSquared() >= deadzoneSquared)
+	{
+		Controller->SetControlRotation(MoveVec.Rotation());
+	}
+}
+
+void AHeroCharacter::TickRunning(float DT)
+{
+	DrawDebugString(GetWorld(), FVector{ -50, -50, -50 }, "Running!", this, FColor::White, DT * 0.7);
+
+	// TODO Handle Velocity < small threshold. Perhaps allow instant turning?
+
+	// Inputs
+	const FVector Velocity = GetVelocity().GetClampedToMaxSize(1);
+	const FVector InputVector = FVector{ AxisMoveUp, AxisMoveRight, 0 }.GetClampedToMaxSize(1);
+
+	// Computed
+	const FVector VelocityTangent = FVector::CrossProduct(Velocity, FVector{ 0,0,1 });
+	bool IsLeftTurn = FVector::DotProduct(VelocityTangent, InputVector) > 0;
+
+	float DegreesAwayFromMove = FMath::RadiansToDegrees(FMath::Acos(Velocity | InputVector));
+
+
+	bool bWantsToSkid = DegreesAwayFromMove > 130; // Diagonal back(135) or back(180) cause skid
+
+
+	float TurnFactor = FMath::Max(RunMaxInputAngle, DegreesAwayFromMove) / RunMaxInputAngle; // 0-1
+	float TurnSpeed = TurnFactor * RunTurnRate;
+
+	auto Result = (IsLeftTurn ? -TurnSpeed : TurnSpeed) * DT;
+
+
+	const auto deadzoneSquared = 0.25f * 0.25f;
+	if (InputVector.SizeSquared() >= deadzoneSquared)
+	{
+		AddMovementInput(FVector{ 1, 0.f, 0.f }, InputVector.X);
+		AddMovementInput(FVector{ 0.f, 1, 0.f }, InputVector.Y);
+	}
+
+
+	if (bWantsToSkid)
+	{
+		// Disable acceleration
+		// Lower friction
+		// TODO Monitor this in Tick. If Velocity is below a threshold, disable skidding.
+		// TODO Do this is in a SetSkidding(bool bNewIsSkidding) func so it can be used in a few places.
+	}
+
+
+	//// Face the movement vector - TODO Only look that way if actually moving
+	Controller->SetControlRotation(Velocity.Rotation());
+}
 
 // Input
 void AHeroCharacter::SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent)
@@ -373,17 +363,32 @@ void AHeroCharacter::OnStartRunning()
 
 void AHeroCharacter::OnStopRunning()
 {
-	SetRunning(false);
+	auto* MyPC = Cast<AHeroController>(Controller);
+	if (MyPC /*&& MyPC->IsGameInputAllowed()*/)
+	{
+		SetRunning(false);
+	}
 }
 
 void AHeroCharacter::SetRunning(bool bNewWantsToRun)
 {
-	if (!bNewWantsToRun)
+	if (bWantsToRun == bNewWantsToRun) return;
+	bWantsToRun = bNewWantsToRun;
+	
+	RefreshWeaponAttachments();
+
+	// Do nothing if we aren't running 
+	if (bNewWantsToRun)
+	{
+		// Stop Reload on run
+		if (bCancelReloadOnRun && GetCurrentWeapon()) GetCurrentWeapon()->CancelAnyReload();
+	}
+	else // Is Walking 
 	{
 		LastRunEnded = FDateTime::Now();
 	}
 
-	bWantsToRun = bNewWantsToRun;
+	
 
 	if (Role < ROLE_Authority)
 	{
@@ -437,12 +442,38 @@ void AHeroCharacter::SetTargeting(bool bNewTargeting)
 {
 	bIsTargeting = bNewTargeting;
 
+
+
 	if (GetCurrentWeapon())
 	{
 		if (bNewTargeting)
-			GetCurrentWeapon()->Input_AdsPressed();
+		{
+			const FTimespan TimeSinceRun = FDateTime::Now() - LastRunEnded;
+			const FTimespan RemainingTime = FTimespan::FromSeconds(RunCooldown) - TimeSinceRun;
+			
+			
+			if (RemainingTime > 0)
+			{
+				// Delay fire!
+				auto DelayAds = [&]
+				{
+					if (bIsTargeting && GetCurrentWeapon())
+					{
+						GetCurrentWeapon()->Input_AdsPressed();
+					}
+				};
+
+				GetWorld()->GetTimerManager().SetTimer(RunEndTimerHandle, DelayAds, RemainingTime.GetTotalSeconds(), false);
+			}
+			else
+			{
+				GetCurrentWeapon()->Input_AdsPressed();
+			}
+		}
 		else
+		{
 			GetCurrentWeapon()->Input_AdsReleased();
+		}
 	}
 
 
@@ -533,6 +564,8 @@ void AHeroCharacter::Input_Reload() const
 	auto* MyPC = Cast<AHeroController>(Controller);
 	if (MyPC && MyPC->IsGameInputAllowed())
 	{
+		if (IsRunning() && bCancelReloadOnRun) return; // don't start a reload if not allowed to reload while running
+
 		if (GetCurrentWeapon())
 		{
 			GetCurrentWeapon()->Input_Reload();
@@ -541,6 +574,7 @@ void AHeroCharacter::Input_Reload() const
 }
 
 
+// TODO Make this handle both client/server requests to fire - like ads pressed etc.
 void AHeroCharacter::StartWeaponFire()
 {
 	if (!bWantsToFire)
@@ -614,12 +648,12 @@ AWeapon* AHeroCharacter::GetCurrentWeapon() const
 	return GetWeapon(CurrentWeaponSlot);
 }
 
-AWeapon* AHeroCharacter::GetHolsteredWeapon() const
-{
-	if (CurrentWeaponSlot == EWeaponSlots::Primary) return GetWeapon(EWeaponSlots::Secondary);
-	if (CurrentWeaponSlot == EWeaponSlots::Secondary) return GetWeapon(EWeaponSlots::Primary);
-	return nullptr;
-}
+//AWeapon* AHeroCharacter::GetHolsteredWeapon() const
+//{
+//	if (CurrentWeaponSlot == EWeaponSlots::Primary) return GetWeapon(EWeaponSlots::Secondary);
+//	if (CurrentWeaponSlot == EWeaponSlots::Secondary) return GetWeapon(EWeaponSlots::Primary);
+//	return nullptr;
+//}
 
 
 void AHeroCharacter::GiveWeaponToPlayer(TSubclassOf<class AWeapon> WeaponClass)
@@ -711,8 +745,9 @@ void AHeroCharacter::EquipWeapon(const EWeaponSlots Slot)
 	if (!NewWeapon) return;
 
 
-	const auto OldSlot = CurrentWeaponSlot;
+	LastWeaponSlot = CurrentWeaponSlot;
 	CurrentWeaponSlot = Slot;
+	//LastWeaponSlot = OldSlot;
 
 
 	// TODO Some management code here to delay for the duration of holster/draw and cancel if certain things happen
@@ -723,7 +758,7 @@ void AHeroCharacter::EquipWeapon(const EWeaponSlots Slot)
 
 
 	// Holster old weapon
-	auto OldWeapon = GetWeapon(OldSlot);
+	auto OldWeapon = GetWeapon(LastWeaponSlot);
 	if (OldWeapon)
 	{
 		OldWeapon->Holster();
@@ -742,7 +777,7 @@ void AHeroCharacter::EquipWeapon(const EWeaponSlots Slot)
 		GetWorld()->GetTimerManager().SetTimer(DrawWeaponTimerHandle, this, &AHeroCharacter::MakeCurrentWeaponVisible, DrawDuration, false);
 	}
 
-	RefereshWeaponAttachments();
+	RefreshWeaponAttachments();
 }
 
 
@@ -750,21 +785,41 @@ void AHeroCharacter::MakeCurrentWeaponVisible() const
 {
 	LogMsgWithRole("ShowWeapon");
 	if (GetCurrentWeapon()) GetCurrentWeapon()->SetActorHiddenInGame(false);
-	RefereshWeaponAttachments();
+	RefreshWeaponAttachments();
 }
 
-void AHeroCharacter::RefereshWeaponAttachments() const
+void AHeroCharacter::RefreshWeaponAttachments() const
 {
 	const FAttachmentTransformRules Rules{ EAttachmentRule::SnapToTarget, true };
 
-	if (GetHolsteredWeapon())
-	{
-		GetHolsteredWeapon()->AttachToComponent(GetMesh(), Rules, HolsterSocketName);
-	}
+	auto W1 = GetWeapon(EWeaponSlots::Primary);
+	auto W2 = GetWeapon(EWeaponSlots::Secondary);
 
-	if (GetCurrentWeapon())
+
+	if (IsRunning())
 	{
-		GetCurrentWeapon()->AttachToComponent(GetMesh(), Rules, HandSocketName);
+		if (W1) W1->AttachToComponent(GetMesh(), Rules, Holster1SocketName);
+		if (W2) W2->AttachToComponent(GetMesh(), Rules, Holster2SocketName);
+	}
+	else // Is Normal
+	{
+		if (CurrentWeaponSlot == EWeaponSlots::Undefined)
+		{
+			if (W1) W1->AttachToComponent(GetMesh(), Rules, Holster1SocketName);
+			if (W2) W2->AttachToComponent(GetMesh(), Rules, Holster2SocketName);
+		}
+
+		if (CurrentWeaponSlot == EWeaponSlots::Primary)
+		{
+			if (W1) W1->AttachToComponent(GetMesh(), Rules, HandSocketName);
+			if (W2) W2->AttachToComponent(GetMesh(), Rules, Holster2SocketName);
+		}
+
+		if (CurrentWeaponSlot == EWeaponSlots::Secondary)
+		{
+			if (W1) W1->AttachToComponent(GetMesh(), Rules, Holster1SocketName);
+			if (W2) W2->AttachToComponent(GetMesh(), Rules, HandSocketName);
+		}
 	}
 }
 
@@ -1023,9 +1078,14 @@ bool AHeroCharacter::AuthTryGiveAmmo()
 		return true; // ammo given to main weapon
 	}
 
+	// TODO Give ammo to current weapon, if that fails give it to the other slot. If no weapon is equipped, give it to the first holstered gun found
+
+
 	// Try give ammo to alternate weapon!
-	AWeapon* AltWeapon = GetHolsteredWeapon();
-	if (AltWeapon && AltWeapon->TryGiveAmmo())
+	AWeapon* AltWeap = nullptr;
+	if (CurrentWeaponSlot == EWeaponSlots::Primary) AltWeap = GetWeapon(EWeaponSlots::Secondary);
+	if (CurrentWeaponSlot == EWeaponSlots::Secondary) AltWeap = GetWeapon(EWeaponSlots::Primary);
+	if (AltWeap && AltWeap->TryGiveAmmo())
 	{
 		return true; // ammo given to alt weapon
 	}

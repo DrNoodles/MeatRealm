@@ -341,6 +341,12 @@ FString AWeapon::GetWeaponName()
 {
 	return WeaponName;
 }
+
+void AWeapon::CancelAnyReload()
+{
+	ReceiverComp->CancelAnyReload();
+}
+
 float AWeapon::GetDrawDuration()
 {
 	return DrawDuration;

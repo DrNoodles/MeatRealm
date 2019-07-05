@@ -89,19 +89,21 @@ public:
 	UPROPERTY(EditAnywhere)
 	float BackpedalSpeedMultiplier = 0.6;
 
-	UPROPERTY(EditAnywhere)
-		int RunTurnMode = 2;
-
-	// Seconds until an action works after running 
-	UPROPERTY(EditAnywhere)
-		float v1RunTurnFactor = 2;
+	/*UPROPERTY(EditAnywhere)
+		bool RunTowardLook = true;*/
 
 	UPROPERTY(EditAnywhere)
-		float v2RunTurnFactor = 2;
+		float RunMaxInputAngle = 45;
+
+	UPROPERTY(EditAnywhere)
+		float RunTurnRate = 45;
 
 	// Seconds until an action works after running 
 	UPROPERTY(EditAnywhere)
 		float RunCooldown = 0.5;
+
+	UPROPERTY(EditAnywhere)
+	bool bCancelReloadOnRun = true;
 
 	// Not replicated cuz diff local vs server time;
 	FDateTime LastRunEnded;
@@ -150,6 +152,7 @@ private:
 
 	bool bWantsToFire;
 
+
 	UPROPERTY(Transient, Replicated)
 	bool bWantsToRun = false;
 
@@ -157,7 +160,12 @@ private:
 	bool bIsTargeting = false;
 	
 	const char* HandSocketName = "HandSocket";
-	const char* HolsterSocketName = "HolsterSocket";
+	const char* Holster1SocketName = "Holster1Socket";
+	const char* Holster2SocketName = "Holster2Socket";
+
+
+	UPROPERTY(Replicated)
+		EWeaponSlots LastWeaponSlot = EWeaponSlots::Undefined;
 
 	UPROPERTY(Replicated)
 		EWeaponSlots CurrentWeaponSlot = EWeaponSlots::Undefined;
@@ -242,7 +250,7 @@ public:
 	UFUNCTION(BlueprintCallable)
 		AWeapon* GetCurrentWeapon() const;
 	
-	AWeapon* GetHolsteredWeapon() const;
+	//AWeapon* GetHolsteredWeapon() const;
 
 	bool IsRunning() const;
 	bool IsTargeting() const;
@@ -250,7 +258,10 @@ public:
 
 private:
 
+	void ScanForWeaponPickups(float DeltaSeconds);
 	virtual void Tick(float DeltaSeconds) override;
+	void TickWalking(float DT);
+	void TickRunning(float DT);
 
 	void OnStartRunning();
 	void OnStopRunning();
@@ -267,7 +278,7 @@ private:
 	AWeapon* AssignWeaponToInventorySlot(AWeapon* Weapon, EWeaponSlots Slot);
 	void EquipWeapon(EWeaponSlots Slot);
 	void MakeCurrentWeaponVisible() const;
-	void RefereshWeaponAttachments() const;
+	void RefreshWeaponAttachments() const;
 
 	static FVector2D GetGameViewportSize();
 	static FVector2D CalcLinearLeanVectorUnclipped(const FVector2D& CursorLoc, const FVector2D& ViewportSize);
