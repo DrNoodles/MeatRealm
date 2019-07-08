@@ -265,8 +265,6 @@ void AHeroCharacter::TickWalking(float DT)
 		{
 			const FVector AimStart = GetAimTransform().GetLocation();
 
-
-
 			const FVector CursorHit = FMath::LinePlaneIntersection(
 				WorldLocation,
 				WorldLocation + (WorldDirection * 5000),
@@ -282,7 +280,7 @@ void AHeroCharacter::TickWalking(float DT)
 			// If cursor is between our pawn and the barrel, aim from our location, not the gun's.
 			if (PawnDistToCursor < PawnDistToBarrel * 2)
 			{
-				LogMsgWithRole("Short aim");
+				//LogMsgWithRole("Short aim");
 				LookVec = CursorHit - PawnLocationOnAimPlane;
 			}
 			else
@@ -315,34 +313,48 @@ void AHeroCharacter::TickRunning(float DT)
 	// TODO Handle Velocity < small threshold. Perhaps allow instant turning?
 
 	// Inputs
-	const FVector Velocity = GetVelocity().GetClampedToMaxSize(1);
+	//const FVector Velocity = GetVelocity().GetClampedToMaxSize(1);
 	const FVector InputVector = FVector{ AxisMoveUp, AxisMoveRight, 0 }.GetClampedToMaxSize(1);
 
 	// Computed
-	const FVector VelocityTangent = FVector::CrossProduct(Velocity, FVector{ 0,0,1 });
-	bool IsLeftTurn = FVector::DotProduct(VelocityTangent, InputVector) > 0;
+	//const FVector VelocityTangent = FVector::CrossProduct(Velocity, FVector{ 0,0,1 });
+	//bool IsLeftTurn = FVector::DotProduct(VelocityTangent, InputVector) > 0;
 
-	float DegreesAwayFromMove = FMath::RadiansToDegrees(FMath::Acos(Velocity | InputVector));
-
-
-	bool bWantsToSkid = DegreesAwayFromMove > 130; // Diagonal back(135) or back(180) cause skid
+	//float DegreesAwayFromMove = FMath::RadiansToDegrees(FMath::Acos(Velocity | InputVector));
 
 
-	float TurnFactor = FMath::Max(RunMaxInputAngle, DegreesAwayFromMove) / RunMaxInputAngle; // 0-1
-	float TurnSpeed = TurnFactor * RunTurnRate;
+	//bool bWantsToSkid = DegreesAwayFromMove > 130; // Diagonal back(135) or back(180) cause skid
 
-	auto Result = (IsLeftTurn ? -TurnSpeed : TurnSpeed) * DT;
 
+	//float TurnFactor = FMath::Max(RunMaxInputAngle, DegreesAwayFromMove) / RunMaxInputAngle; // 0-1
+	//float TurnSpeed = TurnFactor * RunTurnRate;
+	//float DegreesPerSecond = IsLeftTurn ? -TurnSpeed : TurnSpeed;
+
+	//// TODO Rotate the current Velocity vector and set it below
+
+
+	//auto HeadingAngle = GetVelocity().HeadingAngle();
+	//auto OffsetHeadingAngle = HeadingAngle + FMath::DegreesToRadians(DegreesPerSecond * DT * 30);
+
+	//auto str = FString::Printf(TEXT("Head:%f NewHead:%f"), HeadingAngle, OffsetHeadingAngle);
+	//LogMsgWithRole(str);
+
+	//const auto RotatedVelocityVector = FVector{
+	//			FMath::Cos(OffsetHeadingAngle),
+	//			FMath::Sin(OffsetHeadingAngle), 0 }.GetSafeNormal();
+	//
 
 	const auto deadzoneSquared = Deadzone * Deadzone;
 	if (InputVector.SizeSquared() >= deadzoneSquared)
 	{
-		AddMovementInput(FVector{ 1, 0.f, 0.f }, InputVector.X);
-		AddMovementInput(FVector{ 0.f, 1, 0.f }, InputVector.Y);
+	/*	AddMovementInput(FVector{ 1, 0.f, 0.f }, RotatedVelocityVector.X);
+		AddMovementInput(FVector{ 0.f, 1, 0.f }, RotatedVelocityVector.Y);*/
+		AddMovementInput(FVector{ 1.0f, 0.0f, 0.0f }, InputVector.X);
+		AddMovementInput(FVector{ 0.0f, 1.0f, 0.0f }, InputVector.Y);
 	}
 
 
-	if (bWantsToSkid)
+	//if (bWantsToSkid)
 	{
 		// Disable acceleration
 		// Lower friction
@@ -352,8 +364,9 @@ void AHeroCharacter::TickRunning(float DT)
 
 
 	//// Face the movement vector - TODO Only look that way if actually moving
-	Controller->SetControlRotation(Velocity.Rotation());
+	//Controller->SetControlRotation(GetVelocity().Rotation());
 }
+
 
 // Input
 void AHeroCharacter::SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent)
@@ -399,10 +412,22 @@ void AHeroCharacter::SetRunning(bool bNewWantsToRun)
 	if (bNewWantsToRun)
 	{
 		// Stop Reload on run
+		//GetCharacterMovement()->bOrientRotationToMovement = false; // Character move independently of facing
+		//GetCharacterMovement()->UseR
+
+		//GetCharacterMovement()->RotationRate = FRotator(0.0f, 540.0f, 0.0f); // ...at this rotation rate
+		
+		bUseControllerRotationYaw = false;
+		GetCharacterMovement()->bOrientRotationToMovement = true;
+		/*GetCharacterMovement()->MaxAcceleration = 20;*/
 		if (bCancelReloadOnRun && GetCurrentWeapon()) GetCurrentWeapon()->CancelAnyReload();
 	}
 	else // Is Walking 
 	{
+		//GetCharacterMovement()->RotationRate = FRotator(0.0f, 540.0f, 0.0f); // ...at this rotation rate
+		GetCharacterMovement()->bOrientRotationToMovement = false;
+		bUseControllerRotationYaw = true;
+
 		LastRunEnded = FDateTime::Now();
 	}
 
