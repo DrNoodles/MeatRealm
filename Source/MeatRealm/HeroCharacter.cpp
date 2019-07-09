@@ -43,8 +43,6 @@ AHeroCharacter::AHeroCharacter(const FObjectInitializer& ObjectInitializer) : Su
 
 	// Configure character movement
 	GetCharacterMovement()->MaxWalkSpeed = WalkSpeed;
-	//GetCharacterMovement()->bOrientRotationToMovement = false; // Character move independently of facing
-	//GetCharacterMovement()->RotationRate = FRotator(0.0f, 540.0f, 0.0f); // ...at this rotation rate
 	GetCharacterMovement()->AirControl = 0.2f;
 
 	// Create a camera boom (pulls in towards the player if there is a collision)
@@ -307,20 +305,25 @@ void AHeroCharacter::TickWalking(float DT)
 
 void AHeroCharacter::TickRunning(float DT)
 {
-	FString str = FString::Printf(TEXT("Running! %f"), GetVelocity().Size());
+	FString str = FString::Printf(TEXT("Running!"));
+	//FString str = FString::Printf(TEXT("Running! %f"), GetVelocity().Size());
 	DrawDebugString(GetWorld(), FVector{ -50, -50, -50 }, str, this, FColor::White, DT * 0.7);
 
-	// TODO Handle Velocity < small threshold. Perhaps allow instant turning?
 
-	// Inputs
-	const FVector VelocityClamped = GetVelocity().GetClampedToMaxSize(1);
+	const auto DeadzoneSquared = Deadzone * Deadzone;
 	const FVector InputVector = FVector{ AxisMoveUp, AxisMoveRight, 0 }.GetClampedToMaxSize(1);
 
-	const auto deadzoneSquared = Deadzone * Deadzone;
-	if (InputVector.SizeSquared() < deadzoneSquared)
+	// If input is zero and velocity is zero. Stop running.
+	if (InputVector.SizeSquared() < DeadzoneSquared)
 	{
-		LogMsgWithRole("Do nothing.");
-		return; // do nothing.
+		// and if no velocity, then lets stop running all together
+		if (GetVelocity().SizeSquared() < 1)
+		{
+			LogMsgWithRole("Stopped running due to no input or velocity");
+			SetRunning(false);
+		}
+
+		return;
 	}
 
 
@@ -356,7 +359,7 @@ void AHeroCharacter::SetupPlayerInputComponent(class UInputComponent* PlayerInpu
 
 
 	PlayerInputComponent->BindAction("Run", IE_Pressed, this, &AHeroCharacter::OnStartRunning);
-	PlayerInputComponent->BindAction("Run", IE_Released, this, &AHeroCharacter::OnStopRunning);
+	//PlayerInputComponent->BindAction("Run", IE_Released, this, &AHeroCharacter::OnStopRunning);
 }
 
 void AHeroCharacter::OnStartRunning()
@@ -393,22 +396,18 @@ void AHeroCharacter::SetRunning(bool bNewWantsToRun)
 	if (bNewWantsToRun)
 	{
 		// Config movement properties TODO Make these data driven (BP) and use Meaty char movement comp
-		//bUseControllerRotationYaw = false;
-		//GetCharacterMovement()->MaxAcceleration = 750;
-		//GetCharacterMovement()->BrakingFrictionFactor = 0;
-		//GetCharacterMovement()->BrakingDecelerationWalking = 750;
-		//GetCharacterMovement()->bOrientRotationToMovement = false;
+		GetCharacterMovement()->MaxAcceleration = 750;
+		GetCharacterMovement()->BrakingFrictionFactor = 1;
+		GetCharacterMovement()->BrakingDecelerationWalking = 250;
 
 		if (bCancelReloadOnRun && GetCurrentWeapon()) GetCurrentWeapon()->CancelAnyReload();
 	}
 	else // Is Walking 
 	{
 		// Config movement properties TODO Make these data driven (BP) and use Meaty char movement comp
-		//bUseControllerRotationYaw = true;
-		//GetCharacterMovement()->MaxAcceleration = 2048;
-		//GetCharacterMovement()->BrakingFrictionFactor = 2;
-	//	GetCharacterMovement()->BrakingDecelerationWalking = 2048;
-		//GetCharacterMovement()->bOrientRotationToMovement = false;
+		GetCharacterMovement()->MaxAcceleration = 3000;
+		GetCharacterMovement()->BrakingFrictionFactor = 2;
+		GetCharacterMovement()->BrakingDecelerationWalking = 3000;
 
 		LastRunEnded = FDateTime::Now();
 	}
@@ -523,7 +522,6 @@ void AHeroCharacter::ServerSetTargeting_Implementation(bool bNewTargeting)
 {
 	SetTargeting(bNewTargeting);
 }
-
 
 //void AHeroCharacter::DrawAdsLine(const FColor& Color, float LineLength) const
 //{
@@ -821,12 +819,12 @@ void AHeroCharacter::RefreshWeaponAttachments() const
 	auto W2 = GetWeapon(EWeaponSlots::Secondary);
 
 
-	if (IsRunning())
+	/*if (IsRunning())
 	{
 		if (W1) W1->AttachToComponent(GetMesh(), Rules, Holster1SocketName);
 		if (W2) W2->AttachToComponent(GetMesh(), Rules, Holster2SocketName);
 	}
-	else // Is Normal
+	else*/ // Is Normal
 	{
 		if (CurrentWeaponSlot == EWeaponSlots::Undefined)
 		{
