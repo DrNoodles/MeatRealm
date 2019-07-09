@@ -414,23 +414,23 @@ void AHeroCharacter::SetRunning(bool bNewWantsToRun)
 	// Do nothing if we aren't running 
 	if (bNewWantsToRun)
 	{
-		// Stop Reload on run
-		//GetCharacterMovement()->bOrientRotationToMovement = false; // Character move independently of facing
-		//GetCharacterMovement()->UseR
-
-		//GetCharacterMovement()->RotationRate = FRotator(0.0f, 540.0f, 0.0f); // ...at this rotation rate
-		
+		// Config movement properties- TODO Make these data driven in blueprint
 		bUseControllerRotationYaw = false;
+		GetCharacterMovement()->MaxAcceleration = 750;
+		GetCharacterMovement()->BrakingFrictionFactor = 0;
+		GetCharacterMovement()->BrakingDecelerationWalking = 750;
 		GetCharacterMovement()->bOrientRotationToMovement = true;
 
-		/*GetCharacterMovement()->MaxAcceleration = 20;*/
 		if (bCancelReloadOnRun && GetCurrentWeapon()) GetCurrentWeapon()->CancelAnyReload();
 	}
 	else // Is Walking 
 	{
-		//GetCharacterMovement()->RotationRate = FRotator(0.0f, 540.0f, 0.0f); // ...at this rotation rate
-		GetCharacterMovement()->bOrientRotationToMovement = false;
+		// Config movement properties
 		bUseControllerRotationYaw = true;
+		GetCharacterMovement()->MaxAcceleration = 2048;
+		GetCharacterMovement()->BrakingFrictionFactor = 2;
+		GetCharacterMovement()->BrakingDecelerationWalking = 2048;
+		GetCharacterMovement()->bOrientRotationToMovement = false;
 
 		LastRunEnded = FDateTime::Now();
 	}

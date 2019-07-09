@@ -5,6 +5,11 @@
 #include "HeroCharacter.h"
 #include "Engine/Public/DrawDebugHelpers.h"
 
+float UMeatyCharacterMovementComponent::GetMaxBrakingDeceleration() const
+{
+	return Super::GetMaxBrakingDeceleration();
+}
+
 float UMeatyCharacterMovementComponent::GetMaxSpeed() const
 {
 	float MaxSpeed = Super::GetMaxSpeed();
