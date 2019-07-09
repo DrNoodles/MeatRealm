@@ -70,7 +70,10 @@ public:
 	//UPROPERTY(EditAnywhere)
 	//	float AdsSpeed = 275;
 	UPROPERTY(EditAnywhere)
-		float RunningSpeed = 500;
+		float RunningSpeed = 525;
+
+	UPROPERTY(EditAnywhere)
+		float RunningReloadSpeed = 425;
 
 	UPROPERTY(EditAnywhere)
 		float WalkSpeed = 375;
@@ -89,6 +92,31 @@ public:
 	UPROPERTY(EditAnywhere)
 	float BackpedalSpeedMultiplier = 0.6;
 
+	/*UPROPERTY(EditAnywhere)
+		bool RunTowardLook = true;*/
+
+	UPROPERTY(EditAnywhere)
+		float RunMaxInputAngle = 45;
+
+	// Degrees per second
+	UPROPERTY(EditAnywhere)
+		float RunTurnRate = 80;
+
+	// Seconds until an action works after running 
+	UPROPERTY(EditAnywhere)
+		float RunCooldown = 0.5;
+
+	UPROPERTY(EditAnywhere)
+	bool bCancelReloadOnRun = true;
+
+	// Not replicated cuz diff local vs server time;
+	FDateTime LastRunEnded;
+
+	FTimerHandle RunEndTimerHandle;
+
+	UPROPERTY(EditAnywhere)
+	float Deadzone = 0.3;
+
 
 protected:
 	UPROPERTY(BlueprintReadOnly, ReplicatedUsing = OnRep_TintChanged)
@@ -102,6 +130,9 @@ protected:
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
 		UArrowComponent* HolsteredweaponAnchor = nullptr;
+
+	UPROPERTY(Replicated, BlueprintReadOnly)
+		EWeaponSlots CurrentWeaponSlot = EWeaponSlots::Undefined;
 
 private:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Camera, meta = (AllowPrivateAccess = "true"))
@@ -131,6 +162,7 @@ private:
 
 	bool bWantsToFire;
 
+
 	UPROPERTY(Transient, Replicated)
 	bool bWantsToRun = false;
 
@@ -138,10 +170,14 @@ private:
 	bool bIsTargeting = false;
 	
 	const char* HandSocketName = "HandSocket";
-	const char* HolsterSocketName = "HolsterSocket";
+	const char* Holster1SocketName = "Holster1Socket";
+	const char* Holster2SocketName = "Holster2Socket";
+
 
 	UPROPERTY(Replicated)
-		EWeaponSlots CurrentWeaponSlot = EWeaponSlots::Undefined;
+		EWeaponSlots LastWeaponSlot = EWeaponSlots::Undefined;
+
+	
 	UPROPERTY(Replicated)
 		AWeapon* Slot1 = nullptr;
 	UPROPERTY(Replicated)
@@ -188,6 +224,13 @@ public:
 	AHeroState* GetHeroState() const;
 	AHeroController* GetHeroController() const;
 	float GetTargetingSpeedModifier() const;
+	bool IsReloading() const
+	{
+		auto W = GetCurrentWeapon();
+		if (W && W->IsReloading()) return true;
+
+		return false;
+	}
 
 
 	static bool IsBackpedaling(const FVector& MoveDir, const FVector& AimDir, int BackpedalAngle);
@@ -208,7 +251,10 @@ public:
 	void Input_AdsPressed();
 	void Input_AdsReleased();
 	void Input_Reload() const;
+
+	UFUNCTION(BlueprintCallable)
 	AWeapon* GetWeapon(EWeaponSlots Slot) const;
+
 	void Input_MoveUp(float Value) {	AxisMoveUp = Value; }
 	void Input_MoveRight(float Value) { AxisMoveRight = Value; }
 	void Input_FaceUp(float Value) { AxisFaceUp = Value; }
@@ -223,15 +269,20 @@ public:
 	UFUNCTION(BlueprintCallable)
 		AWeapon* GetCurrentWeapon() const;
 	
-	AWeapon* GetHolsteredWeapon() const;
+	//AWeapon* GetHolsteredWeapon() const;
 
 	bool IsRunning() const;
 	bool IsTargeting() const;
 	float GetRunningSpeed() const { return RunningSpeed; }
+	
+	float GetRunningReloadSpeed() const { return RunningReloadSpeed; }
 
 private:
 
+	void ScanForWeaponPickups(float DeltaSeconds);
 	virtual void Tick(float DeltaSeconds) override;
+	void TickWalking(float DT);
+	void TickRunning(float DT);
 
 	void OnStartRunning();
 	void OnStopRunning();
@@ -248,7 +299,7 @@ private:
 	AWeapon* AssignWeaponToInventorySlot(AWeapon* Weapon, EWeaponSlots Slot);
 	void EquipWeapon(EWeaponSlots Slot);
 	void MakeCurrentWeaponVisible() const;
-	void RefereshWeaponAttachments() const;
+	void RefreshWeaponAttachments() const;
 
 	static FVector2D GetGameViewportSize();
 	static FVector2D CalcLinearLeanVectorUnclipped(const FVector2D& CursorLoc, const FVector2D& ViewportSize);

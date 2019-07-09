@@ -13,6 +13,6 @@ UCLASS()
 class MEATREALM_API UMeatyCharacterMovementComponent : public UCharacterMovementComponent
 {
 	GENERATED_BODY()
-
+	float GetMaxBrakingDeceleration() const override;
 	float GetMaxSpeed() const override;
 };
