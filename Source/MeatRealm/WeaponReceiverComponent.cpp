@@ -72,6 +72,15 @@ bool UWeaponReceiverComponent::TryGiveAmmo()
 	return true;
 }
 
+void UWeaponReceiverComponent::CancelAnyReload()
+{
+	if (WeaponState.Mode==EWeaponModes::Reloading)
+	{
+		bIsBusy = false;
+		GetWorld()->GetTimerManager().ClearTimer(BusyTimerHandle);
+		ChangeState(EWeaponCommands::ReloadEnd, WeaponState);
+	}
+}
 
 
 // Tick and state transitions
@@ -165,11 +174,11 @@ bool UWeaponReceiverComponent::TickIdle(float DT)
 
 
 	// Ready > Reloading (forced when clip empty)
-	if (NeedsReload() && CanReload())
-	{
-		// Reload instead
-		return ChangeState(EWeaponCommands::ReloadStart, WeaponState);
-	}
+	//if (NeedsReload() && CanReload())
+	//{
+	//	// Reload instead
+	//	return ChangeState(EWeaponCommands::ReloadStart, WeaponState);
+	//}
 
 
 	// Ready > Reloading
