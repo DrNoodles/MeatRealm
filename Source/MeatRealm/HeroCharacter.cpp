@@ -323,63 +323,29 @@ void AHeroCharacter::TickRunning(float DT)
 		return; // do nothing.
 	}
 
-	// Computed
-	const FVector VelocityTangent = FVector::CrossProduct(VelocityClamped, FVector{ 0,0,1 });
-	const bool IsLeftTurn = FVector::DotProduct(VelocityTangent, InputVector) > 0;
 
-	const float Rate = InputVector.Size();
-	const int Dir = IsLeftTurn ? -1 : 1;
 
-	float DegreesAwayFromMove = FMath::RadiansToDegrees(FMath::Acos(VelocityClamped | InputVector));
-	
-	
-	bool bWantsToSkid = DegreesAwayFromMove > 130; // Diagonal back(135) or back(180) cause skid
-	if (bWantsToSkid)
+	// Set Movement direction
+	AddMovementInput({ 1,0,0 }, InputVector.X);
+	AddMovementInput({ 0,1,0 }, InputVector.Y);
+
+
+	// Slowly turn towards the movement direction (purely cosmetic)
+	const auto FacingVector = GetActorForwardVector();
+	const float DegreesAwayFromMove = FMath::RadiansToDegrees(FMath::Acos(FacingVector | InputVector));
+	if (DegreesAwayFromMove < 3)
 	{
-		// Disable acceleration
-		// Lower friction
-		// TODO Monitor this in Tick. If Velocity is below a threshold, disable skidding.
-		// TODO Do this is in a SetSkidding(bool bNewIsSkidding) func so it can be used in a few places.
+		// Just snap to it - otherwise it'll oscillate around the desired direction
+		Controller->SetControlRotation(InputVector.Rotation());
 	}
-
-	
-
-
-	auto CurrentSpeed = GetVelocity().Size();
-	if (CurrentSpeed < RunningReloadSpeed * 1.01)
+	else
 	{
-		LogMsgWithRole("Not full speed! Fast turn");
-		AddMovementInput({ 1,0,0 }, InputVector.X);
-		AddMovementInput({ 0,1,0 }, InputVector.Y);
-		return;
+		// Rotate over time
+		const FVector FacingTangent = FVector::CrossProduct(FacingVector, FVector{ 0,0,1 });
+		const bool IsLeftTurn = FVector::DotProduct(FacingTangent, InputVector) > 0;
+		const int Dir = IsLeftTurn ? -1 : 1;
+		AddControllerYawInput(RunTurnRate * Dir * DT);
 	}
-	LogMsgWithRole("Full speed! Slow turn");
-
-
-	//float TurnFactor = FMath::Max(RunMaxInputAngle, DegreesAwayFromMove) / RunMaxInputAngle; // 0-1
-	//float TurnSpeed = TurnFactor * RunTurnRate;
-	//float DegreesPerSecond = IsLeftTurn ? -TurnSpeed : TurnSpeed;
-	//auto HeadingAngle = GetVelocity().HeadingAngle();
-	//auto OffsetHeadingAngle = HeadingAngle + FMath::DegreesToRadians(DegreesPerSecond * DT * 30);
-
-
-
-	// Turn!
-	// TODO Remove facing jitter when facing our target direction
-	AddControllerYawInput(Rate * RunTurnRate * Dir * DT);
-
-
-
-	// Move forward the way we're facing
-
-	// find out which way is forward
-	const FRotator Rotation = Controller->GetControlRotation();
-	const FRotator YawRotation(0, Rotation.Yaw, 0);
-
-
-	// Get forward vector
-	const FVector Direction = YawRotation.Vector(); // FRotationMatrix(YawRotation).GetUnitAxis(EAxis::X);
-	AddMovementInput(Direction, Rate); 
 }
 
 
@@ -426,23 +392,23 @@ void AHeroCharacter::SetRunning(bool bNewWantsToRun)
 	// Do nothing if we aren't running 
 	if (bNewWantsToRun)
 	{
-		// Config movement properties- TODO Make these data driven in blueprint
-		bUseControllerRotationYaw = false;
-		GetCharacterMovement()->MaxAcceleration = 750;
-		GetCharacterMovement()->BrakingFrictionFactor = 0;
-		GetCharacterMovement()->BrakingDecelerationWalking = 750;
-		GetCharacterMovement()->bOrientRotationToMovement = true;
+		// Config movement properties TODO Make these data driven (BP) and use Meaty char movement comp
+		//bUseControllerRotationYaw = false;
+		//GetCharacterMovement()->MaxAcceleration = 750;
+		//GetCharacterMovement()->BrakingFrictionFactor = 0;
+		//GetCharacterMovement()->BrakingDecelerationWalking = 750;
+		//GetCharacterMovement()->bOrientRotationToMovement = false;
 
 		if (bCancelReloadOnRun && GetCurrentWeapon()) GetCurrentWeapon()->CancelAnyReload();
 	}
 	else // Is Walking 
 	{
-		// Config movement properties
-		bUseControllerRotationYaw = true;
-		GetCharacterMovement()->MaxAcceleration = 2048;
-		GetCharacterMovement()->BrakingFrictionFactor = 2;
-		GetCharacterMovement()->BrakingDecelerationWalking = 2048;
-		GetCharacterMovement()->bOrientRotationToMovement = false;
+		// Config movement properties TODO Make these data driven (BP) and use Meaty char movement comp
+		//bUseControllerRotationYaw = true;
+		//GetCharacterMovement()->MaxAcceleration = 2048;
+		//GetCharacterMovement()->BrakingFrictionFactor = 2;
+	//	GetCharacterMovement()->BrakingDecelerationWalking = 2048;
+		//GetCharacterMovement()->bOrientRotationToMovement = false;
 
 		LastRunEnded = FDateTime::Now();
 	}
