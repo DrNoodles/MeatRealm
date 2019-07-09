@@ -307,12 +307,13 @@ void AHeroCharacter::TickWalking(float DT)
 
 void AHeroCharacter::TickRunning(float DT)
 {
-	DrawDebugString(GetWorld(), FVector{ -50, -50, -50 }, "Running!", this, FColor::White, DT * 0.7);
+	FString str = FString::Printf(TEXT("Running! %f"), GetVelocity().Size());
+	DrawDebugString(GetWorld(), FVector{ -50, -50, -50 }, str, this, FColor::White, DT * 0.7);
 
 	// TODO Handle Velocity < small threshold. Perhaps allow instant turning?
 
 	// Inputs
-	const FVector Velocity = GetVelocity().GetClampedToMaxSize(1);
+	const FVector VelocityClamped = GetVelocity().GetClampedToMaxSize(1);
 	const FVector InputVector = FVector{ AxisMoveUp, AxisMoveRight, 0 }.GetClampedToMaxSize(1);
 
 	const auto deadzoneSquared = Deadzone * Deadzone;
@@ -323,15 +324,13 @@ void AHeroCharacter::TickRunning(float DT)
 	}
 
 	// Computed
-	const FVector VelocityTangent = FVector::CrossProduct(Velocity, FVector{ 0,0,1 });
+	const FVector VelocityTangent = FVector::CrossProduct(VelocityClamped, FVector{ 0,0,1 });
 	const bool IsLeftTurn = FVector::DotProduct(VelocityTangent, InputVector) > 0;
 
 	const float Rate = InputVector.Size();
 	const int Dir = IsLeftTurn ? -1 : 1;
 
-
-
-	float DegreesAwayFromMove = FMath::RadiansToDegrees(FMath::Acos(Velocity | InputVector));
+	float DegreesAwayFromMove = FMath::RadiansToDegrees(FMath::Acos(VelocityClamped | InputVector));
 	
 	
 	bool bWantsToSkid = DegreesAwayFromMove > 130; // Diagonal back(135) or back(180) cause skid
@@ -342,6 +341,19 @@ void AHeroCharacter::TickRunning(float DT)
 		// TODO Monitor this in Tick. If Velocity is below a threshold, disable skidding.
 		// TODO Do this is in a SetSkidding(bool bNewIsSkidding) func so it can be used in a few places.
 	}
+
+	
+
+
+	auto CurrentSpeed = GetVelocity().Size();
+	if (CurrentSpeed < RunningReloadSpeed * 1.01)
+	{
+		LogMsgWithRole("Not full speed! Fast turn");
+		AddMovementInput({ 1,0,0 }, InputVector.X);
+		AddMovementInput({ 0,1,0 }, InputVector.Y);
+		return;
+	}
+	LogMsgWithRole("Full speed! Slow turn");
 
 
 	//float TurnFactor = FMath::Max(RunMaxInputAngle, DegreesAwayFromMove) / RunMaxInputAngle; // 0-1
