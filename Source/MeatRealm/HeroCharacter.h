@@ -131,6 +131,9 @@ protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
 		UArrowComponent* HolsteredweaponAnchor = nullptr;
 
+	UPROPERTY(Replicated, BlueprintReadOnly)
+		EWeaponSlots CurrentWeaponSlot = EWeaponSlots::Undefined;
+
 private:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Camera, meta = (AllowPrivateAccess = "true"))
 		class USpringArmComponent* CameraBoom;
@@ -174,8 +177,7 @@ private:
 	UPROPERTY(Replicated)
 		EWeaponSlots LastWeaponSlot = EWeaponSlots::Undefined;
 
-	UPROPERTY(Replicated)
-		EWeaponSlots CurrentWeaponSlot = EWeaponSlots::Undefined;
+	
 	UPROPERTY(Replicated)
 		AWeapon* Slot1 = nullptr;
 	UPROPERTY(Replicated)
@@ -249,7 +251,10 @@ public:
 	void Input_AdsPressed();
 	void Input_AdsReleased();
 	void Input_Reload() const;
+
+	UFUNCTION(BlueprintCallable)
 	AWeapon* GetWeapon(EWeaponSlots Slot) const;
+
 	void Input_MoveUp(float Value) {	AxisMoveUp = Value; }
 	void Input_MoveRight(float Value) { AxisMoveRight = Value; }
 	void Input_FaceUp(float Value) { AxisFaceUp = Value; }
