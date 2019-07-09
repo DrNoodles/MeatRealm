@@ -229,7 +229,6 @@ void AHeroCharacter::Tick(float DeltaSeconds)
 	}
 }
 
-
 void AHeroCharacter::TickWalking(float DT)
 {
 	const auto deadzoneSquared = Deadzone * Deadzone;
@@ -313,48 +312,30 @@ void AHeroCharacter::TickRunning(float DT)
 	// TODO Handle Velocity < small threshold. Perhaps allow instant turning?
 
 	// Inputs
-	//const FVector Velocity = GetVelocity().GetClampedToMaxSize(1);
+	const FVector Velocity = GetVelocity().GetClampedToMaxSize(1);
 	const FVector InputVector = FVector{ AxisMoveUp, AxisMoveRight, 0 }.GetClampedToMaxSize(1);
 
-	// Computed
-	//const FVector VelocityTangent = FVector::CrossProduct(Velocity, FVector{ 0,0,1 });
-	//bool IsLeftTurn = FVector::DotProduct(VelocityTangent, InputVector) > 0;
-
-	//float DegreesAwayFromMove = FMath::RadiansToDegrees(FMath::Acos(Velocity | InputVector));
-
-
-	//bool bWantsToSkid = DegreesAwayFromMove > 130; // Diagonal back(135) or back(180) cause skid
-
-
-	//float TurnFactor = FMath::Max(RunMaxInputAngle, DegreesAwayFromMove) / RunMaxInputAngle; // 0-1
-	//float TurnSpeed = TurnFactor * RunTurnRate;
-	//float DegreesPerSecond = IsLeftTurn ? -TurnSpeed : TurnSpeed;
-
-	//// TODO Rotate the current Velocity vector and set it below
-
-
-	//auto HeadingAngle = GetVelocity().HeadingAngle();
-	//auto OffsetHeadingAngle = HeadingAngle + FMath::DegreesToRadians(DegreesPerSecond * DT * 30);
-
-	//auto str = FString::Printf(TEXT("Head:%f NewHead:%f"), HeadingAngle, OffsetHeadingAngle);
-	//LogMsgWithRole(str);
-
-	//const auto RotatedVelocityVector = FVector{
-	//			FMath::Cos(OffsetHeadingAngle),
-	//			FMath::Sin(OffsetHeadingAngle), 0 }.GetSafeNormal();
-	//
-
 	const auto deadzoneSquared = Deadzone * Deadzone;
-	if (InputVector.SizeSquared() >= deadzoneSquared)
+	if (InputVector.SizeSquared() < deadzoneSquared)
 	{
-	/*	AddMovementInput(FVector{ 1, 0.f, 0.f }, RotatedVelocityVector.X);
-		AddMovementInput(FVector{ 0.f, 1, 0.f }, RotatedVelocityVector.Y);*/
-		AddMovementInput(FVector{ 1.0f, 0.0f, 0.0f }, InputVector.X);
-		AddMovementInput(FVector{ 0.0f, 1.0f, 0.0f }, InputVector.Y);
+		LogMsgWithRole("Do nothing.");
+		return; // do nothing.
 	}
 
+	// Computed
+	const FVector VelocityTangent = FVector::CrossProduct(Velocity, FVector{ 0,0,1 });
+	const bool IsLeftTurn = FVector::DotProduct(VelocityTangent, InputVector) > 0;
 
-	//if (bWantsToSkid)
+	const float Rate = InputVector.Size();
+	const int Dir = IsLeftTurn ? -1 : 1;
+
+
+
+	float DegreesAwayFromMove = FMath::RadiansToDegrees(FMath::Acos(Velocity | InputVector));
+	
+	
+	bool bWantsToSkid = DegreesAwayFromMove > 130; // Diagonal back(135) or back(180) cause skid
+	if (bWantsToSkid)
 	{
 		// Disable acceleration
 		// Lower friction
@@ -363,8 +344,30 @@ void AHeroCharacter::TickRunning(float DT)
 	}
 
 
-	//// Face the movement vector - TODO Only look that way if actually moving
-	//Controller->SetControlRotation(GetVelocity().Rotation());
+	//float TurnFactor = FMath::Max(RunMaxInputAngle, DegreesAwayFromMove) / RunMaxInputAngle; // 0-1
+	//float TurnSpeed = TurnFactor * RunTurnRate;
+	//float DegreesPerSecond = IsLeftTurn ? -TurnSpeed : TurnSpeed;
+	//auto HeadingAngle = GetVelocity().HeadingAngle();
+	//auto OffsetHeadingAngle = HeadingAngle + FMath::DegreesToRadians(DegreesPerSecond * DT * 30);
+
+
+
+	// Turn!
+	// TODO Remove facing jitter when facing our target direction
+	AddControllerYawInput(Rate * RunTurnRate * Dir * DT);
+
+
+
+	// Move forward the way we're facing
+
+	// find out which way is forward
+	const FRotator Rotation = Controller->GetControlRotation();
+	const FRotator YawRotation(0, Rotation.Yaw, 0);
+
+
+	// Get forward vector
+	const FVector Direction = YawRotation.Vector(); // FRotationMatrix(YawRotation).GetUnitAxis(EAxis::X);
+	AddMovementInput(Direction, Rate); 
 }
 
 
@@ -419,6 +422,7 @@ void AHeroCharacter::SetRunning(bool bNewWantsToRun)
 		
 		bUseControllerRotationYaw = false;
 		GetCharacterMovement()->bOrientRotationToMovement = true;
+
 		/*GetCharacterMovement()->MaxAcceleration = 20;*/
 		if (bCancelReloadOnRun && GetCurrentWeapon()) GetCurrentWeapon()->CancelAnyReload();
 	}

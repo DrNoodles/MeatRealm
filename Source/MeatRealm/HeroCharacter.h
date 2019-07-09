@@ -98,8 +98,9 @@ public:
 	UPROPERTY(EditAnywhere)
 		float RunMaxInputAngle = 45;
 
+	// Degrees per second
 	UPROPERTY(EditAnywhere)
-		float RunTurnRate = 45;
+		float RunTurnRate = 80;
 
 	// Seconds until an action works after running 
 	UPROPERTY(EditAnywhere)
