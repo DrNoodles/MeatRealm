@@ -531,7 +531,7 @@ void UWeaponReceiverComponent::DrawAdsLine(const FColor& Color, float LineLength
 	FVector BarrelLocation = Delegate->GetBarrelLocation();
 	FVector BarrelDirection = Delegate->GetBarrelDirection();
 
-	const FVector Start = BarrelLocation + BarrelDirection * 100; // dont draw line for first meter
+	const FVector Start = BarrelLocation + BarrelDirection;// *100; // dont draw line for first meter
 	FVector End = BarrelLocation + BarrelDirection * LineLength;
 
 	// Trace line to first hit for end
