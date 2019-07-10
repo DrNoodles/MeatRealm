@@ -284,6 +284,7 @@ private:
 	void TickWalking(float DT);
 	void TickRunning(float DT);
 
+	void OnRunToggle();
 	void OnStartRunning();
 	void OnStopRunning();
 	void SetRunning(bool bNewWantsToRun);

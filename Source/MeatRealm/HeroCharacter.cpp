@@ -357,11 +357,17 @@ void AHeroCharacter::SetupPlayerInputComponent(class UInputComponent* PlayerInpu
 {
 	check(PlayerInputComponent);
 
-
+	PlayerInputComponent->BindAction("RunToggle", IE_Pressed, this, &AHeroCharacter::OnRunToggle);
 	PlayerInputComponent->BindAction("Run", IE_Pressed, this, &AHeroCharacter::OnStartRunning);
-	//PlayerInputComponent->BindAction("Run", IE_Released, this, &AHeroCharacter::OnStopRunning);
+	PlayerInputComponent->BindAction("Run", IE_Released, this, &AHeroCharacter::OnStopRunning);
 }
-
+void AHeroCharacter::OnRunToggle()
+{
+	if (IsRunning())
+		OnStopRunning();
+	else
+		OnStartRunning();
+}
 void AHeroCharacter::OnStartRunning()
 {
 	auto* MyPC = Cast<AHeroController>(Controller);
