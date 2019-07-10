@@ -321,6 +321,7 @@ void AHeroCharacter::TickRunning(float DT)
 	{
 		str.AppendInt((int)GetVelocity().Size());
 	}
+
 	//FString str = FString::Printf(TEXT("Running! %d"), (int)GetVelocity().Size());
 	DrawDebugString(GetWorld(), FVector{ -50, -50, -50 }, str, this, FColor::White, DT * 0.7);
 
@@ -328,21 +329,14 @@ void AHeroCharacter::TickRunning(float DT)
 	const auto DeadzoneSquared = Deadzone * Deadzone;
 	const FVector InputVector = FVector{ AxisMoveUp, AxisMoveRight, 0 }.GetClampedToMaxSize(1);
 
-	// and if no velocity, then lets stop running all together
-	/*if (GetVelocity().Size() < WalkSpeed)
-	{
-		LogMsgWithRole("Stopped running due to no input or velocity");
-		SetRunning(false);
-	}*/
-
 	// If input is zero and velocity is zero. Stop running.
 	if (InputVector.SizeSquared() < DeadzoneSquared)
 	{
-		//if (GetVelocity().Size() < 1)
-		//{
-		//	LogMsgWithRole("Stopped running due to no input or velocity");
-		//	SetRunning(false);
-		//}
+		if (GetVelocity().Size() < 100)
+		{
+			LogMsgWithRole("Stopped running due to no input or velocity");
+			SetRunning(false);
+		}
 
 		return;
 	}
