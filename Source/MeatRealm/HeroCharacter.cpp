@@ -21,6 +21,7 @@
 #include "Weapon.h"
 #include "TimerManager.h"
 #include "Engine/World.h"
+#include "DrawDebugHelpers.h"
 
 /// Lifecycle
 
@@ -130,7 +131,7 @@ void AHeroCharacter::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLi
 	//	DOREPLIFETIME(AHeroCharacter, bIsAdsing);
 
 	// everyone except local owner: flag change is locally instigated
-	DOREPLIFETIME_CONDITION(AHeroCharacter, bWantsToRun, COND_SkipOwner);
+	DOREPLIFETIME_CONDITION(AHeroCharacter, bIsRunning, COND_SkipOwner);
 	DOREPLIFETIME_CONDITION(AHeroCharacter, bIsTargeting, COND_SkipOwner);
 
 	// Just the owner
@@ -178,9 +179,19 @@ void AHeroCharacter::Tick(float DeltaSeconds)
 	if (HasAuthority()) return;
 	if (GetHeroController() == nullptr) return;
 
+	if (bDrawDebugMovementInput)
+	{
+		auto V = FVector{ AxisMoveUp, AxisMoveRight, 0 } * 100;
+		DrawDebugDirectionalArrow(GetWorld(), GetActorLocation(), GetActorLocation() + V, 3, FColor::Blue, false, -1, 0, 2.f);
+	}
+	if (bDrawDebugMovementVector)
+	{
+		auto V = GetVelocity();
+		DrawDebugDirectionalArrow(GetWorld(), GetActorLocation(), GetActorLocation() + V, 3, FColor::Green, false, -1, 0, 2.f);
+	}
 
 	// Local Client only below
-	if (IsRunning())
+	if (IsRunning())// && GetVelocity().Size() > WalkSpeed*.7)
 	{
 		TickRunning(DeltaSeconds);
 	}
@@ -305,23 +316,33 @@ void AHeroCharacter::TickWalking(float DT)
 
 void AHeroCharacter::TickRunning(float DT)
 {
-	FString str = FString::Printf(TEXT("Running!"));
-	//FString str = FString::Printf(TEXT("Running! %f"), GetVelocity().Size());
+	FString str = FString::Printf(TEXT("Running! "));
+	if (bDrawDebugMovementSpeed)
+	{
+		str.AppendInt((int)GetVelocity().Size());
+	}
+	//FString str = FString::Printf(TEXT("Running! %d"), (int)GetVelocity().Size());
 	DrawDebugString(GetWorld(), FVector{ -50, -50, -50 }, str, this, FColor::White, DT * 0.7);
 
 
 	const auto DeadzoneSquared = Deadzone * Deadzone;
 	const FVector InputVector = FVector{ AxisMoveUp, AxisMoveRight, 0 }.GetClampedToMaxSize(1);
 
+	// and if no velocity, then lets stop running all together
+	/*if (GetVelocity().Size() < WalkSpeed)
+	{
+		LogMsgWithRole("Stopped running due to no input or velocity");
+		SetRunning(false);
+	}*/
+
 	// If input is zero and velocity is zero. Stop running.
 	if (InputVector.SizeSquared() < DeadzoneSquared)
 	{
-		// and if no velocity, then lets stop running all together
-		if (GetVelocity().SizeSquared() < 1)
-		{
-			LogMsgWithRole("Stopped running due to no input or velocity");
-			SetRunning(false);
-		}
+		//if (GetVelocity().Size() < 1)
+		//{
+		//	LogMsgWithRole("Stopped running due to no input or velocity");
+		//	SetRunning(false);
+		//}
 
 		return;
 	}
@@ -333,6 +354,9 @@ void AHeroCharacter::TickRunning(float DT)
 	AddMovementInput({ 0,1,0 }, InputVector.Y);
 
 
+
+	if (GetCharacterMovement()->bOrientRotationToMovement) return;
+
 	// Slowly turn towards the movement direction (purely cosmetic)
 	const auto FacingVector = GetActorForwardVector();
 	const float DegreesAwayFromMove = FMath::RadiansToDegrees(FMath::Acos(FacingVector | InputVector));
@@ -343,11 +367,16 @@ void AHeroCharacter::TickRunning(float DT)
 	}
 	else
 	{
+		float Diff = RunTurnRateMax - RunTurnRateBase;
+		float Ratio = DegreesAwayFromMove / 180.f;
+		float EffectiveRate = RunTurnRateBase + Diff*Ratio;
+
+
 		// Rotate over time
 		const FVector FacingTangent = FVector::CrossProduct(FacingVector, FVector{ 0,0,1 });
 		const bool IsLeftTurn = FVector::DotProduct(FacingTangent, InputVector) > 0;
 		const int Dir = IsLeftTurn ? -1 : 1;
-		AddControllerYawInput(RunTurnRate * Dir * DT);
+		AddControllerYawInput(EffectiveRate * Dir * DT);
 	}
 }
 
@@ -357,11 +386,17 @@ void AHeroCharacter::SetupPlayerInputComponent(class UInputComponent* PlayerInpu
 {
 	check(PlayerInputComponent);
 
-
+	PlayerInputComponent->BindAction("RunToggle", IE_Pressed, this, &AHeroCharacter::OnRunToggle);
 	PlayerInputComponent->BindAction("Run", IE_Pressed, this, &AHeroCharacter::OnStartRunning);
-	//PlayerInputComponent->BindAction("Run", IE_Released, this, &AHeroCharacter::OnStopRunning);
+	PlayerInputComponent->BindAction("Run", IE_Released, this, &AHeroCharacter::OnStopRunning);
 }
-
+void AHeroCharacter::OnRunToggle()
+{
+	if (IsRunning())
+		OnStopRunning();
+	else
+		OnStartRunning();
+}
 void AHeroCharacter::OnStartRunning()
 {
 	auto* MyPC = Cast<AHeroController>(Controller);
@@ -371,7 +406,7 @@ void AHeroCharacter::OnStartRunning()
 		{
 			SetTargeting(false);
 		}
-		//	StopWeaponFire();
+		StopWeaponFire();
 		SetRunning(true);
 	}
 }
@@ -385,20 +420,24 @@ void AHeroCharacter::OnStopRunning()
 	}
 }
 
-void AHeroCharacter::SetRunning(bool bNewWantsToRun)
+void AHeroCharacter::SetRunning(bool bNewIsRunning)
 {
-	if (bWantsToRun == bNewWantsToRun) return;
-	bWantsToRun = bNewWantsToRun;
+	if (bIsRunning == bNewIsRunning) return;
+	bIsRunning = bNewIsRunning;
 	
 	RefreshWeaponAttachments();
 
 	// Do nothing if we aren't running 
-	if (bNewWantsToRun)
+	if (bNewIsRunning)
 	{
 		// Config movement properties TODO Make these data driven (BP) and use Meaty char movement comp
-		GetCharacterMovement()->MaxAcceleration = 750;
+		GetCharacterMovement()->MaxAcceleration = 1250;
 		GetCharacterMovement()->BrakingFrictionFactor = 1;
 		GetCharacterMovement()->BrakingDecelerationWalking = 250;
+
+	//	bUseControllerRotationYaw = false;
+	//	GetCharacterMovement()->bOrientRotationToMovement = true;
+
 
 		if (bCancelReloadOnRun && GetCurrentWeapon()) GetCurrentWeapon()->CancelAnyReload();
 	}
@@ -407,7 +446,12 @@ void AHeroCharacter::SetRunning(bool bNewWantsToRun)
 		// Config movement properties TODO Make these data driven (BP) and use Meaty char movement comp
 		GetCharacterMovement()->MaxAcceleration = 3000;
 		GetCharacterMovement()->BrakingFrictionFactor = 2;
+		//GetCharacterMovement()->bUseSeparateBrakingFriction = false;
 		GetCharacterMovement()->BrakingDecelerationWalking = 3000;
+
+	//	bUseControllerRotationYaw = true;;
+	//	GetCharacterMovement()->bOrientRotationToMovement = false;
+
 
 		LastRunEnded = FDateTime::Now();
 	}
@@ -416,33 +460,28 @@ void AHeroCharacter::SetRunning(bool bNewWantsToRun)
 
 	if (Role < ROLE_Authority)
 	{
-		ServerSetRunning(bNewWantsToRun);
+		ServerSetRunning(bNewIsRunning);
 	}
 }
 
 bool AHeroCharacter::IsRunning() const
 {
-	if (!GetCharacterMovement())
-	{
-		return false;
-	}
-
-	return bWantsToRun;
-
-	FVector Velocity = GetVelocity().GetSafeNormal2D();
-	FVector Facing = GetActorForwardVector();
-
-	bool bIsRunning = bWantsToRun && !GetVelocity().IsZero() 
-		&& (Velocity | Facing) > FMath::Cos(FMath::DegreesToRadians(SprintMaxAngle));
-
-	// Debug
-	if (false && bIsRunning)
-	{
-		const float Angle = FMath::RadiansToDegrees(FMath::Acos(Velocity | Facing));
-		UE_LOG(LogTemp, Warning, TEXT("Sprinting! %fd"), Angle);
-	}
-
 	return bIsRunning;
+
+	//FVector Velocity = GetVelocity().GetSafeNormal2D();
+	//FVector Facing = GetActorForwardVector();
+
+	//bool bIsRunning = bIsRunning && !GetVelocity().IsZero() 
+	//	&& (Velocity | Facing) > FMath::Cos(FMath::DegreesToRadians(SprintMaxAngle));
+
+	//// Debug
+	//if (false && bIsRunning)
+	//{
+	//	const float Angle = FMath::RadiansToDegrees(FMath::Acos(Velocity | Facing));
+	//	UE_LOG(LogTemp, Warning, TEXT("Sprinting! %fd"), Angle);
+	//}
+
+	//return bIsRunning;
 }
 
 void AHeroCharacter::ServerSetRunning_Implementation(bool bNewWantsToRun)
@@ -548,7 +587,7 @@ void AHeroCharacter::Input_FirePressed()
 	auto* MyPC = Cast<AHeroController>(Controller);
 	if (MyPC && MyPC->IsGameInputAllowed())
 	{
-		if (bWantsToRun || IsRunning())
+		if (bIsRunning || IsRunning())
 		{
 			SetRunning(false);
 		}
@@ -567,7 +606,7 @@ void AHeroCharacter::Input_AdsPressed()
 	auto* MyPC = Cast<AHeroController>(Controller);
 	if (MyPC && MyPC->IsGameInputAllowed())
 	{
-		if (bWantsToRun || IsRunning())
+		if (bIsRunning || IsRunning())
 		{
 			SetRunning(false);
 		}
