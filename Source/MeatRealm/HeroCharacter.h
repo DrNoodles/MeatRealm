@@ -95,12 +95,15 @@ public:
 	/*UPROPERTY(EditAnywhere)
 		bool RunTowardLook = true;*/
 
-	UPROPERTY(EditAnywhere)
-		float RunMaxInputAngle = 45;
+	//UPROPERTY(EditAnywhere)
+	//	float RunMaxInputAngle = 45;
 
 	// Degrees per second
 	UPROPERTY(EditAnywhere)
-		float RunTurnRate = 80;
+		float RunTurnRateBase = 45;
+
+	UPROPERTY(EditAnywhere)
+		float RunTurnRateMax = 270;
 
 	// Seconds until an action works after running 
 	UPROPERTY(EditAnywhere)
@@ -116,6 +119,16 @@ public:
 
 	UPROPERTY(EditAnywhere)
 	float Deadzone = 0.3;
+
+
+	UPROPERTY(EditAnywhere, Category = Debug)
+		bool bDrawDebugMovementInput;
+
+	UPROPERTY(EditAnywhere, Category = Debug)
+		bool bDrawDebugMovementVector;
+
+	UPROPERTY(EditAnywhere, Category = Debug)
+		bool bDrawDebugMovementSpeed;
 
 
 protected:
@@ -164,7 +177,7 @@ private:
 
 
 	UPROPERTY(Transient, Replicated)
-	bool bWantsToRun = false;
+	bool bIsRunning = false;
 
 	UPROPERTY(Transient, Replicated)
 	bool bIsTargeting = false;
@@ -287,7 +300,7 @@ private:
 	void OnRunToggle();
 	void OnStartRunning();
 	void OnStopRunning();
-	void SetRunning(bool bNewWantsToRun);
+	void SetRunning(bool bNewIsRunning);
 
 
 	void SetTargeting(bool bNewTargeting);
