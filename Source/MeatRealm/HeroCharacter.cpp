@@ -179,12 +179,12 @@ void AHeroCharacter::Tick(float DeltaSeconds)
 	if (HasAuthority()) return;
 	if (GetHeroController() == nullptr) return;
 
-	if (bDrawDebugMovementInput)
+	if (bDrawMovementInput)
 	{
 		auto V = FVector{ AxisMoveUp, AxisMoveRight, 0 } * 100;
 		DrawDebugDirectionalArrow(GetWorld(), GetActorLocation(), GetActorLocation() + V, 3, FColor::Blue, false, -1, 0, 2.f);
 	}
-	if (bDrawDebugMovementVector)
+	if (bDrawMovementVector)
 	{
 		auto V = GetVelocity();
 		DrawDebugDirectionalArrow(GetWorld(), GetActorLocation(), GetActorLocation() + V, 3, FColor::Green, false, -1, 0, 2.f);
@@ -316,14 +316,13 @@ void AHeroCharacter::TickWalking(float DT)
 
 void AHeroCharacter::TickRunning(float DT)
 {
-	FString str = FString::Printf(TEXT("Running! "));
-	if (bDrawDebugMovementSpeed)
+	if (bDrawMovementSpeed)
 	{
+		FString str = FString::Printf(TEXT("Running! "));
 		str.AppendInt((int)GetVelocity().Size());
+		//FString str = FString::Printf(TEXT("Running! %d"), (int)GetVelocity().Size());
+		DrawDebugString(GetWorld(), FVector{ -50, -50, -50 }, str, this, FColor::White, DT * 0.7);
 	}
-
-	//FString str = FString::Printf(TEXT("Running! %d"), (int)GetVelocity().Size());
-	DrawDebugString(GetWorld(), FVector{ -50, -50, -50 }, str, this, FColor::White, DT * 0.7);
 
 
 	const auto DeadzoneSquared = Deadzone * Deadzone;

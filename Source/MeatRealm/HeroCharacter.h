@@ -122,13 +122,13 @@ public:
 
 
 	UPROPERTY(EditAnywhere, Category = Debug)
-		bool bDrawDebugMovementInput;
+		bool bDrawMovementInput;
 
 	UPROPERTY(EditAnywhere, Category = Debug)
-		bool bDrawDebugMovementVector;
+		bool bDrawMovementVector;
 
 	UPROPERTY(EditAnywhere, Category = Debug)
-		bool bDrawDebugMovementSpeed;
+		bool bDrawMovementSpeed;
 
 
 protected:
