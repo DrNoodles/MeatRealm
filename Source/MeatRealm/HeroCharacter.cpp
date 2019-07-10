@@ -305,8 +305,8 @@ void AHeroCharacter::TickWalking(float DT)
 
 void AHeroCharacter::TickRunning(float DT)
 {
-	FString str = FString::Printf(TEXT("Running!"));
-	//FString str = FString::Printf(TEXT("Running! %f"), GetVelocity().Size());
+	//FString str = FString::Printf(TEXT("Running!"));
+	FString str = FString::Printf(TEXT("Running! %d"), (int)GetVelocity().Size());
 	DrawDebugString(GetWorld(), FVector{ -50, -50, -50 }, str, this, FColor::White, DT * 0.7);
 
 
@@ -332,6 +332,9 @@ void AHeroCharacter::TickRunning(float DT)
 	AddMovementInput({ 1,0,0 }, InputVector.X);
 	AddMovementInput({ 0,1,0 }, InputVector.Y);
 
+
+
+	if (GetCharacterMovement()->bOrientRotationToMovement) return;
 
 	// Slowly turn towards the movement direction (purely cosmetic)
 	const auto FacingVector = GetActorForwardVector();
@@ -406,6 +409,10 @@ void AHeroCharacter::SetRunning(bool bNewWantsToRun)
 		GetCharacterMovement()->BrakingFrictionFactor = 1;
 		GetCharacterMovement()->BrakingDecelerationWalking = 250;
 
+		bUseControllerRotationYaw = false;
+		GetCharacterMovement()->bOrientRotationToMovement = true;
+
+
 		if (bCancelReloadOnRun && GetCurrentWeapon()) GetCurrentWeapon()->CancelAnyReload();
 	}
 	else // Is Walking 
@@ -414,6 +421,10 @@ void AHeroCharacter::SetRunning(bool bNewWantsToRun)
 		GetCharacterMovement()->MaxAcceleration = 3000;
 		GetCharacterMovement()->BrakingFrictionFactor = 2;
 		GetCharacterMovement()->BrakingDecelerationWalking = 3000;
+
+		bUseControllerRotationYaw = true;;
+		GetCharacterMovement()->bOrientRotationToMovement = false;
+
 
 		LastRunEnded = FDateTime::Now();
 	}
