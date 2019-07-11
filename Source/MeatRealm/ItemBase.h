@@ -6,6 +6,7 @@
 #include "GameFramework/Actor.h"
 #include "TimerManager.h"
 #include "Interfaces/Equippable.h"
+//#include "Interfaces/AffectableInterface.h"
 
 #include "ItemBase.generated.h"
 
@@ -35,8 +36,9 @@ private:
 
 public:
 	AItemBase();
+	void BeginDestroy() override;
 
-	void UseStart(IAffectableInterface* const Affectable);
+	void UseStart(/*IAffectableInterface* const Affectable*/);
 	void UseStop();
 
 	/* IEquippable */
@@ -50,19 +52,25 @@ public:
 		return EInventoryCategory::Undefined;
 	}
 
+	IAffectableInterface* Recipient = nullptr;
+	void SetRecipient(IAffectableInterface* NewAffectable);
+
 	/* End IEquippable */
 
 
 protected:
 	//virtual void ApplyItem(IAffectableInterface* const Affectable) PURE_VIRTUAL(AItemBase::ApplyItem, );
 
-	virtual void ApplyItem(IAffectableInterface* const Affectable)
+	virtual void ApplyItem(IAffectableInterface* Affectable)
 	{
 		unimplemented();
 	}
 
 
 private:
+	UFUNCTION(Server, Reliable, WithValidation)
+		void ServerUseStart(/*IAffectableInterface* Affectable*/);
+
 	//virtual void BeginPlay() override;
 	//virtual void Tick(float DeltaTime) override;
 };

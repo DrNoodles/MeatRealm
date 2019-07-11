@@ -398,7 +398,7 @@ void AHeroCharacter::UseItemStart()
 	LogMsgWithRole("AHeroCharacter::UseItemStart");
 	auto Item = GetCurrentItem();
 	if (!Item) return;
-	Item->UseStart(this);
+	Item->UseStart();
 }
 
 void AHeroCharacter::UseItemStop()
@@ -802,7 +802,7 @@ void AHeroCharacter::GiveItemToPlayer(TSubclassOf<AItemBase> ItemClass)
 		this,
 		ESpawnActorCollisionHandlingMethod::AlwaysSpawn);
 
-	//Item->SetHeroControllerId(GetHeroController()->PlayerState->PlayerId);
+	Item->SetRecipient(this);
 
 	UGameplayStatics::FinishSpawningActor(Item, TF);
 	//Item->SetHidden(true);

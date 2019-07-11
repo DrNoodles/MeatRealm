@@ -14,6 +14,12 @@ class MEATREALM_API AItemHealth : public AItemBase
 {
 	GENERATED_BODY()
 
+public:
+	UPROPERTY(EditAnywhere)
+		float Health = 25;
+
+public:
+
 private:
 	// TODO Spawn a model in constructor as set by a blueprint - see weapons for example
 

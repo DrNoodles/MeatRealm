@@ -3,26 +3,48 @@
 
 #include "ItemBase.h"
 #include "Engine/World.h"
+#include "Interfaces/AffectableInterface.h"
 
 AItemBase::AItemBase()
 {
+	bAlwaysRelevant = true;
 	PrimaryActorTick.bCanEverTick = false;
 	SetReplicates(true);
 }
 
-void AItemBase::UseStart(IAffectableInterface* const Affectable)
+void AItemBase::BeginDestroy()
 {
+	Recipient = nullptr;
+}
+
+
+void AItemBase::UseStart(/*IAffectableInterface* Affectable*/)
+{
+	if (Role < ROLE_Authority)
+	{
+		ServerUseStart();
+	}
+
 	UE_LOG(LogTemp, Warning, TEXT("AItemBase::UseStart"));
 	UseStop();
 
-	auto UseComplete = [&]
+	//auto LocalAffectable = Affectable;
+	auto UseComplete = [this]
 	{
 		UE_LOG(LogTemp, Warning, TEXT("AItemBase::UseComplete"));
-		ApplyItem(Affectable);
+		ApplyItem(Recipient);
 		OnUsageSuccess.Broadcast();
 	};
 
 	GetWorldTimerManager().SetTimer(UsageTimerHandle, UseComplete, UsageDuration, false);
+}
+void AItemBase::ServerUseStart_Implementation(/*IAffectableInterface* Affectable*/)
+{
+	UseStart();
+}
+bool AItemBase::ServerUseStart_Validate(/*IAffectableInterface* Affectable*/)
+{
+	return true;
 }
 
 void AItemBase::UseStop()
@@ -41,6 +63,13 @@ void AItemBase::Unequip()
 {
 	UE_LOG(LogTemp, Warning, TEXT("AItemBase::Unequip"));
 	UseStop();
+}
+
+void AItemBase::SetRecipient(IAffectableInterface* NewAffectable)
+{
+	check(HasAuthority());
+
+	Recipient = NewAffectable;
 }
 
 //
