@@ -16,5 +16,7 @@ class MEATREALM_API AAmmoPickup : public APickupBase
 	GENERATED_BODY()
 
 protected:
+
+	bool CanInteract(IAffectableInterface* const Affectable, float& OutDelay) override;
 	bool TryApplyAffect(IAffectableInterface* const Affectable) override;
 };

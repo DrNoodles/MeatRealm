@@ -97,6 +97,7 @@ public:
 	void Input_Reload();
 	void Input_AdsPressed();
 	void Input_AdsReleased();
+	bool CanGiveAmmo();
 	bool TryGiveAmmo();
 	void SetHeroControllerId(uint32 HeroControllerUid) { this->HeroControllerId = HeroControllerUid; }
 	float GetAdsMovementScale() const { return AdsMovementScale; }

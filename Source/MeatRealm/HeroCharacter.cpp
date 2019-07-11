@@ -141,7 +141,7 @@ void AHeroCharacter::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLi
 
 void AHeroCharacter::ScanForWeaponPickups(float DeltaSeconds)
 {
-	auto* const Pickup = ScanForInteractable<AWeaponPickupBase>();
+	auto* const Pickup = ScanForInteractable<APickupBase>();
 
 	float PickupDelay;
 	if (Pickup && Pickup->CanInteract(this, OUT PickupDelay))
@@ -165,9 +165,13 @@ void AHeroCharacter::ScanForWeaponPickups(float DeltaSeconds)
 				break;
 			}
 		}
-		auto asdf = ActionText.ToString();
 		if (World)
-			DrawDebugString(World, Pickup->GetActorLocation() + FVector{0, 0, 200}, "Equip (" + asdf + ")", nullptr, FColor::White, DeltaSeconds * 0.5);
+		{
+			auto Str = FString::Printf(TEXT("Grab (%s)"), *ActionText.ToString());
+			const auto YOffset = -5.f * Str.Len();
+
+			DrawDebugString(World, FVector{ 50, YOffset, 100 },	Str, Pickup, FColor::White, DeltaSeconds * 0.5);
+		}
 
 		//LogMsgWithRole("Can Interact! ");
 	}
@@ -1121,16 +1125,17 @@ bool AHeroCharacter::AuthTryGiveHealth(float Hp)
 	return true;
 }
 
-bool AHeroCharacter::AuthTryGiveAmmo()
+bool AHeroCharacter::CanGiveAmmo()
 {
-	//LogMsgWithRole("AHeroCharacter::TryGiveAmmo");
-	if (!HasAuthority()) return false;
-
+	return FindWeaponToReceiveAmmo() != nullptr;
+}
+AWeapon* AHeroCharacter::FindWeaponToReceiveAmmo() const
+{
 	// Try give ammo to equipped weapon
 	AWeapon* CurrentWeapon = GetCurrentWeapon();
-	if (CurrentWeapon && CurrentWeapon->TryGiveAmmo())
+	if (CurrentWeapon && CurrentWeapon->CanGiveAmmo())
 	{
-		return true; // ammo given to main weapon
+		return CurrentWeapon; // ammo given to main weapon
 	}
 
 	// TODO Give ammo to current weapon, if that fails give it to the other slot. If no weapon is equipped, give it to the first holstered gun found
@@ -1142,9 +1147,19 @@ bool AHeroCharacter::AuthTryGiveAmmo()
 	if (CurrentWeaponSlot == EWeaponSlots::Secondary) AltWeap = GetWeapon(EWeaponSlots::Primary);
 	if (AltWeap && AltWeap->TryGiveAmmo())
 	{
-		return true; // ammo given to alt weapon
+		return AltWeap; // ammo given to alt weapon
 	}
 
+	return nullptr;
+}
+bool AHeroCharacter::AuthTryGiveAmmo()
+{
+	//LogMsgWithRole("AHeroCharacter::TryGiveAmmo");
+	if (!HasAuthority()) return false;
+
+	auto Weap = FindWeaponToReceiveAmmo();
+	if (Weap) 
+		return Weap->TryGiveAmmo();
 
 	return false;
 }
@@ -1245,7 +1260,7 @@ void AHeroCharacter::ServerRPC_TryInteract_Implementation()
 {
 	//LogMsgWithRole("AHeroCharacter::ServerRPC_TryInteract_Implementation()");
 
-	auto* const Pickup = ScanForInteractable<AWeaponPickupBase>();
+	auto* const Pickup = ScanForInteractable<APickupBase>();
 
 	float PickupDelay;
 

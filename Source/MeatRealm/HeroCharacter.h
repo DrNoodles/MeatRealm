@@ -222,6 +222,8 @@ public:
 	UFUNCTION()
 	bool AuthTryGiveHealth(float Hp) override;
 	UFUNCTION()
+	bool CanGiveAmmo() override;
+	UFUNCTION()
 	bool AuthTryGiveAmmo() override;
 	UFUNCTION()
 	bool AuthTryGiveArmour(float Delta) override;
@@ -291,6 +293,8 @@ public:
 	float GetRunningReloadSpeed() const { return RunningReloadSpeed; }
 
 private:
+
+	AWeapon* FindWeaponToReceiveAmmo() const;
 
 	void ScanForWeaponPickups(float DeltaSeconds);
 	virtual void Tick(float DeltaSeconds) override;

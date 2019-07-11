@@ -187,7 +187,10 @@ bool AWeapon::ServerRPC_AdsReleased_Validate()
 {
 	return true;
 }
-
+bool AWeapon::CanGiveAmmo()
+{
+	return ReceiverComp->CanGiveAmmo();
+}
 bool AWeapon::TryGiveAmmo()
 {
 	return ReceiverComp->TryGiveAmmo();
