@@ -85,8 +85,8 @@ void AHeroCharacter::EndPlay(const EEndPlayReason::Type EndPlayReason)
 {
 	if (ROLE_Authority == Role)
 	{
-		LastWeaponSlot = EWeaponSlots::Undefined;
-		CurrentWeaponSlot = EWeaponSlots::Undefined;
+		LastWeaponSlot = EInventorySlots::Undefined;
+		CurrentInventorySlot = EInventorySlots::Undefined;
 		if (Slot1)
 		{
 			Slot1->Destroy();
@@ -122,7 +122,7 @@ void AHeroCharacter::Restart()
 void AHeroCharacter::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
 {
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
-	DOREPLIFETIME(AHeroCharacter, CurrentWeaponSlot);
+	DOREPLIFETIME(AHeroCharacter, CurrentInventorySlot);
 	DOREPLIFETIME(AHeroCharacter, Slot1);
 	DOREPLIFETIME(AHeroCharacter, Slot2);
 	DOREPLIFETIME(AHeroCharacter, Health);
@@ -378,6 +378,7 @@ void AHeroCharacter::TickRunning(float DT)
 }
 
 
+
 // Input
 void AHeroCharacter::SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent)
 {
@@ -386,7 +387,36 @@ void AHeroCharacter::SetupPlayerInputComponent(class UInputComponent* PlayerInpu
 	PlayerInputComponent->BindAction("RunToggle", IE_Pressed, this, &AHeroCharacter::OnRunToggle);
 	PlayerInputComponent->BindAction("Run", IE_Pressed, this, &AHeroCharacter::OnStartRunning);
 	PlayerInputComponent->BindAction("Run", IE_Released, this, &AHeroCharacter::OnStopRunning);
+	PlayerInputComponent->BindAction("PrimaryWeapon", IE_Pressed, this, &AHeroCharacter::OnEquipHealth);
+
 }
+
+void AHeroCharacter::OnEquipHealth()
+{
+	EquipHealth();
+
+	if (Role < ROLE_Authority)
+	{
+		ServerEquipHealth();
+	}
+}
+void AHeroCharacter::EquipHealth()
+{
+	// TODO Ask inventory to equip health
+
+	// TODO Return if health already equipped or zero health items
+
+	EquipSlot(EInventorySlots::Health);
+}
+void AHeroCharacter::ServerEquipHealth_Implementation()
+{
+	EquipHealth();
+}
+bool AHeroCharacter::ServerEquipHealth_Validate()
+{
+	return true;
+}
+
 void AHeroCharacter::OnRunToggle()
 {
 	if (IsRunning())
@@ -689,14 +719,13 @@ bool AHeroCharacter::IsFiring() const
 
 // Weapon spawning
 
-AWeapon* AHeroCharacter::GetWeapon(EWeaponSlots Slot) const
+AWeapon* AHeroCharacter::GetWeapon(EInventorySlots Slot) const
 {
 	switch (Slot)
 	{
-	case EWeaponSlots::Primary: return Slot1;
-	case EWeaponSlots::Secondary: return Slot2;
+	case EInventorySlots::Primary: return Slot1;
+	case EInventorySlots::Secondary: return Slot2;
 
-	case EWeaponSlots::Undefined:
 	default:
 		return nullptr;
 	}
@@ -704,7 +733,7 @@ AWeapon* AHeroCharacter::GetWeapon(EWeaponSlots Slot) const
 
 AWeapon* AHeroCharacter::GetCurrentWeapon() const
 {
-	return GetWeapon(CurrentWeaponSlot);
+	return GetWeapon(CurrentInventorySlot);
 }
 
 //AWeapon* AHeroCharacter::GetHolsteredWeapon() const
@@ -725,10 +754,10 @@ void AHeroCharacter::GiveWeaponToPlayer(TSubclassOf<class AWeapon> WeaponClass)
 	{
 		// If it's the same slot, replay the equip weapon
 		RemovedWeapon->Destroy();
-		CurrentWeaponSlot = EWeaponSlots::Undefined;
+		CurrentInventorySlot = EInventorySlots::Undefined;
 	}
 
-	EquipWeapon(Slot);
+	EquipSlot(Slot);
 }
 
 AWeapon* AHeroCharacter::AuthSpawnWeapon(TSubclassOf<AWeapon> weaponClass)
@@ -767,22 +796,22 @@ AWeapon* AHeroCharacter::AuthSpawnWeapon(TSubclassOf<AWeapon> weaponClass)
 	return Weapon;
 }
 
-EWeaponSlots AHeroCharacter::FindGoodSlot() const
+EInventorySlots AHeroCharacter::FindGoodSlot() const
 {
 	// Find an empty slot, if none exists, 
-	if (!Slot1) return EWeaponSlots::Primary;
-	if (!Slot2) return EWeaponSlots::Secondary;
-	return CurrentWeaponSlot;
+	if (!Slot1) return EInventorySlots::Primary;
+	if (!Slot2) return EInventorySlots::Secondary;
+	return CurrentInventorySlot;
 }
 
-AWeapon* AHeroCharacter::AssignWeaponToInventorySlot(AWeapon* Weapon, EWeaponSlots Slot)
+AWeapon* AHeroCharacter::AssignWeaponToInventorySlot(AWeapon* Weapon, EInventorySlots Slot)
 {
 	const auto Removed = GetWeapon(Slot);
 
 	//SetWeapon(Weapon, Slot);
 	// This does not free up resources by design! If needed, first get the weapon before overwriting it
-	if (Slot == EWeaponSlots::Primary) Slot1 = Weapon;
-	if (Slot == EWeaponSlots::Secondary) Slot2 = Weapon;
+	if (Slot == EInventorySlots::Primary) Slot1 = Weapon;
+	if (Slot == EInventorySlots::Secondary) Slot2 = Weapon;
 
 
 	//// Cleanup previous weapon // TODO Drop this on ground
@@ -790,22 +819,22 @@ AWeapon* AHeroCharacter::AssignWeaponToInventorySlot(AWeapon* Weapon, EWeaponSlo
 	return Removed;
 }
 
-void AHeroCharacter::EquipWeapon(const EWeaponSlots Slot)
+void AHeroCharacter::EquipSlot(const EInventorySlots Slot)
 {
 	/*if (bIsEquipping) return;
 	bIsEquipping = true;*/
 
 
 	// Already selected?
-	if (CurrentWeaponSlot == Slot) return;
+	if (CurrentInventorySlot == Slot) return;
 
 	// Desired slot is empty?
 	auto NewWeapon = GetWeapon(Slot);
 	if (!NewWeapon) return;
 
 
-	LastWeaponSlot = CurrentWeaponSlot;
-	CurrentWeaponSlot = Slot;
+	LastWeaponSlot = CurrentInventorySlot;
+	CurrentInventorySlot = Slot;
 	//LastWeaponSlot = OldSlot;
 
 
@@ -851,8 +880,8 @@ void AHeroCharacter::RefreshWeaponAttachments() const
 {
 	const FAttachmentTransformRules Rules{ EAttachmentRule::SnapToTarget, true };
 
-	auto W1 = GetWeapon(EWeaponSlots::Primary);
-	auto W2 = GetWeapon(EWeaponSlots::Secondary);
+	auto W1 = GetWeapon(EInventorySlots::Primary);
+	auto W2 = GetWeapon(EInventorySlots::Secondary);
 
 
 	/*if (IsRunning())
@@ -862,19 +891,19 @@ void AHeroCharacter::RefreshWeaponAttachments() const
 	}
 	else*/ // Is Normal
 	{
-		if (CurrentWeaponSlot == EWeaponSlots::Undefined)
+		if (CurrentInventorySlot == EInventorySlots::Undefined)
 		{
 			if (W1) W1->AttachToComponent(GetMesh(), Rules, Holster1SocketName);
 			if (W2) W2->AttachToComponent(GetMesh(), Rules, Holster2SocketName);
 		}
 
-		if (CurrentWeaponSlot == EWeaponSlots::Primary)
+		if (CurrentInventorySlot == EInventorySlots::Primary)
 		{
 			if (W1) W1->AttachToComponent(GetMesh(), Rules, HandSocketName);
 			if (W2) W2->AttachToComponent(GetMesh(), Rules, Holster2SocketName);
 		}
 
-		if (CurrentWeaponSlot == EWeaponSlots::Secondary)
+		if (CurrentInventorySlot == EInventorySlots::Secondary)
 		{
 			if (W1) W1->AttachToComponent(GetMesh(), Rules, Holster1SocketName);
 			if (W2) W2->AttachToComponent(GetMesh(), Rules, HandSocketName);
@@ -1143,8 +1172,8 @@ AWeapon* AHeroCharacter::FindWeaponToReceiveAmmo() const
 
 	// Try give ammo to alternate weapon!
 	AWeapon* AltWeap = nullptr;
-	if (CurrentWeaponSlot == EWeaponSlots::Primary) AltWeap = GetWeapon(EWeaponSlots::Secondary);
-	if (CurrentWeaponSlot == EWeaponSlots::Secondary) AltWeap = GetWeapon(EWeaponSlots::Primary);
+	if (CurrentInventorySlot == EInventorySlots::Primary) AltWeap = GetWeapon(EInventorySlots::Secondary);
+	if (CurrentInventorySlot == EInventorySlots::Secondary) AltWeap = GetWeapon(EInventorySlots::Primary);
 	if (AltWeap && AltWeap->TryGiveAmmo())
 	{
 		return AltWeap; // ammo given to alt weapon
@@ -1190,7 +1219,7 @@ bool AHeroCharacter::AuthTryGiveWeapon(const TSubclassOf<AWeapon>& Class)
 
 bool AHeroCharacter::CanGiveWeapon(const TSubclassOf<AWeapon>& Class, OUT float& OutDelay)
 {
-	EWeaponSlots GoodSlot = FindGoodSlot();
+	EInventorySlots GoodSlot = FindGoodSlot();
 
 	// Get pickup delay
 	const bool bIdealSlotAlreadyContainsWeapon = GetWeapon(GoodSlot) != nullptr;
@@ -1204,6 +1233,18 @@ bool AHeroCharacter::CanGiveWeapon(const TSubclassOf<AWeapon>& Class, OUT float&
 	//}
 
 	// Always allow pickup of weapon - for now
+	return true;
+}
+
+bool AHeroCharacter::CanGiveItem(const TSubclassOf<AItemBase>& Class, float& OutDelay)
+{
+	LogMsgWithRole("Can give item!");
+	return true;
+}
+
+bool AHeroCharacter::TryGiveItem(const TSubclassOf<AItemBase>& Class)
+{
+	LogMsgWithRole("Item get!");
 	return true;
 }
 
@@ -1281,7 +1322,7 @@ bool AHeroCharacter::ServerRPC_TryInteract_Validate()
 
 void AHeroCharacter::ServerRPC_EquipPrimaryWeapon_Implementation()
 {
-	EquipWeapon(EWeaponSlots::Primary);
+	EquipSlot(EInventorySlots::Primary);
 }
 
 bool AHeroCharacter::ServerRPC_EquipPrimaryWeapon_Validate()
@@ -1291,7 +1332,7 @@ bool AHeroCharacter::ServerRPC_EquipPrimaryWeapon_Validate()
 
 void AHeroCharacter::ServerRPC_EquipSecondaryWeapon_Implementation()
 {
-	EquipWeapon(EWeaponSlots::Secondary);
+	EquipSlot(EInventorySlots::Secondary);
 }
 
 bool AHeroCharacter::ServerRPC_EquipSecondaryWeapon_Validate()
@@ -1302,16 +1343,16 @@ bool AHeroCharacter::ServerRPC_EquipSecondaryWeapon_Validate()
 
 void AHeroCharacter::ServerRPC_ToggleWeapon_Implementation()
 {
-	switch (CurrentWeaponSlot)
+	switch (CurrentInventorySlot)
 	{
-	case EWeaponSlots::Primary:
-		EquipWeapon(EWeaponSlots::Secondary);
+	case EInventorySlots::Primary:
+		EquipSlot(EInventorySlots::Secondary);
 		break;
 
-	case EWeaponSlots::Undefined:
-	case EWeaponSlots::Secondary:
+	case EInventorySlots::Undefined:
+	case EInventorySlots::Secondary:
 	default:
-		EquipWeapon(EWeaponSlots::Primary);
+		EquipSlot(EInventorySlots::Primary);
 	}
 }
 

@@ -15,11 +15,12 @@ class AWeapon;
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FPlayerTintChanged);
 
 UENUM(BlueprintType)
-enum class EWeaponSlots : uint8
+enum class EInventorySlots : uint8
 {
 	Undefined = 0,
 	Primary = 1,
 	Secondary = 2,
+	Health = 3,
 };
 
 UCLASS()
@@ -145,7 +146,7 @@ protected:
 		UArrowComponent* HolsteredweaponAnchor = nullptr;
 
 	UPROPERTY(Replicated, BlueprintReadOnly)
-		EWeaponSlots CurrentWeaponSlot = EWeaponSlots::Undefined;
+		EInventorySlots CurrentInventorySlot = EInventorySlots::Undefined;
 
 private:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Camera, meta = (AllowPrivateAccess = "true"))
@@ -188,7 +189,7 @@ private:
 
 
 	UPROPERTY(Replicated)
-		EWeaponSlots LastWeaponSlot = EWeaponSlots::Undefined;
+		EInventorySlots LastWeaponSlot = EInventorySlots::Undefined;
 
 	
 	UPROPERTY(Replicated)
@@ -231,6 +232,10 @@ public:
 	bool AuthTryGiveWeapon(const TSubclassOf<AWeapon>& Class) override;
 	UFUNCTION()
 	bool CanGiveWeapon(const TSubclassOf<AWeapon>& Class, float& OutDelay) override;
+	UFUNCTION()
+	bool CanGiveItem(const TSubclassOf<AItemBase>& Class, float& OutDelay) override;
+	UFUNCTION()
+	bool TryGiveItem(const TSubclassOf<AItemBase>& Class) override;
 	/* End IAffectableInterface */
 
 
@@ -268,7 +273,7 @@ public:
 	void Input_Reload() const;
 
 	UFUNCTION(BlueprintCallable)
-	AWeapon* GetWeapon(EWeaponSlots Slot) const;
+	AWeapon* GetWeapon(EInventorySlots Slot) const;
 
 	void Input_MoveUp(float Value) {	AxisMoveUp = Value; }
 	void Input_MoveRight(float Value) { AxisMoveRight = Value; }
@@ -301,6 +306,11 @@ private:
 	void TickWalking(float DT);
 	void TickRunning(float DT);
 
+	void OnEquipHealth();
+	void EquipHealth();
+	UFUNCTION(Server, Reliable, WithValidation)
+	void ServerEquipHealth();
+
 	void OnRunToggle();
 	void OnStartRunning();
 	void OnStopRunning();
@@ -313,9 +323,9 @@ private:
 
 	void GiveWeaponToPlayer(TSubclassOf<class AWeapon> WeaponClass);
 	AWeapon* AuthSpawnWeapon(TSubclassOf<AWeapon> weaponClass);
-	EWeaponSlots FindGoodSlot() const;
-	AWeapon* AssignWeaponToInventorySlot(AWeapon* Weapon, EWeaponSlots Slot);
-	void EquipWeapon(EWeaponSlots Slot);
+	EInventorySlots FindGoodSlot() const;
+	AWeapon* AssignWeaponToInventorySlot(AWeapon* Weapon, EInventorySlots Slot);
+	void EquipSlot(EInventorySlots Slot);
 	void MakeCurrentWeaponVisible() const;
 	void RefreshWeaponAttachments() const;
 
