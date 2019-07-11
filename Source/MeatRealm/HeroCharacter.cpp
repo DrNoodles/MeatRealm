@@ -22,6 +22,7 @@
 #include "TimerManager.h"
 #include "Engine/World.h"
 #include "DrawDebugHelpers.h"
+#include "Interfaces/Equippable.h"
 
 /// Lifecycle
 
@@ -85,17 +86,17 @@ void AHeroCharacter::EndPlay(const EEndPlayReason::Type EndPlayReason)
 {
 	if (ROLE_Authority == Role)
 	{
-		LastWeaponSlot = EInventorySlots::Undefined;
+		LastInventorySlot = EInventorySlots::Undefined;
 		CurrentInventorySlot = EInventorySlots::Undefined;
-		if (Slot1)
+		if (PrimaryWeaponSlot)
 		{
-			Slot1->Destroy();
-			Slot1 = nullptr;
+			PrimaryWeaponSlot->Destroy();
+			PrimaryWeaponSlot = nullptr;
 		}
-		if (Slot2)
+		if (SecondaryWeaponSlot)
 		{
-			Slot2->Destroy();
-			Slot2 = nullptr;
+			SecondaryWeaponSlot->Destroy();
+			SecondaryWeaponSlot = nullptr;
 		}
 	}
 }
@@ -123,8 +124,8 @@ void AHeroCharacter::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLi
 {
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
 	DOREPLIFETIME(AHeroCharacter, CurrentInventorySlot);
-	DOREPLIFETIME(AHeroCharacter, Slot1);
-	DOREPLIFETIME(AHeroCharacter, Slot2);
+	DOREPLIFETIME(AHeroCharacter, PrimaryWeaponSlot);
+	DOREPLIFETIME(AHeroCharacter, SecondaryWeaponSlot);
 	DOREPLIFETIME(AHeroCharacter, Health);
 	DOREPLIFETIME(AHeroCharacter, Armour);
 	DOREPLIFETIME(AHeroCharacter, TeamTint);
@@ -135,7 +136,7 @@ void AHeroCharacter::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLi
 	DOREPLIFETIME_CONDITION(AHeroCharacter, bIsTargeting, COND_SkipOwner);
 
 	// Just the owner
-	DOREPLIFETIME_CONDITION(AHeroCharacter, LastWeaponSlot, COND_OwnerOnly);
+	DOREPLIFETIME_CONDITION(AHeroCharacter, LastInventorySlot, COND_OwnerOnly);
 
 }
 
@@ -717,14 +718,33 @@ bool AHeroCharacter::IsFiring() const
 };
 
 
+
+
+IEquippable* AHeroCharacter::GetEquippable(EInventorySlots Slot) const
+{
+	switch (Slot) 
+	{ 
+		case EInventorySlots::Primary: return PrimaryWeaponSlot;
+		case EInventorySlots::Secondary: return SecondaryWeaponSlot;
+		case EInventorySlots::Health: return HealthSlot;
+
+		case EInventorySlots::Undefined:
+		default:;
+	}
+
+	return nullptr;
+}
+
+
+
 // Weapon spawning
 
 AWeapon* AHeroCharacter::GetWeapon(EInventorySlots Slot) const
 {
 	switch (Slot)
 	{
-	case EInventorySlots::Primary: return Slot1;
-	case EInventorySlots::Secondary: return Slot2;
+	case EInventorySlots::Primary: return PrimaryWeaponSlot;
+	case EInventorySlots::Secondary: return SecondaryWeaponSlot;
 
 	default:
 		return nullptr;
@@ -747,7 +767,7 @@ AWeapon* AHeroCharacter::GetCurrentWeapon() const
 void AHeroCharacter::GiveWeaponToPlayer(TSubclassOf<class AWeapon> WeaponClass)
 {
 	const auto Weapon = AuthSpawnWeapon(WeaponClass);
-	const auto Slot = FindGoodSlot();
+	const auto Slot = FindGoodWeaponSlot();
 	const auto RemovedWeapon = AssignWeaponToInventorySlot(Weapon, Slot);
 
 	if (RemovedWeapon)
@@ -796,22 +816,38 @@ AWeapon* AHeroCharacter::AuthSpawnWeapon(TSubclassOf<AWeapon> weaponClass)
 	return Weapon;
 }
 
-EInventorySlots AHeroCharacter::FindGoodSlot() const
+EInventorySlots AHeroCharacter::FindGoodWeaponSlot() const
 {
-	// Find an empty slot, if none exists, 
-	if (!Slot1) return EInventorySlots::Primary;
-	if (!Slot2) return EInventorySlots::Secondary;
-	return CurrentInventorySlot;
+	// Find an empty slot, if one exists
+	if (!PrimaryWeaponSlot) return EInventorySlots::Primary;
+	if (!SecondaryWeaponSlot) return EInventorySlots::Secondary;
+
+	// If we currently have a weapon selected, replace that.
+	if (CurrentInventorySlot == EInventorySlots::Primary || CurrentInventorySlot == EInventorySlots::Secondary)
+		return CurrentInventorySlot;
+
+	// If the last inventory slot was a weapon, use that
+	if (LastInventorySlot == EInventorySlots::Primary || LastInventorySlot == EInventorySlots::Secondary)
+		return LastInventorySlot;
+
+	return EInventorySlots::Primary; // just default to the first slot
 }
 
 AWeapon* AHeroCharacter::AssignWeaponToInventorySlot(AWeapon* Weapon, EInventorySlots Slot)
 {
+	bool IsNotAWeaponSlot = Slot != EInventorySlots::Primary && Slot != EInventorySlots::Secondary;
+	if (IsNotAWeaponSlot)
+	{
+		UE_LOG(LogTemp, Error, TEXT("Attempting to equip a weapon into a non weapon slot: %d"), Slot);
+		return nullptr;
+	}
+
 	const auto Removed = GetWeapon(Slot);
 
 	//SetWeapon(Weapon, Slot);
 	// This does not free up resources by design! If needed, first get the weapon before overwriting it
-	if (Slot == EInventorySlots::Primary) Slot1 = Weapon;
-	if (Slot == EInventorySlots::Secondary) Slot2 = Weapon;
+	if (Slot == EInventorySlots::Primary) PrimaryWeaponSlot = Weapon;
+	if (Slot == EInventorySlots::Secondary) SecondaryWeaponSlot = Weapon;
 
 
 	//// Cleanup previous weapon // TODO Drop this on ground
@@ -821,58 +857,57 @@ AWeapon* AHeroCharacter::AssignWeaponToInventorySlot(AWeapon* Weapon, EInventory
 
 void AHeroCharacter::EquipSlot(const EInventorySlots Slot)
 {
-	/*if (bIsEquipping) return;
-	bIsEquipping = true;*/
-
-
 	// Already selected?
 	if (CurrentInventorySlot == Slot) return;
 
 	// Desired slot is empty?
-	auto NewWeapon = GetWeapon(Slot);
-	if (!NewWeapon) return;
+	auto NewEquippable = GetEquippable(Slot);
+	if (!NewEquippable) return;
 
 
-	LastWeaponSlot = CurrentInventorySlot;
+	LastInventorySlot = CurrentInventorySlot;
 	CurrentInventorySlot = Slot;
-	//LastWeaponSlot = OldSlot;
 
 
-	// TODO Some management code here to delay for the duration of holster/draw and cancel if certain things happen
+	// TODO Some delay on holster
 
 
 	// Clear any existing Equip timer
-	GetWorld()->GetTimerManager().ClearTimer(DrawWeaponTimerHandle);
+	GetWorld()->GetTimerManager().ClearTimer(EquipTimerHandle);
 
 
-	// Holster old weapon
-	auto OldWeapon = GetWeapon(LastWeaponSlot);
-	if (OldWeapon)
+	// Unequip old 
+	auto OldEquippable = GetEquippable(LastInventorySlot);
+	if (OldEquippable)
 	{
-		OldWeapon->Holster();
-		OldWeapon->SetActorHiddenInGame(false); // make sure old weapon is visible
+		//LogMsgWithRole("Un-equip new slot");
+		OldEquippable->Unequip();
+		OldEquippable->SetHidden(false);
 	}
 
 
-	// Hold new weapon
-	if (NewWeapon)
+	// Equip new
+	if (NewEquippable)
 	{
-		LogMsgWithRole("DrawNewWeapon");
-		NewWeapon->Draw();
-		NewWeapon->SetActorHiddenInGame(true);
+		//LogMsgWithRole("Equip new slot");
+		NewEquippable->Equip();
+		const float DrawDuration = NewEquippable->GetEquipDuration();
+		NewEquippable->SetHidden(true);
 
-		const auto DrawDuration = NewWeapon->GetDrawDuration();
-		GetWorld()->GetTimerManager().SetTimer(DrawWeaponTimerHandle, this, &AHeroCharacter::MakeCurrentWeaponVisible, DrawDuration, false);
+		GetWorldTimerManager().SetTimer(EquipTimerHandle, this, &AHeroCharacter::MakeEquippedItemVisible, DrawDuration, false);
 	}
 
 	RefreshWeaponAttachments();
 }
 
 
-void AHeroCharacter::MakeCurrentWeaponVisible() const
+void AHeroCharacter::MakeEquippedItemVisible() const
 {
-	LogMsgWithRole("ShowWeapon");
-	if (GetCurrentWeapon()) GetCurrentWeapon()->SetActorHiddenInGame(false);
+	LogMsgWithRole("MakeEquippedItemVisible");
+	IEquippable* Item = GetEquippable(CurrentInventorySlot);
+
+	if (Item) Item->SetHidden(false);
+
 	RefreshWeaponAttachments();
 }
 
@@ -1219,7 +1254,7 @@ bool AHeroCharacter::AuthTryGiveWeapon(const TSubclassOf<AWeapon>& Class)
 
 bool AHeroCharacter::CanGiveWeapon(const TSubclassOf<AWeapon>& Class, OUT float& OutDelay)
 {
-	EInventorySlots GoodSlot = FindGoodSlot();
+	EInventorySlots GoodSlot = FindGoodWeaponSlot();
 
 	// Get pickup delay
 	const bool bIdealSlotAlreadyContainsWeapon = GetWeapon(GoodSlot) != nullptr;

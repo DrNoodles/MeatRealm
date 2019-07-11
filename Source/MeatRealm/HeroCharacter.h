@@ -11,6 +11,7 @@
 class AHeroState;
 class AHeroController;
 class AWeapon;
+class IEquippable;
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FPlayerTintChanged);
 
@@ -170,7 +171,7 @@ private:
 	FVector2D AimPos_ScreenSpace = FVector2D::ZeroVector;
 	FVector AimPos_WorldSpace = FVector::ZeroVector;
 
-	FTimerHandle DrawWeaponTimerHandle;
+	FTimerHandle EquipTimerHandle;
 
 	bool bIsEquipping;
 
@@ -189,13 +190,15 @@ private:
 
 
 	UPROPERTY(Replicated)
-		EInventorySlots LastWeaponSlot = EInventorySlots::Undefined;
+		EInventorySlots LastInventorySlot = EInventorySlots::Undefined;
 
 	
 	UPROPERTY(Replicated)
-		AWeapon* Slot1 = nullptr;
+		AWeapon* PrimaryWeaponSlot = nullptr;
 	UPROPERTY(Replicated)
-		AWeapon* Slot2 = nullptr;
+		AWeapon* SecondaryWeaponSlot = nullptr;
+	UPROPERTY(Replicated)
+		AItemBase* HealthSlot = nullptr;
 
 
 
@@ -274,6 +277,7 @@ public:
 
 	UFUNCTION(BlueprintCallable)
 	AWeapon* GetWeapon(EInventorySlots Slot) const;
+	IEquippable* GetEquippable(EInventorySlots Slot) const;
 
 	void Input_MoveUp(float Value) {	AxisMoveUp = Value; }
 	void Input_MoveRight(float Value) { AxisMoveRight = Value; }
@@ -323,10 +327,10 @@ private:
 
 	void GiveWeaponToPlayer(TSubclassOf<class AWeapon> WeaponClass);
 	AWeapon* AuthSpawnWeapon(TSubclassOf<AWeapon> weaponClass);
-	EInventorySlots FindGoodSlot() const;
+	EInventorySlots FindGoodWeaponSlot() const;
 	AWeapon* AssignWeaponToInventorySlot(AWeapon* Weapon, EInventorySlots Slot);
 	void EquipSlot(EInventorySlots Slot);
-	void MakeCurrentWeaponVisible() const;
+	void MakeEquippedItemVisible() const;
 	void RefreshWeaponAttachments() const;
 
 	static FVector2D GetGameViewportSize();

@@ -30,6 +30,8 @@ void AItemBase::UseStop()
 	GetWorldTimerManager().ClearTimer(UsageTimerHandle);
 }
 
+
+
 void AItemBase::Equip()
 {
 	UE_LOG(LogTemp, Warning, TEXT("AItemBase::Equip"));
@@ -41,6 +43,7 @@ void AItemBase::Unequip()
 	UE_LOG(LogTemp, Warning, TEXT("AItemBase::Unequip"));
 	UseStop();
 }
+
 //
 //void AItemBase::BeginPlay()
 //{

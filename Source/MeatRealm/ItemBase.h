@@ -5,6 +5,7 @@
 #include "CoreMinimal.h"
 #include "GameFramework/Actor.h"
 #include "TimerManager.h"
+#include "Interfaces/Equippable.h"
 
 #include "ItemBase.generated.h"
 
@@ -15,13 +16,16 @@ class IAffectableInterface;
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FUsageSuccess);
 
 UCLASS()
-class MEATREALM_API AItemBase : public AActor
+class MEATREALM_API AItemBase : public AActor, public IEquippable
 {
 	GENERATED_BODY()
 
 public:
 	UPROPERTY(EditAnywhere)
-	float UsageDuration = 2;
+		float UsageDuration = 2;
+
+	UPROPERTY(EditAnywhere)
+		float EquipDuration = 0.5;
 
 	UPROPERTY(BlueprintAssignable, Category = "Event Dispatchers")
 		FUsageSuccess OnUsageSuccess;
@@ -34,8 +38,14 @@ public:
 
 	void UseStart(IAffectableInterface* const Affectable);
 	void UseStop();
-	void Equip();
-	void Unequip();
+
+	/* IEquippable */
+	void Equip() override;
+	void Unequip() override;
+	float GetEquipDuration() override { return EquipDuration; }
+	void SetHidden(bool bIsHidden) override { SetActorHiddenInGame(bIsHidden); }
+	/* End IEquippable */
+
 
 protected:
 	//virtual void ApplyItem(IAffectableInterface* const Affectable) PURE_VIRTUAL(AItemBase::ApplyItem, );
