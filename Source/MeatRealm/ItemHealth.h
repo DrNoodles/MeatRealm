@@ -15,5 +15,8 @@ class MEATREALM_API AItemHealth : public AItemBase
 	GENERATED_BODY()
 
 private:
+	// TODO Spawn a model in constructor as set by a blueprint - see weapons for example
+
 	void ApplyItem(IAffectableInterface* const Affectable) override;
+	EInventoryCategory GetInventoryCategory() override { return EInventoryCategory::Health; }
 };

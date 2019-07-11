@@ -44,6 +44,12 @@ public:
 	void Unequip() override;
 	float GetEquipDuration() override { return EquipDuration; }
 	void SetHidden(bool bIsHidden) override { SetActorHiddenInGame(bIsHidden); }
+	virtual EInventoryCategory GetInventoryCategory() override
+	{
+		unimplemented();
+		return EInventoryCategory::Undefined;
+	}
+
 	/* End IEquippable */
 
 

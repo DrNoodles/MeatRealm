@@ -85,7 +85,7 @@ private:
 	uint32 HeroControllerId;
 
 
-	
+
 public:
 	AWeapon();
 
@@ -95,6 +95,7 @@ public:
 	void Unequip() override;
 	float GetEquipDuration() override { return DrawDuration; }
 	void SetHidden(bool bIsHidden) override { SetActorHiddenInGame(bIsHidden); }
+	EInventoryCategory GetInventoryCategory() override { return EInventoryCategory::Weapon; }
 	/* End IEquippable */
 
 	void Input_PullTrigger();

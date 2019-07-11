@@ -13,6 +13,13 @@ class UEquippable : public UInterface
 	GENERATED_BODY()
 };
 
+
+UENUM()
+enum class EInventoryCategory : uint8
+{
+	Undefined = 0, Weapon, Health, Armour, Throwable
+};
+
 /**
  * 
  */
@@ -29,4 +36,6 @@ public:
 		virtual float GetEquipDuration() = 0;
 	UFUNCTION()
 		virtual void SetHidden(bool bIsHidden) = 0;
+	UFUNCTION()
+		virtual EInventoryCategory GetInventoryCategory() = 0;
 };

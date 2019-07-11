@@ -7,6 +7,7 @@
 AItemBase::AItemBase()
 {
 	PrimaryActorTick.bCanEverTick = false;
+	SetReplicates(true);
 }
 
 void AItemBase::UseStart(IAffectableInterface* const Affectable)
@@ -29,8 +30,6 @@ void AItemBase::UseStop()
 	UE_LOG(LogTemp, Warning, TEXT("AItemBase::UseStop"));
 	GetWorldTimerManager().ClearTimer(UsageTimerHandle);
 }
-
-
 
 void AItemBase::Equip()
 {

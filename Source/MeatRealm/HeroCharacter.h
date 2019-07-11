@@ -263,8 +263,13 @@ public:
 		/** setup pawn specific input handlers */
 	virtual void SetupPlayerInputComponent(class UInputComponent* InputComponent) override;
 
-	void StartWeaponFire() const;
-	void StopWeaponFire() const;
+	//void StartWeaponFire() const;
+	//void StopWeaponFire() const;
+
+	void UseItemStart();
+	void UseItemStop();
+
+
 	void StartWeaponFire();
 	void StopWeaponFire();
 	bool IsFiring() const;
@@ -277,6 +282,7 @@ public:
 
 	UFUNCTION(BlueprintCallable)
 	AWeapon* GetWeapon(EInventorySlots Slot) const;
+	AItemBase* GetItem(EInventorySlots Slot) const;
 	IEquippable* GetEquippable(EInventorySlots Slot) const;
 
 	void Input_MoveUp(float Value) {	AxisMoveUp = Value; }
@@ -291,8 +297,15 @@ public:
 	void SetUseMouseAim(bool bUseMouseAimIn) { bUseMouseAim = bUseMouseAimIn; }
 
 	UFUNCTION(BlueprintCallable)
-		AWeapon* GetCurrentWeapon() const;
-	
+	AWeapon* GetCurrentWeapon() const;
+
+	UFUNCTION(BlueprintCallable)
+	AItemBase* GetCurrentItem() const;
+
+	//UFUNCTION(BlueprintCallable)
+	IEquippable* GetCurrentEquippable() const;
+
+
 	//AWeapon* GetHolsteredWeapon() const;
 
 	bool IsRunning() const;
@@ -323,6 +336,7 @@ private:
 
 	void SetTargeting(bool bNewTargeting);
 
+	void GiveItemToPlayer(TSubclassOf<class AItemBase> ItemClass);
 
 
 	void GiveWeaponToPlayer(TSubclassOf<class AWeapon> WeaponClass);
