@@ -14,15 +14,15 @@ struct MEATREALM_API FMRHitResult
 		uint32 ReceiverControllerId;
 	UPROPERTY()
 		uint32 AttackerControllerId;
-	UPROPERTY()
+	UPROPERTY(BlueprintReadOnly)
 		int HealthRemaining;
-	UPROPERTY()
+	UPROPERTY(BlueprintReadOnly)
 		int DamageTaken;
-	UPROPERTY()
+	UPROPERTY(BlueprintReadOnly)
 		bool bHitArmour;
-	UPROPERTY()
+	UPROPERTY(BlueprintReadOnly)
 		FVector HitLocation;
-	UPROPERTY()
+	UPROPERTY(BlueprintReadOnly)
 		FVector HitDirection;
 };
 

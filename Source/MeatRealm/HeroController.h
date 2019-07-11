@@ -20,10 +20,9 @@ class MEATREALM_API AHeroController : public APlayerController
 {
 	GENERATED_BODY()
 
-public:
-	AHeroController();
-	void CleanupPlayerState() override;
+	// Data
 
+public:
 	UPROPERTY(EditDefaultsOnly, Category = "Widgets")
 		TSubclassOf<class UUserWidget> HudClass;
 
@@ -31,7 +30,30 @@ public:
 		TSubclassOf<class ADamageNumber> DamageNumberClass;
 
 	UUserWidget* HudInstance;
-	
+
+	UPROPERTY(BlueprintAssignable, Category = "Event Dispatchers")
+		FPlayerSpawned OnPlayerSpawned;
+	UPROPERTY(BlueprintAssignable, Category = "Event Dispatchers")
+		FTakenDamage OnTakenDamage;
+
+	UPROPERTY(BlueprintAssignable, Category = "Event Dispatchers")
+		FTakenDamage OnGivenDamage;
+
+protected:
+private:
+	// Used to gate-keep whether player inputs are allowewd! TODO Needs more implementation
+	bool bAllowGameActions = true;
+
+
+
+
+	// Methods
+
+public:
+	AHeroController();
+	void CleanupPlayerState() override;
+	bool IsGameInputAllowed() const;
+
 	void OnPossess(APawn* InPawn) override;
 	void AcknowledgePossession(APawn* P) override;
 	void OnUnPossess() override;
@@ -52,22 +74,14 @@ public:
 	void ClientRPC_PlayHit(const FMRHitResult& Hit);
 
 	UFUNCTION(Client, Reliable)
-	void ClientRPC_OnTakenDamage(const FMRHitResult& Hit);
+	void ClientRPC_NotifyOnTakenDamage(const FMRHitResult& Hit);
 
-	UPROPERTY(BlueprintAssignable, Category = "Event Dispatchers")
-		FPlayerSpawned OnPlayerSpawned;
 
 	//DECLARE_EVENT_TwoParams(AHeroController, FHealthDepleted, uint32, uint32)
 	//FHealthDepleted& OnHealthDepleted() { return HealthDepletedEvent; }
 
 	// receiverId, instigatorId, healthRemaining, damageTaken, isArmour
 	//FTakenDamage& OnTakenDamage() { return TakenDamageEvent; }
-
-	UPROPERTY(BlueprintAssignable, Category = "Event Dispatchers")
-		FTakenDamage OnTakenDamage;
-
-	UPROPERTY(BlueprintAssignable, Category = "Event Dispatchers")
-		FTakenDamage OnGivenDamage;
 
 protected:
 	virtual void PreInitializeComponents() override;
@@ -91,5 +105,9 @@ private:
 	void Input_AdsReleased();
 	void Input_Reload();
 	void Input_Interact();
+	void Input_PrimaryWeapon();
+	void Input_SecondaryWeapon();
+	void Input_ToggleWeapon();
+
 	void SetUseMouseaim(bool bUseMouseAim);
 };

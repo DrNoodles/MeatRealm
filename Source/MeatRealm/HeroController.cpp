@@ -19,6 +19,11 @@ void AHeroController::CleanupPlayerState()
 	DestroyHud();
 }
 
+bool AHeroController::IsGameInputAllowed() const
+{
+	return bAllowGameActions;
+}
+
 void AHeroController::OnPossess(APawn* InPawn)
 {
 	// Called on server upon possessing a pawn
@@ -127,14 +132,7 @@ void AHeroController::TakeDamage2(const FMRHitResult& Hit)
 
 
 	// Do client side effects!
-	if (!IsLocalPlayerController())
-	{
-		ClientRPC_OnTakenDamage(Hit);
-	}
-	else
-	{
-		if (OnTakenDamage.IsBound()) OnTakenDamage.Broadcast(Hit);
-	}
+	ClientRPC_NotifyOnTakenDamage(Hit);
 }
 
 void AHeroController::SimulateHitGiven(const FMRHitResult& Hit)
@@ -184,10 +182,9 @@ void AHeroController::SimulateHitGiven(const FMRHitResult& Hit)
 		OnGivenDamage.Broadcast(Hit);
 }
 
-void AHeroController::ClientRPC_OnTakenDamage_Implementation(const FMRHitResult& Hit)
+void AHeroController::ClientRPC_NotifyOnTakenDamage_Implementation(const FMRHitResult& Hit)
 {
-	if (OnTakenDamage.IsBound())
-		OnTakenDamage.Broadcast(Hit);
+	if (OnTakenDamage.IsBound()) OnTakenDamage.Broadcast(Hit);
 }
 
 void AHeroController::ClientRPC_PlayHit_Implementation(const FMRHitResult& Hit)
@@ -207,6 +204,7 @@ void AHeroController::ClientRPC_PlayHit_Implementation(const FMRHitResult& Hit)
 	//		0.5);
 	//}
 }
+
 
 /// Input
 
@@ -249,6 +247,9 @@ void AHeroController::SetupInputComponent()
 	I->BindAction("AdsWeapon", IE_Released, this, &AHeroController::Input_AdsReleased);
 	I->BindAction("Reload", IE_Released, this, &AHeroController::Input_Reload);
 	I->BindAction("Interact", IE_Pressed, this, &AHeroController::Input_Interact);
+	I->BindAction("PrimaryWeapon", IE_Pressed, this, &AHeroController::Input_PrimaryWeapon);
+	I->BindAction("SecondaryWeapon", IE_Pressed, this, &AHeroController::Input_SecondaryWeapon);
+	I->BindAction("ToggleWeapon", IE_Pressed, this, &AHeroController::Input_ToggleWeapon);
 }
 
 bool AHeroController::InputAxis(FKey Key, float Delta, float DeltaTime, int32 NumSamples, bool bGamepad)
@@ -325,6 +326,24 @@ void AHeroController::Input_Interact()
 {
 	auto Char = GetHeroCharacter();
 	if (Char) Char->Input_Interact();
+}
+
+void AHeroController::Input_PrimaryWeapon()
+{
+	auto Char = GetHeroCharacter();
+	if (Char) Char->Input_PrimaryWeapon();
+}
+
+void AHeroController::Input_SecondaryWeapon()
+{
+	auto Char = GetHeroCharacter();
+	if (Char) Char->Input_SecondaryWeapon();
+}
+
+void AHeroController::Input_ToggleWeapon()
+{
+	auto Char = GetHeroCharacter();
+	if (Char) Char->Input_ToggleWeapon();
 }
 
 void AHeroController::SetUseMouseaim(bool bUseMouseAim)

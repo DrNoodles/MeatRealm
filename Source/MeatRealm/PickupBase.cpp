@@ -1,6 +1,7 @@
 #include "PickupBase.h"
 #include "Components/CapsuleComponent.h"
 #include "Components/StaticMeshComponent.h"
+#include "Components/SkeletalMeshComponent.h"
 #include "Components/SceneComponent.h"
 #include "TimerManager.h"
 #include "UnrealNetwork.h"
@@ -24,11 +25,11 @@ APickupBase::APickupBase()
 	CollisionComp->SetCollisionProfileName(FName("Pickup"));
 	RootComponent = CollisionComp;
 
-	MeshComp = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("Mesh"));
-	MeshComp->SetupAttachment(RootComponent);
-	MeshComp->SetGenerateOverlapEvents(false);
-	MeshComp->SetCollisionProfileName(TEXT("NoCollision"));
-	MeshComp->CanCharacterStepUpOn = ECB_No;
+	SkeletalMeshComp = CreateDefaultSubobject<USkeletalMeshComponent>(TEXT("SkeletalMesh"));
+	SkeletalMeshComp->SetupAttachment(RootComponent);
+	SkeletalMeshComp->SetGenerateOverlapEvents(false);
+	SkeletalMeshComp->SetCollisionProfileName(TEXT("NoCollision"));
+	SkeletalMeshComp->CanCharacterStepUpOn = ECB_No;
 }
 
 bool APickupBase::AuthTryInteract(IAffectableInterface* const Affectable)
@@ -36,7 +37,8 @@ bool APickupBase::AuthTryInteract(IAffectableInterface* const Affectable)
 	check(Affectable)
 	check(HasAuthority())
 
-	if (!CanInteract()) return false;
+	float Delay;
+	if (!CanInteract(Affectable, OUT Delay)) return false;
 	return TryPickup(Affectable);
 }
 
@@ -107,7 +109,7 @@ void APickupBase::MakePickupAvailable(bool bIsAvailable)
 	if (bIsAvailable)
 	{
 		// Show visual
-		MeshComp->SetVisibility(true, true);
+		SkeletalMeshComp->SetVisibility(true, true);
 	
 		// Enable Overlap
 		CollisionComp->SetGenerateOverlapEvents(true);
@@ -121,7 +123,7 @@ void APickupBase::MakePickupAvailable(bool bIsAvailable)
 		CollisionComp->SetGenerateOverlapEvents(false);
 
 		// Hide visual
-		MeshComp->SetVisibility(false, true);
+		SkeletalMeshComp->SetVisibility(false, true);
 
 		// Announce taken
 		OnTaken.Broadcast();

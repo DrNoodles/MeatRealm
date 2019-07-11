@@ -10,6 +10,7 @@
 
 class USceneComponent;
 class UStaticMeshComponent;
+class USkeletalMeshComponent;
 class UCapsuleComponent;
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FPickupSpawned);
@@ -38,7 +39,7 @@ protected:
 
 private:
 	UPROPERTY(VisibleAnywhere)
-		UStaticMeshComponent* MeshComp = nullptr;
+		USkeletalMeshComponent* SkeletalMeshComp = nullptr;
 	UPROPERTY(VisibleAnywhere)
 		UCapsuleComponent* CollisionComp = nullptr;
 	UPROPERTY(ReplicatedUsing = OnRep_IsAvailableChanged)
@@ -52,10 +53,18 @@ private:
 
 public:
 	APickupBase();
-	bool CanInteract() const { return bExplicitInteraction && IsAvailable; }
+	//bool CanInteract() const { return bExplicitInteraction && IsAvailable; }
+	
+
+	virtual bool CanInteract(IAffectableInterface* const Affectable, OUT float& OutDelay)
+	{
+		OutDelay = 0;
+		return  bExplicitInteraction && IsAvailable;
+	}
 	bool AuthTryInteract(IAffectableInterface* const Affectable);
 
 protected:
+
 	// Override this to do whatever.
 	virtual bool TryApplyAffect(IAffectableInterface* const Affectable)
 	{

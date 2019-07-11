@@ -4,13 +4,26 @@
 #include "Weapon.h"
 #include "Engine/World.h"
 #include "Components/ArrowComponent.h"
+#include "Components/SkeletalMeshComponent.h"
 #include "Components/StaticMeshComponent.h"
+#include "Components/PointLightComponent.h"
 #include "DrawDebugHelpers.h"
 #include "UnrealNetwork.h"
 #include "Kismet/GameplayStatics.h"
 #include "TimerManager.h"
 #include "Projectile.h"
-#include "GameFramework/GameState.h"
+#include "HeroCharacter.h"
+
+
+//void AWeapon::GetLifetimeReplicatedProps(TArray< FLifetimeProperty >& OutLifetimeProps) const
+//{
+//	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
+//	//DOREPLIFETIME(AWeapon, ReceiverComp);
+//}
+void AWeapon::BeginPlay()
+{
+	Super::BeginPlay();
+}
 
 AWeapon::AWeapon()
 {
@@ -20,356 +33,260 @@ AWeapon::AWeapon()
 	RootComp = CreateDefaultSubobject<USceneComponent>(TEXT("Root"));
 	RootComponent = RootComp;
 
-	MeshComp = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("Mesh"));
-	MeshComp->SetupAttachment(RootComponent);
-	MeshComp->SetGenerateOverlapEvents(false);
-	MeshComp->SetCollisionProfileName(TEXT("NoCollision"));
-	MeshComp->CanCharacterStepUpOn = ECB_No;
+	SkeletalMeshComp = CreateDefaultSubobject<USkeletalMeshComponent>(TEXT("SkeletalMesh"));
+	SkeletalMeshComp->SetupAttachment(RootComponent);
+	SkeletalMeshComp->SetGenerateOverlapEvents(false);
+	SkeletalMeshComp->SetCollisionProfileName(TEXT("NoCollision"));
+	SkeletalMeshComp->CanCharacterStepUpOn = ECB_No;
 
 	MuzzleLocationComp = CreateDefaultSubobject<UArrowComponent>(TEXT("MuzzleLocationComp"));
 	MuzzleLocationComp->SetupAttachment(RootComponent);
+	MuzzleLocationComp->ArrowColor = FColor{ 255,0,0 };
+	MuzzleLocationComp->ArrowSize = 0.2;
+
+	MuzzleLightComp = CreateDefaultSubobject<UPointLightComponent>(TEXT("MuzzleLightComp"));
+	MuzzleLightComp->SetupAttachment(RootComponent);
+	MuzzleLightComp->Intensity = 4000;
+	MuzzleLightComp->AttenuationRadius = 200;
+	MuzzleLightComp->bUseTemperature = true;
+	MuzzleLightComp->Temperature = 3000;
+	MuzzleLightComp->SetVisibility(false);
+
+	ReceiverComp = CreateDefaultSubobject<UWeaponReceiverComponent>(TEXT("ReceiverComp"));
+	ReceiverComp->SetDelegate(this);
+	ReceiverComp->SetIsReplicated(true);
+
 }
 
-void AWeapon::GetLifetimeReplicatedProps(TArray< FLifetimeProperty >& OutLifetimeProps) const
+
+// INPUT //////////////////////
+
+
+void AWeapon::Draw()
 {
-	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
-	DOREPLIFETIME(AWeapon, AmmoInClip);
-	DOREPLIFETIME(AWeapon, AmmoInPool);
-	DOREPLIFETIME(AWeapon, ReloadState);
-}
-
-
-void AWeapon::BeginPlay()
-{
-	Super::BeginPlay();
-
-	if (!HasAuthority()) return;
-
-	bCanAction = true;
-	AmmoInClip = ClipSize;
-	AmmoInPool = AmmoPoolGiven;
-}
-
-void AWeapon::Tick(float DeltaTime)
-{
-	Super::Tick(DeltaTime);
-
-	if (HasAuthority())
+	if (!HasAuthority())
 	{
-		AuthTick(DeltaTime);
+		ServerRPC_Draw();
+		return; // TODO Remove return to enable client preditiction (currently broken)
 	}
-	else
-	{
-		RemoteTick(DeltaTime);
-	}
+	ReceiverComp->DrawWeapon();
 }
-void AWeapon::RemoteTick(float DeltaTime)
+void AWeapon::ServerRPC_Draw_Implementation()
 {
-	check (!HasAuthority())
-
-	if (ReloadState == ReloadStates::Starting)
-	{
-		ReloadStartTime = FDateTime::Now();
-
-		// Update UI
-		ReloadProgress = 0;
-		bIsReloading = true;
-
-		ReloadState = ReloadStates::InProgress;
-	}
-	else if (ReloadState == ReloadStates::InProgress)
-	{
-		const auto ElapsedReloadTime = (FDateTime::Now() - ReloadStartTime).GetTotalSeconds();
-
-		// Update UI
-		ReloadProgress = ElapsedReloadTime / ReloadTime;
-	}
-	else if (ReloadState == ReloadStates::Finishing)
-	{
-		// Update UI
-		ReloadProgress = 100;
-		bIsReloading = false;
-
-		ReloadState = ReloadStates::Nothing;
-	}
+	Draw();
 }
-void AWeapon::AuthTick(float DeltaTime)
+bool AWeapon::ServerRPC_Draw_Validate()
 {
-	check(HasAuthority())
+	return true;
+}
 
-	bIsInAdsMode = bAdsPressed;
-
-	if (!bCanAction) return;
-
-
-	// Reload!
-	if (bReloadQueued && CanReload())
+void AWeapon::Holster()
+{
+	if (!HasAuthority())
 	{
-		AuthReloadStart();
-		return;
+		ServerRPC_Holster();
+		return; // TODO Remove return to enable client preditiction (currently broken)
 	}
+	ReceiverComp->HolsterWeapon();
+}
+void AWeapon::ServerRPC_Holster_Implementation()
+{
+	Holster();
+}
+bool AWeapon::ServerRPC_Holster_Validate()
+{
+	return true;
+}
 
-
-	// Fire!
-
-	// Behaviour: Holding the trigger on an auto gun will auto reload then auto resume firing. Whereas a semiauto requires a new trigger pull to reload and then a new trigger pull to fire again.
-	const auto bWeaponCanCycle = bFullAuto || !bHasActionedThisTriggerPull;
-	if (bTriggerPulled && bWeaponCanCycle)
+void AWeapon::Input_PullTrigger()
+{
+	if (!HasAuthority())
 	{
-		if (NeedsReload() && CanReload())
-		{
-			AuthReloadStart();
-		}
-		else if (AmmoInClip > 0)
-		{
-			AuthFireStart();
-		}
+		ServerRPC_PullTrigger();
+		return; // TODO Remove return to enable client preditiction (currently broken)
 	}
+	ReceiverComp->PullTrigger();
 }
-
-void AWeapon::AuthFireStart()
-{
-	//LogMsgWithRole("ClientFireStart()");
-	check(HasAuthority())
-
-	bHasActionedThisTriggerPull = true;
-	bCanAction = false;
-	if (bUseClip) --AmmoInClip;
-
-	SpawnProjectiles();
-
-	// Notify listeners Fire occured
-	MultiRPC_NotifyOnShotFired();
-
-	GetWorld()->GetTimerManager().SetTimer(
-		CanActionTimerHandle, this, &AWeapon::AuthFireEnd, 1.f / ShotsPerSecond, false, -1);
-}
-void AWeapon::AuthFireEnd()
-{
-	//LogMsgWithRole("ClientFireEnd()");
-	check(HasAuthority())
-
-	bCanAction = true;
-
-	if (CanActionTimerHandle.IsValid())
-	{
-		GetWorld()->GetTimerManager().ClearTimer(CanActionTimerHandle);
-	}
-}
-
-void AWeapon::AuthReloadStart()
-{
-	//LogMsgWithRole("ClientReloadStart()");
-	check(HasAuthority())
-
-	if (!bUseClip) return;
-
-	ReloadState = ReloadStates::Starting;
-	bCanAction = false;
-	bHasActionedThisTriggerPull = true;
-
-	GetWorld()->GetTimerManager().SetTimer(
-		CanActionTimerHandle, this, &AWeapon::AuthReloadEnd, ReloadTime, false, -1);
-}
-void AWeapon::AuthReloadEnd()
-{
-	//LogMsgWithRole("ClientReloadEnd()");
-	check(HasAuthority())
-
-	ReloadState = ReloadStates::Finishing;
-	bCanAction = true;
-	bReloadQueued = false;
-
-	// Take ammo from pool
-	const int AmmoNeeded = ClipSize - AmmoInClip;
-	const int AmmoReceived = (AmmoNeeded > AmmoInPool) ? AmmoInPool : AmmoNeeded;
-	AmmoInPool -= AmmoReceived;
-	AmmoInClip += AmmoReceived;
-	
-
-	if (CanActionTimerHandle.IsValid())
-	{
-		GetWorld()->GetTimerManager().ClearTimer(CanActionTimerHandle);
-	}
-}
-
-bool AWeapon::CanReload() const
-{
-	return bUseClip && 
-		AmmoInClip < ClipSize && 
-		AmmoInPool > 0;
-}
-
-bool AWeapon::NeedsReload() const
-{
-	return bUseClip && AmmoInClip < 1;
-}
-
-bool AWeapon::IsMatchInProgress()
-{
-	auto World = GetWorld();
-	if (World)
-	{
-		auto GM = World->GetAuthGameMode();
-		if (GM)
-		{
-			auto GS = GM->GetGameState<AGameState>();
-			if (GS && GS->IsMatchInProgress())
-			{
-				return true;
-			}
-		}
-	}
-	return false;
-}
-
 void AWeapon::ServerRPC_PullTrigger_Implementation()
 {
-	if (!IsMatchInProgress()) return;
-
-	bTriggerPulled = true;
-	bHasActionedThisTriggerPull = false;
+	Input_PullTrigger();
 }
-
 bool AWeapon::ServerRPC_PullTrigger_Validate()
 {
 	return true;
 }
 
+void AWeapon::Input_ReleaseTrigger()
+{
+	if (!HasAuthority())
+	{
+		ServerRPC_ReleaseTrigger();
+		return; // TODO Remove return to enable client preditiction (currently broken)
+	}
+	ReceiverComp->ReleaseTrigger();
+}
 void AWeapon::ServerRPC_ReleaseTrigger_Implementation()
 {
-	bTriggerPulled = false;
-	bHasActionedThisTriggerPull = false;
+	Input_ReleaseTrigger();
 }
-
 bool AWeapon::ServerRPC_ReleaseTrigger_Validate()
 {
 	return true;
 }
 
+void AWeapon::Input_Reload()
+{
+	if (!HasAuthority())
+	{
+		ServerRPC_Reload();
+		return; // TODO Remove return to enable client preditiction (currently broken)
+	}
+	ReceiverComp->Reload();
+}
 void AWeapon::ServerRPC_Reload_Implementation()
 {
-	if (bTriggerPulled || !CanReload()) return;
-	bReloadQueued = true;
+	Input_Reload();
 }
-
 bool AWeapon::ServerRPC_Reload_Validate()
 {
 	return true;
 }
 
-
+void AWeapon::Input_AdsPressed()
+{
+	if (!HasAuthority()) 
+	{
+		ServerRPC_AdsPressed();
+		return; // TODO Remove return to enable client preditiction (currently broken)
+	}
+	ReceiverComp->AdsPressed();
+}
 void AWeapon::ServerRPC_AdsPressed_Implementation()
 {
-	LogMsgWithRole("AWeapon::ServerRPC_AdsPressed_Implementation()");
-	bAdsPressed = true;
+	Input_AdsPressed();
 }
-
 bool AWeapon::ServerRPC_AdsPressed_Validate()
 {
 	return true;
 }
 
+void AWeapon::Input_AdsReleased()
+{
+	if (!HasAuthority())
+	{
+		ServerRPC_AdsReleased();
+		return; // TODO Remove return to enable client preditiction (currently broken)
+	}
+	ReceiverComp->AdsReleased();
+}
 void AWeapon::ServerRPC_AdsReleased_Implementation()
 {
-	LogMsgWithRole("AWeapon::ServerRPC_AdsReleased_Implementation()");
-	bAdsPressed = false;
+	Input_AdsReleased();
 }
-
 bool AWeapon::ServerRPC_AdsReleased_Validate()
 {
 	return true;
 }
 
+bool AWeapon::TryGiveAmmo()
+{
+	return ReceiverComp->TryGiveAmmo();
+}
+
+
+
+
 
 void AWeapon::MultiRPC_NotifyOnShotFired_Implementation()
 {
+	if (MuzzleLightComp) MuzzleLightComp->SetVisibility(true);
+
+	FTimerHandle Handle;
+	GetWorld()->GetTimerManager().SetTimer(Handle, [&]
+	{
+		if (MuzzleLightComp) MuzzleLightComp->SetVisibility(false);
+	}, 0.05, false, -1);
+
 	if (OnShotFired.IsBound()) OnShotFired.Broadcast();
 }
 
-void AWeapon::SpawnProjectiles() const
+
+void AWeapon::ClientRPC_NotifyOnAmmoWarning_Implementation()
 {
-	check(HasAuthority())
-	//LogMsgWithRole("Shoot");
-
-	if (ProjectileClass == nullptr)
-	{
-		UE_LOG(LogTemp, Error, TEXT("Set a Projectile Class in your Weapon Blueprint to shoot"));
-		return;
-	};
-
-	auto ShotPattern = CalcShotPattern();
-	for (auto Direction : ShotPattern)
-	{
-		if (!SpawnAProjectile(Direction))
-		{
-			UE_LOG(LogTemp, Error, TEXT("Failed to spawn projectile in Shoot()"));
-			return;
-		}
-	}
+	LogMsgWithRole("AWeapon::ClientRPC_NotifyOnAmmoWarning_Implementation()");
+	if (OnAmmoWarning.IsBound()) OnAmmoWarning.Broadcast();
 }
 
-TArray<FVector> AWeapon::CalcShotPattern() const
+
+/* IReceiverComponentDelegate */
+void AWeapon::ShotFired()
 {
-	TArray<FVector> Shots;
+	MultiRPC_NotifyOnShotFired();
+}
+void AWeapon::AmmoInClipChanged(int AmmoInClip)
+{
+	LogMsgWithRole(FString::Printf(TEXT("AWeapon::AmmoInClipChanged(%d)"), AmmoInClip));
 
-	const float BarrelAngle = MuzzleLocationComp->GetForwardVector().HeadingAngle();
-	const float SpreadInRadians = FMath::DegreesToRadians(bIsInAdsMode ? AdsSpread :
-HipfireSpread);
-
-	if (bEvenSpread && ProjectilesPerShot > 1)
+	if (AmmoInClip == 0)
 	{
-		// Shoot projectiles in an even fan with optional shot clumping.
-		for (int i = 0; i < ProjectilesPerShot; ++i)
-		{
-			// TODO factor spread clumping into the base angle and offset per projectile
-			// Currently the projectile will spawn out of range of the max spread.
+		ClientRPC_NotifyOnAmmoWarning();
+	}
+}
+void AWeapon::AmmoInPoolChanged(int AmmoInPool)
+{
+	LogMsgWithRole(FString::Printf(TEXT("AWeapon::AmmoInPoolChanged(%d)"), AmmoInPool));
+	if (AmmoInPool == 0)
+	{
+		ClientRPC_NotifyOnAmmoWarning();
+	}
+}
+void AWeapon::InReloadingChanged(bool IsReloading)
+{
+	//FString Str{ IsReloading ? "True" : "False" };
+	LogMsgWithRole(FString::Printf(TEXT("AWeapon::InReloadingChanged(%s)"), *FString{ IsReloading ? "True" : "False" }));
 
-			const float BaseAngle = BarrelAngle - (SpreadInRadians / 2);
-			const float OffsetPerProjectile = SpreadInRadians / (ProjectilesPerShot - 1);
-			float OffsetHeadingAngle = BaseAngle + i * OffsetPerProjectile;
-			
-			// Optionally clump shots together within the fan for natural variance
-			if (bSpreadClumping)
-			{
-				OffsetHeadingAngle += FMath::RandRange(-OffsetPerProjectile / 2, OffsetPerProjectile / 2);
-			}
-		
-			const FVector ShootDirectionWithSpread = FVector{
-				FMath::Cos(OffsetHeadingAngle),
-				FMath::Sin(OffsetHeadingAngle), 0 };
+	// Use for client side effects only 
+	if (HasAuthority()) return;
 
-			Shots.Add(ShootDirectionWithSpread);
-		}
+	if (IsReloading)
+	{
+		OnReloadStarted.Broadcast();
 	}
 	else
 	{
-		for (int i = 0; i < ProjectilesPerShot; ++i)
-		{
-			const float OffsetAngle = FMath::RandRange(-SpreadInRadians / 2, SpreadInRadians / 2);
-			const float OffsetHeadingAngle = BarrelAngle + OffsetAngle;
-			
-			const FVector ShootDirectionWithSpread = FVector{ 
-				FMath::Cos(OffsetHeadingAngle), 
-				FMath::Sin(OffsetHeadingAngle), 0 };
-
-			Shots.Add(ShootDirectionWithSpread);
-		}
+		OnReloadEnded.Broadcast();
+	}
+}
+void AWeapon::OnReloadProgressChanged(float ReloadProgress)
+{
+	LogMsgWithRole(FString::Printf(TEXT("AWeapon::OnReloadProgressChanged(%f)"), ReloadProgress));
+}
+bool AWeapon::SpawnAProjectile(const FVector& Direction)
+{
+	if (ProjectileClass == nullptr)
+	{
+		UE_LOG(LogTemp, Error, TEXT("Set a Projectile Class in your Weapon Blueprint to shoot"));
+		return false;
 	}
 	
-
-	return Shots;
-}
-
-bool AWeapon::SpawnAProjectile(const FVector& Direction) const
-{
 	UWorld* World = GetWorld();
 	if (World == nullptr) { return false; }
+
+
+
+	//const auto ProjectileStartTform = MuzzleLocationComp->GetComponentTransform();
+
+	auto Hero = Cast<AHeroCharacter>(GetOwningPawn());
+	if (!Hero) return false;
+	const auto ProjectileStartTform = Hero->GetAimTransform();
+
+
+
 
 	// Spawn the projectile at the muzzle.
 	AProjectile* Projectile = World->SpawnActorDeferred<AProjectile>(
 		ProjectileClass,
-		MuzzleLocationComp->GetComponentTransform(),
+		ProjectileStartTform,
 		GetOwner(),
 		Instigator,
 		ESpawnActorCollisionHandlingMethod::AlwaysSpawn);
@@ -383,55 +300,58 @@ bool AWeapon::SpawnAProjectile(const FVector& Direction) const
 	// Fire it!
 	UGameplayStatics::FinishSpawningActor(
 		Projectile,
-		MuzzleLocationComp->GetComponentTransform());
-	
+		ProjectileStartTform);
+
 	Projectile->FireInDirection(Direction);
-	
+
 	return true;
 }
-
-
-
-/// INPUT
-
-void AWeapon::Input_PullTrigger()
+FVector AWeapon::GetBarrelDirection()
 {
-	ServerRPC_PullTrigger();
+	//AActor* OwningPawn = GetOwningPawn();
+
+	auto Hero = Cast<AHeroCharacter>(GetOwningPawn());
+	if (Hero)
+		return Hero->GetAimTransform().GetRotation().Vector();
+
+	//return FVector::ZeroVector;
+	// We are using the actor facing direction so that animation doesn't affect the weapon's firing mechanics
+//	return OwningPawn ? OwningPawn->GetActorForwardVector() : FVector::ZeroVector;
+
+	// Plan B
+	return MuzzleLocationComp->GetForwardVector();
+}
+FVector AWeapon::GetBarrelLocation()
+{
+	/*auto Hero = Cast<AHeroCharacter>(GetOwningPawn());
+	if (Hero)
+		return Hero->GetWeaponAnchor()->GetComponentLocation();*/
+	auto Hero = Cast<AHeroCharacter>(GetOwningPawn());
+	if (Hero)
+		return Hero->GetAimTransform().GetLocation();
+
+	// Plan B
+	return MuzzleLocationComp->GetComponentLocation();
+}
+AActor* AWeapon::GetOwningPawn()
+{
+	return GetOwner();
+}
+FString AWeapon::GetWeaponName()
+{
+	return WeaponName;
 }
 
-void AWeapon::Input_ReleaseTrigger()
+void AWeapon::CancelAnyReload()
 {
-	ServerRPC_ReleaseTrigger();
+	ReceiverComp->CancelAnyReload();
 }
 
-void AWeapon::Input_Reload()
+float AWeapon::GetDrawDuration()
 {
-	ServerRPC_Reload();
+	return DrawDuration;
 }
-
-void AWeapon::Input_AdsPressed()
-{
-	ServerRPC_AdsPressed();
-}
-
-void AWeapon::Input_AdsReleased()
-{
-	ServerRPC_AdsReleased();
-}
-
-bool AWeapon::TryGiveAmmo()
-{
-	//LogMsgWithRole("AWeapon::TryGiveAmmo()");
-
-	if (AmmoInPool == AmmoPoolSize) return false;
-
-	AmmoInPool = FMath::Min(AmmoInPool + AmmoGivenPerPickup, AmmoPoolSize);
-	
-	return true;
-}
-
-
-/// RPC
+/* End IReceiverComponentDelegate */
 
 void AWeapon::LogMsgWithRole(FString message)
 {
@@ -456,23 +376,6 @@ FString GetEnumText(ENetRole role)
 }
 FString AWeapon::GetRoleText()
 {
-	//auto Local = GetOwner()->Role;
-	//auto Remote = GetOwner()->GetRemoteRole();
-
-
-	//if (Remote == ROLE_SimulatedProxy) //&& Local == ROLE_Authority
-	//	return "ListenServer";
-
-	//if (Local == ROLE_Authority)
-	//	return "Server";
-
-	//if (Local == ROLE_AutonomousProxy) // && Remote == ROLE_Authority
-	//	return "OwningClient";
-
-	//if (Local == ROLE_SimulatedProxy) // && Remote == ROLE_Authority
-	//	return "SimClient";
-
-	return GetEnumText(Role) + " " + GetEnumText(GetRemoteRole()) + " Ded:" + (IsRunningDedicatedServer() ? "True" : "False");
-
+	return GetEnumText(Role) + " " + GetEnumText(GetRemoteRole());
 }
 

@@ -14,12 +14,18 @@ class AWeapon;
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FPlayerTintChanged);
 
+UENUM(BlueprintType)
+enum class EWeaponSlots : uint8
+{
+	Undefined = 0,
+	Primary = 1,
+	Secondary = 2,
+};
 
 UCLASS()
 class MEATREALM_API AHeroCharacter : public ACharacter, public IAffectableInterface
 {
 	GENERATED_BODY()
-
 
 
 public:
@@ -43,23 +49,11 @@ public:
 		bool bUseExperimentalMouseTracking = false;
 
 	UPROPERTY(EditAnywhere)
-	float AdsLineLength = 1500; // cm
-	
-	UPROPERTY(EditAnywhere)
-	FColor AdsLineColor = FColor{ 0,0,255 };
-	
-	UPROPERTY(EditAnywhere)
-	float EnemyAdsLineLength = 200; // cm
-
-	UPROPERTY(EditAnywhere)
-	FColor EnemyAdsLineColor = FColor{255,0,0};
-
-	UPROPERTY(EditAnywhere)
 	float InteractableSearchDistance = 150.f; //cm
 
 	// Projectile class to spawn.
 	UPROPERTY(EditDefaultsOnly, Category = Weapon)
-		TArray<TSubclassOf<class AWeapon>> WeaponClasses;
+		TArray<TSubclassOf<class AWeapon>> DefaultWeaponClass;
 
 	UPROPERTY(BlueprintReadWrite, EditAnywhere)
 		float MaxHealth = 100.f;
@@ -73,14 +67,69 @@ public:
 	UPROPERTY(BlueprintReadOnly, Replicated)
 		float Armour = 0.f;
 
+	//UPROPERTY(EditAnywhere)
+	//	float AdsSpeed = 275;
 	UPROPERTY(EditAnywhere)
-		float AdsSpeed = 200;
+		float RunningSpeed = 525;
 
 	UPROPERTY(EditAnywhere)
-		float WalkSpeed = 400;
+		float RunningReloadSpeed = 425;
+
+	UPROPERTY(EditAnywhere)
+		float WalkSpeed = 375;
 
 	UPROPERTY(BlueprintAssignable, Category = "Event Dispatchers")
 		FPlayerTintChanged OnPlayerTintChanged;
+
+	// 
+	UPROPERTY(EditAnywhere)
+		int SprintMaxAngle = 70;
+
+	// An angle between 0 and 180 degrees. 
+	UPROPERTY(EditAnywhere)
+	int BackpedalThresholdAngle = 135;
+
+	UPROPERTY(EditAnywhere)
+	float BackpedalSpeedMultiplier = 0.6;
+
+	/*UPROPERTY(EditAnywhere)
+		bool RunTowardLook = true;*/
+
+	//UPROPERTY(EditAnywhere)
+	//	float RunMaxInputAngle = 45;
+
+	// Degrees per second
+	UPROPERTY(EditAnywhere)
+		float RunTurnRateBase = 45;
+
+	UPROPERTY(EditAnywhere)
+		float RunTurnRateMax = 270;
+
+	// Seconds until an action works after running 
+	UPROPERTY(EditAnywhere)
+		float RunCooldown = 0.5;
+
+	UPROPERTY(EditAnywhere)
+	bool bCancelReloadOnRun = true;
+
+	// Not replicated cuz diff local vs server time;
+	FDateTime LastRunEnded;
+
+	FTimerHandle RunEndTimerHandle;
+
+	UPROPERTY(EditAnywhere)
+	float Deadzone = 0.3;
+
+
+	UPROPERTY(EditAnywhere, Category = Debug)
+		bool bDrawMovementInput;
+
+	UPROPERTY(EditAnywhere, Category = Debug)
+		bool bDrawMovementVector;
+
+	UPROPERTY(EditAnywhere, Category = Debug)
+		bool bDrawMovementSpeed;
+
 
 protected:
 	UPROPERTY(BlueprintReadOnly, ReplicatedUsing = OnRep_TintChanged)
@@ -92,8 +141,11 @@ protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
 		UArrowComponent* WeaponAnchor = nullptr;
 
-	UPROPERTY(BlueprintReadOnly, Replicated)
-		AWeapon* CurrentWeapon = nullptr;
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
+		UArrowComponent* HolsteredweaponAnchor = nullptr;
+
+	UPROPERTY(Replicated, BlueprintReadOnly)
+		EWeaponSlots CurrentWeaponSlot = EWeaponSlots::Undefined;
 
 private:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Camera, meta = (AllowPrivateAccess = "true"))
@@ -105,9 +157,8 @@ private:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Camera, meta = (AllowPrivateAccess = "true"))
 		class UCameraComponent* FollowCamera;
 
-	// This is nasty - probably need to work with the official movement states
-	UPROPERTY(Replicated) // Replicated so we can see enemy aim lines
-	bool bIsAdsing = false;
+	//UPROPERTY(Replicated) // Replicated so we can see enemy aim lines
+	//bool bIsAdsing = false;
 
 	bool bUseMouseAim = true;
 	float AxisMoveUp;
@@ -118,17 +169,40 @@ private:
 	FVector2D AimPos_ScreenSpace = FVector2D::ZeroVector;
 	FVector AimPos_WorldSpace = FVector::ZeroVector;
 
+	FTimerHandle DrawWeaponTimerHandle;
 
+	bool bIsEquipping;
+
+	bool bWantsToFire;
+
+
+	UPROPERTY(Transient, Replicated)
+	bool bIsRunning = false;
+
+	UPROPERTY(Transient, Replicated)
+	bool bIsTargeting = false;
+	
+	const char* HandSocketName = "HandSocket";
+	const char* Holster1SocketName = "Holster1Socket";
+	const char* Holster2SocketName = "Holster2Socket";
+
+
+	UPROPERTY(Replicated)
+		EWeaponSlots LastWeaponSlot = EWeaponSlots::Undefined;
+
+	
+	UPROPERTY(Replicated)
+		AWeapon* Slot1 = nullptr;
+	UPROPERTY(Replicated)
+		AWeapon* Slot2 = nullptr;
 
 
 
 public:
-	AHeroCharacter();
+	AHeroCharacter(const FObjectInitializer& ObjectInitializer);
 	void Restart() override;
 	void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
-
-	void AuthSpawnWeapon(TSubclassOf<AWeapon> weaponClass);
-
+	
 	void SetTint(FColor bCond)
 	{
 		TeamTint = bCond;
@@ -153,33 +227,93 @@ public:
 	bool AuthTryGiveArmour(float Delta) override;
 	UFUNCTION()
 	bool AuthTryGiveWeapon(const TSubclassOf<AWeapon>& Class) override;
+	UFUNCTION()
+	bool CanGiveWeapon(const TSubclassOf<AWeapon>& Class, float& OutDelay) override;
 	/* End IAffectableInterface */
 
 
+	FTransform GetAimTransform() const;
 
 	AHeroState* GetHeroState() const;
 	AHeroController* GetHeroController() const;
+	float GetTargetingSpeedModifier() const;
+	bool IsReloading() const
+	{
+		auto W = GetCurrentWeapon();
+		if (W && W->IsReloading()) return true;
 
+		return false;
+	}
+
+
+	static bool IsBackpedaling(const FVector& MoveDir, const FVector& AimDir, int BackpedalAngle);
 
 
 	/// Input
+		/** setup pawn specific input handlers */
+	virtual void SetupPlayerInputComponent(class UInputComponent* InputComponent) override;
 
-	void Input_FirePressed() const;
-	void Input_FireReleased() const;
+	void StartWeaponFire() const;
+	void StopWeaponFire() const;
+	void StartWeaponFire();
+	void StopWeaponFire();
+	bool IsFiring() const;
+
+	void Input_FirePressed();
+	void Input_FireReleased();
 	void Input_AdsPressed();
 	void Input_AdsReleased();
 	void Input_Reload() const;
+
+	UFUNCTION(BlueprintCallable)
+	AWeapon* GetWeapon(EWeaponSlots Slot) const;
+
 	void Input_MoveUp(float Value) {	AxisMoveUp = Value; }
 	void Input_MoveRight(float Value) { AxisMoveRight = Value; }
 	void Input_FaceUp(float Value) { AxisFaceUp = Value; }
 	void Input_FaceRight(float Value) { AxisFaceRight = Value; }
 	void Input_Interact();
+	void Input_PrimaryWeapon();
+	void Input_SecondaryWeapon();
+	void Input_ToggleWeapon();
 
 	void SetUseMouseAim(bool bUseMouseAimIn) { bUseMouseAim = bUseMouseAimIn; }
 
+	UFUNCTION(BlueprintCallable)
+		AWeapon* GetCurrentWeapon() const;
+	
+	//AWeapon* GetHolsteredWeapon() const;
+
+	bool IsRunning() const;
+	bool IsTargeting() const;
+	float GetRunningSpeed() const { return RunningSpeed; }
+	
+	float GetRunningReloadSpeed() const { return RunningReloadSpeed; }
+
 private:
 
+	void ScanForWeaponPickups(float DeltaSeconds);
 	virtual void Tick(float DeltaSeconds) override;
+	void TickWalking(float DT);
+	void TickRunning(float DT);
+
+	void OnRunToggle();
+	void OnStartRunning();
+	void OnStopRunning();
+	void SetRunning(bool bNewIsRunning);
+
+
+	void SetTargeting(bool bNewTargeting);
+
+
+
+	void GiveWeaponToPlayer(TSubclassOf<class AWeapon> WeaponClass);
+	AWeapon* AuthSpawnWeapon(TSubclassOf<AWeapon> weaponClass);
+	EWeaponSlots FindGoodSlot() const;
+	AWeapon* AssignWeaponToInventorySlot(AWeapon* Weapon, EWeaponSlots Slot);
+	void EquipWeapon(EWeaponSlots Slot);
+	void MakeCurrentWeaponVisible() const;
+	void RefreshWeaponAttachments() const;
 
 	static FVector2D GetGameViewportSize();
 	static FVector2D CalcLinearLeanVectorUnclipped(const FVector2D& CursorLoc, const FVector2D& ViewportSize);
@@ -188,22 +322,38 @@ private:
 	FVector2D TrackCameraWithAimGamepad() const;
 	void ExperimentalMouseAimTracking(float DT);
 
+	//void SimulateAdsMode(bool IsAdsing);
+	//void DrawAdsLine(const FColor& Color, float LineLength) const;
 
-	void SimulateAdsMode(bool IsAdsing);
-	void DrawAdsLine(const FColor& Color, float LineLength) const;
 
+
+	UFUNCTION(Server, Reliable, WithValidation)
+		void ServerSetTargeting(bool bNewTargeting);
+
+	UFUNCTION(Server, Reliable, WithValidation)
+		void ServerSetRunning(bool bNewWantsToRun);
 
 	UFUNCTION()
 		void OnRep_TintChanged() const;
 
-	UFUNCTION(Server, Reliable, WithValidation)
-		void ServerRPC_AdsPressed();
+	//UFUNCTION(Server, Reliable, WithValidation)
+	//	void ServerRPC_AdsPressed();
 
-	UFUNCTION(Server, Reliable, WithValidation)
-		void ServerRPC_AdsReleased();
+	//UFUNCTION(Server, Reliable, WithValidation)
+	//	void ServerRPC_AdsReleased();
 
 	UFUNCTION(Server, Reliable, WithValidation)
 		void ServerRPC_TryInteract();
+
+	UFUNCTION(Server, Reliable, WithValidation)
+		void ServerRPC_EquipPrimaryWeapon();
+	
+	UFUNCTION(Server, Reliable, WithValidation)
+		void ServerRPC_EquipSecondaryWeapon();
+
+	UFUNCTION(Server, Reliable, WithValidation)
+		void ServerRPC_ToggleWeapon();
+
 
 	template<class T>
 	T* ScanForInteractable();

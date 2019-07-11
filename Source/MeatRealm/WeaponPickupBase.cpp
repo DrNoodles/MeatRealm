@@ -3,6 +3,16 @@
 
 #include "WeaponPickupBase.h"
 
+bool AWeaponPickupBase::CanInteract(IAffectableInterface* const Affectable, float& OutDelay)
+{
+	bool bCanInteract = Super::CanInteract(Affectable, OutDelay);
+	if (bCanInteract)
+	{
+		bCanInteract = Affectable->CanGiveWeapon(WeaponClass, OUT OutDelay);
+	}
+	return bCanInteract;
+}
+
 bool AWeaponPickupBase::TryApplyAffect(IAffectableInterface* const Affectable)
 {
 	if (WeaponClass == nullptr)
