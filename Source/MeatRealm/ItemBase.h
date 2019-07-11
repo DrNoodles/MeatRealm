@@ -4,28 +4,42 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/Actor.h"
+#include "TimerManager.h"
+
 #include "ItemBase.generated.h"
 
 class IAffectableInterface;
 
-UCLASS(Abstract)
+//DECLARE_DYNAMIC_MULTICAST_DELEGATE(FUsageStarted);
+//DECLARE_DYNAMIC_MULTICAST_DELEGATE(FUsageCancelled);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE(FUsageSuccess);
+
+UCLASS()
 class MEATREALM_API AItemBase : public AActor
 {
 	GENERATED_BODY()
 
 public:
+	UPROPERTY(EditAnywhere)
 	float UsageDuration = 2;
 
-public:	
+	UPROPERTY(BlueprintAssignable, Category = "Event Dispatchers")
+		FUsageSuccess OnUsageSuccess;
+	
+private:
+	FTimerHandle UsageTimerHandle;
+
+public:
 	AItemBase();
 
-	void StartUse(IAffectableInterface* const Affectable);
-	void StopUse();
+	void UseStart(IAffectableInterface* const Affectable);
+	void UseStop();
 	void Equip();
 	void Unequip();
 
 protected:
 	//virtual void ApplyItem(IAffectableInterface* const Affectable) PURE_VIRTUAL(AItemBase::ApplyItem, );
+
 	virtual void ApplyItem(IAffectableInterface* const Affectable)
 	{
 		unimplemented();

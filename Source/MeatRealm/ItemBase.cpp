@@ -3,33 +3,43 @@
 
 #include "ItemBase.h"
 #include "Engine/World.h"
-#include "TimerManager.h"
 
 AItemBase::AItemBase()
 {
 	PrimaryActorTick.bCanEverTick = false;
 }
 
-void AItemBase::StartUse(IAffectableInterface* const Affectable)
+void AItemBase::UseStart(IAffectableInterface* const Affectable)
 {
-	StopUse();
+	UE_LOG(LogTemp, Warning, TEXT("AItemBase::UseStart"));
+	UseStop();
 
-	//auto TM = GetWorld()->GetTimerManager();
-	//TM.SetTimer()
+	auto UseComplete = [&]
+	{
+		UE_LOG(LogTemp, Warning, TEXT("AItemBase::UseComplete"));
+		ApplyItem(Affectable);
+		OnUsageSuccess.Broadcast();
+	};
+
+	GetWorldTimerManager().SetTimer(UsageTimerHandle, UseComplete, UsageDuration, false);
 }
 
-void AItemBase::StopUse()
+void AItemBase::UseStop()
 {
+	UE_LOG(LogTemp, Warning, TEXT("AItemBase::UseStop"));
+	GetWorldTimerManager().ClearTimer(UsageTimerHandle);
 }
 
 void AItemBase::Equip()
 {
-	StopUse();
+	UE_LOG(LogTemp, Warning, TEXT("AItemBase::Equip"));
+	UseStop();
 }
 
 void AItemBase::Unequip()
 {
-	StopUse();
+	UE_LOG(LogTemp, Warning, TEXT("AItemBase::Unequip"));
+	UseStop();
 }
 //
 //void AItemBase::BeginPlay()
