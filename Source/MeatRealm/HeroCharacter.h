@@ -276,6 +276,11 @@ public:
 
 	void SetUseMouseAim(bool bUseMouseAimIn) { bUseMouseAim = bUseMouseAimIn; }
 
+
+
+	UFUNCTION(BlueprintCallable)
+		int GetHealthItemCount() const;
+
 	UFUNCTION(BlueprintCallable)
 	AWeapon* GetCurrentWeapon() const;
 

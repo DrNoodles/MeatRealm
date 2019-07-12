@@ -778,6 +778,11 @@ IEquippable* AHeroCharacter::GetEquippable(EInventorySlots Slot) const
 	return nullptr;
 }
 
+int AHeroCharacter::GetHealthItemCount() const
+{
+	return HealthSlot == nullptr ? 0 : 1;
+}
+
 AWeapon* AHeroCharacter::GetCurrentWeapon() const
 {
 	return GetWeapon(CurrentInventorySlot);
