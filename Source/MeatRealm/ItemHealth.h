@@ -4,6 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "ItemBase.h"
+
 #include "ItemHealth.generated.h"
 
 /**

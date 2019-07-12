@@ -4,21 +4,37 @@
 #include "ItemBase.h"
 #include "Engine/World.h"
 #include "Interfaces/AffectableInterface.h"
+#include "Components/StaticMeshComponent.h"
 
 AItemBase::AItemBase()
 {
 	bAlwaysRelevant = true;
 	PrimaryActorTick.bCanEverTick = false;
 	SetReplicates(true);
+
+	RootComp = CreateDefaultSubobject<USceneComponent>(TEXT("Root"));
+	RootComponent = RootComp;
+
+	SkeletalMeshComp = CreateDefaultSubobject<USkeletalMeshComponent>(TEXT("SkeletalMesh"));
+	SkeletalMeshComp->SetupAttachment(RootComponent);
+	SkeletalMeshComp->SetGenerateOverlapEvents(false);
+	SkeletalMeshComp->SetCollisionProfileName(TEXT("NoCollision"));
+	SkeletalMeshComp->CanCharacterStepUpOn = ECB_No;
 }
 
-void AItemBase::BeginDestroy()
+void AItemBase::EnterInventory()
 {
+	check(HasAuthority())
+
+}
+void AItemBase::ExitInventory()
+{
+	check(HasAuthority())
 	Recipient = nullptr;
 }
 
 
-void AItemBase::UseStart(/*IAffectableInterface* Affectable*/)
+void AItemBase::UseStart()
 {
 	if (Role < ROLE_Authority)
 	{
@@ -28,8 +44,7 @@ void AItemBase::UseStart(/*IAffectableInterface* Affectable*/)
 	UE_LOG(LogTemp, Warning, TEXT("AItemBase::UseStart"));
 	UseStop();
 
-	//auto LocalAffectable = Affectable;
-	auto UseComplete = [this]
+	auto UseComplete = [&]
 	{
 		UE_LOG(LogTemp, Warning, TEXT("AItemBase::UseComplete"));
 		ApplyItem(Recipient);
@@ -38,19 +53,19 @@ void AItemBase::UseStart(/*IAffectableInterface* Affectable*/)
 
 	GetWorldTimerManager().SetTimer(UsageTimerHandle, UseComplete, UsageDuration, false);
 }
-void AItemBase::ServerUseStart_Implementation(/*IAffectableInterface* Affectable*/)
-{
-	UseStart();
-}
-bool AItemBase::ServerUseStart_Validate(/*IAffectableInterface* Affectable*/)
-{
-	return true;
-}
 
 void AItemBase::UseStop()
 {
+	// TODO Server client support
+
 	UE_LOG(LogTemp, Warning, TEXT("AItemBase::UseStop"));
 	GetWorldTimerManager().ClearTimer(UsageTimerHandle);
+}
+
+void AItemBase::SetRecipient(IAffectableInterface* const TheRecipient)
+{
+	check(HasAuthority())
+	Recipient = TheRecipient;
 }
 
 void AItemBase::Equip()
@@ -65,21 +80,16 @@ void AItemBase::Unequip()
 	UseStop();
 }
 
-void AItemBase::SetRecipient(IAffectableInterface* NewAffectable)
+
+
+
+// Replication 
+
+void AItemBase::ServerUseStart_Implementation()
 {
-	check(HasAuthority());
-
-	Recipient = NewAffectable;
+	UseStart();
 }
-
-//
-//void AItemBase::BeginPlay()
-//{
-//	Super::BeginPlay();
-//}
-
-//void AItemBase::Tick(float DeltaTime)
-//{
-//	Super::Tick(DeltaTime);
-//}
-
+bool AItemBase::ServerUseStart_Validate()
+{
+	return true;
+}

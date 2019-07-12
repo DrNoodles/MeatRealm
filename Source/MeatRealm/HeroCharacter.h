@@ -247,13 +247,8 @@ public:
 	AHeroState* GetHeroState() const;
 	AHeroController* GetHeroController() const;
 	float GetTargetingSpeedModifier() const;
-	bool IsReloading() const
-	{
-		auto W = GetCurrentWeapon();
-		if (W && W->IsReloading()) return true;
-
-		return false;
-	}
+	bool IsReloading() const;
+	
 
 
 	static bool IsBackpedaling(const FVector& MoveDir, const FVector& AimDir, int BackpedalAngle);
@@ -302,11 +297,7 @@ public:
 	UFUNCTION(BlueprintCallable)
 	AItemBase* GetCurrentItem() const;
 
-	//UFUNCTION(BlueprintCallable)
 	IEquippable* GetCurrentEquippable() const;
-
-
-	//AWeapon* GetHolsteredWeapon() const;
 
 	bool IsRunning() const;
 	bool IsTargeting() const;

@@ -6,20 +6,18 @@
 #include "GameFramework/Actor.h"
 #include "TimerManager.h"
 #include "Interfaces/Equippable.h"
-//#include "Interfaces/AffectableInterface.h"
 
 #include "ItemBase.generated.h"
 
 class IAffectableInterface;
 
-//DECLARE_DYNAMIC_MULTICAST_DELEGATE(FUsageStarted);
-//DECLARE_DYNAMIC_MULTICAST_DELEGATE(FUsageCancelled);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FUsageSuccess);
 
 UCLASS()
 class MEATREALM_API AItemBase : public AActor, public IEquippable
 {
 	GENERATED_BODY()
+
 
 public:
 	UPROPERTY(EditAnywhere)
@@ -33,34 +31,38 @@ public:
 	
 private:
 	FTimerHandle UsageTimerHandle;
+	IAffectableInterface* Recipient = nullptr;
+
+	UPROPERTY(VisibleAnywhere)
+		USceneComponent* RootComp = nullptr;
+
+	UPROPERTY(VisibleAnywhere)
+		USkeletalMeshComponent* SkeletalMeshComp = nullptr;
+
 
 public:
 	AItemBase();
-	void BeginDestroy() override;
 
-	void UseStart(/*IAffectableInterface* const Affectable*/);
+	void UseStart();
 	void UseStop();
+	void SetRecipient(IAffectableInterface* const TheRecipient);
 
 	/* IEquippable */
 	void Equip() override;
 	void Unequip() override;
 	float GetEquipDuration() override { return EquipDuration; }
 	void SetHidden(bool bIsHidden) override { SetActorHiddenInGame(bIsHidden); }
+	void EnterInventory() override;
+	void ExitInventory() override;
 	virtual EInventoryCategory GetInventoryCategory() override
 	{
 		unimplemented();
 		return EInventoryCategory::Undefined;
 	}
-
-	IAffectableInterface* Recipient = nullptr;
-	void SetRecipient(IAffectableInterface* NewAffectable);
-
 	/* End IEquippable */
-
 
 protected:
 	//virtual void ApplyItem(IAffectableInterface* const Affectable) PURE_VIRTUAL(AItemBase::ApplyItem, );
-
 	virtual void ApplyItem(IAffectableInterface* Affectable)
 	{
 		unimplemented();
@@ -69,8 +71,8 @@ protected:
 
 private:
 	UFUNCTION(Server, Reliable, WithValidation)
-		void ServerUseStart(/*IAffectableInterface* Affectable*/);
+		void ServerUseStart();
 
-	//virtual void BeginPlay() override;
-	//virtual void Tick(float DeltaTime) override;
+	//UFUNCTION(Server, Reliable, WithValidation)
+	//	void ServerUseStop();
 };

@@ -4,7 +4,10 @@
 
 #include "CoreMinimal.h"
 #include "UObject/Interface.h"
+
+
 #include "Equippable.generated.h"
+
 
 // This class does not need to be modified.
 UINTERFACE(MinimalAPI)
@@ -20,9 +23,7 @@ enum class EInventoryCategory : uint8
 	Undefined = 0, Weapon, Health, Armour, Throwable
 };
 
-/**
- * 
- */
+
 class MEATREALM_API IEquippable
 {
 	GENERATED_BODY()
@@ -38,4 +39,8 @@ public:
 		virtual void SetHidden(bool bIsHidden) = 0;
 	UFUNCTION()
 		virtual EInventoryCategory GetInventoryCategory() = 0;
+	UFUNCTION()
+		virtual void EnterInventory() = 0;
+	UFUNCTION()
+		virtual void ExitInventory() = 0;
 };

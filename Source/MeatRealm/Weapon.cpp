@@ -13,7 +13,7 @@
 #include "TimerManager.h"
 #include "Projectile.h"
 #include "HeroCharacter.h"
-
+#include "Interfaces/AffectableInterface.h"
 
 //void AWeapon::GetLifetimeReplicatedProps(TArray< FLifetimeProperty >& OutLifetimeProps) const
 //{
@@ -89,6 +89,14 @@ void AWeapon::Unequip()
 	}
 	ReceiverComp->HolsterWeapon();
 }
+
+void AWeapon::EnterInventory()
+{
+}
+void AWeapon::ExitInventory()
+{
+}
+
 void AWeapon::ServerRPC_Unequip_Implementation()
 {
 	Unequip();

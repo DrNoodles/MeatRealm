@@ -9,6 +9,8 @@
 
 #include "Weapon.generated.h"
 
+class UWeaponReceiverComponent;
+class IAffectableInterface;
 class UArrowComponent;
 class USceneComponent;
 class USkeletalMeshComponent;
@@ -95,6 +97,8 @@ public:
 	void Unequip() override;
 	float GetEquipDuration() override { return DrawDuration; }
 	void SetHidden(bool bIsHidden) override { SetActorHiddenInGame(bIsHidden); }
+	void EnterInventory() override;
+	void ExitInventory() override;
 	EInventoryCategory GetInventoryCategory() override { return EInventoryCategory::Weapon; }
 	/* End IEquippable */
 
