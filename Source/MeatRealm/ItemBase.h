@@ -20,11 +20,14 @@ class MEATREALM_API AItemBase : public AActor, public IEquippable
 
 
 public:
+	UPROPERTY(BlueprintReadOnly, Replicated)
+		float UsageProgress = 0;
+
+	UPROPERTY(BlueprintReadOnly, Replicated)
+		bool bIsInUse;
+
 	UPROPERTY(EditAnywhere)
 		float UsageDuration = 2;
-
-	UPROPERTY(BlueprintReadOnly)
-		float UsageProgress = 0;
 
 	UPROPERTY(EditAnywhere)
 		float EquipDuration = 0.5;
@@ -32,9 +35,9 @@ public:
 	UPROPERTY(BlueprintAssignable, Category = "Event Dispatchers")
 		FUsageSuccess OnUsageSuccess;
 
+
 private:
 	FDateTime UsageStartTime;
-	bool bIsInUse;
 
 	FTimerHandle UsageTimerHandle;
 	IAffectableInterface* Recipient = nullptr;

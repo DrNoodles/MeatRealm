@@ -5,11 +5,13 @@
 #include "Engine/World.h"
 #include "Interfaces/AffectableInterface.h"
 #include "Components/StaticMeshComponent.h"
+#include "UnrealNetwork.h"
 
 AItemBase::AItemBase()
 {
 	bAlwaysRelevant = true;
 	SetReplicates(true);
+
 
 	PrimaryActorTick.bCanEverTick = true;
 	RegisterAllActorTickFunctions(true, false); // necessary for SetActorTickEnabled() to work
@@ -37,24 +39,19 @@ void AItemBase::ExitInventory()
 
 void AItemBase::BeginPlay()
 {
+	SetActorTickInterval(.1); // tick every 10th of a sec
 	SetActorTickEnabled(false);
 }
 
 void AItemBase::Tick(float DT)
 {
-
 	if (bIsInUse)
 	{
 		const auto ElapsedReloadTime = (FDateTime::Now() - UsageStartTime).GetTotalSeconds();
 		UsageProgress = ElapsedReloadTime / UsageDuration;
 
-		UE_LOG(LogTemp, Warning, TEXT("AItemBase::Tick - Progress:%f"), UsageProgress);
-
+		//UE_LOG(LogTemp, Warning, TEXT("AItemBase::Tick - Progress:%f"), UsageProgress);
 	}
-	else
-		UE_LOG(LogTemp, Warning, TEXT("AItemBase::Tick"));
-
-
 }
 
 void AItemBase::UseStart()
@@ -82,6 +79,7 @@ void AItemBase::UseStart()
 		ApplyItem(Recipient);
 		OnUsageSuccess.Broadcast();
 
+		bIsInUse = false;
 		UsageProgress = 100;
 		SetActorTickEnabled(false);
 	};
@@ -137,6 +135,12 @@ void AItemBase::Unequip()
 
 // Replication 
 
+void AItemBase::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
+{
+	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
+	DOREPLIFETIME_CONDITION(AItemBase, UsageProgress, COND_OwnerOnly);
+	DOREPLIFETIME_CONDITION(AItemBase, bIsInUse, COND_OwnerOnly);
+}
 void AItemBase::ServerUseStart_Implementation()
 {
 	UseStart();
