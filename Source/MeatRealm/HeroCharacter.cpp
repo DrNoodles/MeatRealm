@@ -1272,6 +1272,11 @@ void AHeroCharacter::AuthApplyDamage(uint32 InstigatorHeroControllerId, float Da
 	}
 }
 
+bool AHeroCharacter::CanGiveHealth()
+{
+	return Health < MaxHealth;
+}
+
 bool AHeroCharacter::AuthTryGiveHealth(float Hp)
 {
 	//LogMsgWithRole("TryGiveHealth");

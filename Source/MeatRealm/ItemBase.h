@@ -40,6 +40,7 @@ private:
 	FDateTime UsageStartTime;
 
 	FTimerHandle UsageTimerHandle;
+
 	IAffectableInterface* Recipient = nullptr;
 
 	UPROPERTY(VisibleAnywhere)
@@ -54,6 +55,7 @@ public:
 
 	void UseStart();
 	void UseStop();
+	
 	void SetRecipient(IAffectableInterface* const TheRecipient);
 
 	/* IEquippable */
@@ -72,12 +74,17 @@ public:
 	/* End IEquippable */
 
 protected:
+	virtual bool CanApplyItem(IAffectableInterface* Affectable)
+	{
+		unimplemented();
+		return false;
+	}
 	//virtual void ApplyItem(IAffectableInterface* const Affectable) PURE_VIRTUAL(AItemBase::ApplyItem, );
 	virtual void ApplyItem(IAffectableInterface* Affectable)
 	{
 		unimplemented();
 	}
-
+	
 
 private:
 	virtual void BeginPlay() override;
@@ -94,4 +101,8 @@ private:
 
 	UFUNCTION(Server, Reliable, WithValidation)
 		void ServerUnequip();
+
+	// Expects object that implements IAffectableInterface - Because Interfaces cant be replicated
+	UFUNCTION(Client, Reliable)
+		void ClientSetRecipient(UObject* Affectable);
 };

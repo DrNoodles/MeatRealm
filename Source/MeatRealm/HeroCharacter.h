@@ -213,6 +213,8 @@ public:
 	UFUNCTION()
 	void AuthApplyDamage(uint32 InstigatorHeroControllerId, float Damage, FVector Location) override;
 	UFUNCTION()
+	bool CanGiveHealth() override;
+	UFUNCTION()
 	bool AuthTryGiveHealth(float Hp) override;
 	UFUNCTION()
 	bool CanGiveAmmo() override;

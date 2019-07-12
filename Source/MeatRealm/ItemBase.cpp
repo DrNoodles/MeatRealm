@@ -67,6 +67,9 @@ void AItemBase::UseStart()
 	UE_LOG(LogTemp, Warning, TEXT("AItemBase::UseStart"));
 
 
+	
+	if (!CanApplyItem(Recipient)) return;
+
 	// Start the usage!
 	SetActorTickEnabled(true);
 	bIsInUse = true;
@@ -108,6 +111,7 @@ void AItemBase::SetRecipient(IAffectableInterface* const TheRecipient)
 {
 	check(HasAuthority())
 	Recipient = TheRecipient;
+	ClientSetRecipient(Cast<UObject>(TheRecipient));
 }
 
 void AItemBase::Equip()
@@ -136,7 +140,11 @@ void AItemBase::Unequip()
 
 
 // Replication 
-
+//void AItemBase::GetLifetimeReplicatedProps(TArray< FLifetimeProperty >& OutLifetimeProps) const
+//{
+//	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
+//	DOREPLIFETIME_CONDITION(AItemBase, Recipient, COND_OwnerOnly);
+//}
 void AItemBase::ServerUseStart_Implementation()
 {
 	UseStart();
@@ -168,4 +176,13 @@ void AItemBase::ServerUnequip_Implementation()
 bool AItemBase::ServerUnequip_Validate()
 {
 	return true;
+}
+
+void AItemBase::ClientSetRecipient_Implementation(UObject* Affectable)
+{
+	const auto AsIFace = Cast<IAffectableInterface>(Affectable);
+	if (AsIFace)
+	{
+		Recipient = AsIFace;
+	}
 }

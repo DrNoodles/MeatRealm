@@ -24,6 +24,7 @@ public:
 private:
 	// TODO Spawn a model in constructor as set by a blueprint - see weapons for example
 
+	bool CanApplyItem(IAffectableInterface* const Affectable) override;
 	void ApplyItem(IAffectableInterface* const Affectable) override;
 	EInventoryCategory GetInventoryCategory() override { return EInventoryCategory::Health; }
 };
