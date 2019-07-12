@@ -69,8 +69,6 @@ public:
 	UPROPERTY(BlueprintReadOnly, Replicated)
 		float Armour = 0.f;
 
-	//UPROPERTY(EditAnywhere)
-	//	float AdsSpeed = 275;
 	UPROPERTY(EditAnywhere)
 		float RunningSpeed = 525;
 
@@ -93,12 +91,6 @@ public:
 
 	UPROPERTY(EditAnywhere)
 	float BackpedalSpeedMultiplier = 0.6;
-
-	/*UPROPERTY(EditAnywhere)
-		bool RunTowardLook = true;*/
-
-	//UPROPERTY(EditAnywhere)
-	//	float RunMaxInputAngle = 45;
 
 	// Degrees per second
 	UPROPERTY(EditAnywhere)
@@ -158,9 +150,6 @@ private:
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Camera, meta = (AllowPrivateAccess = "true"))
 		class UCameraComponent* FollowCamera;
-
-	//UPROPERTY(Replicated) // Replicated so we can see enemy aim lines
-	//bool bIsAdsing = false;
 
 	bool bUseMouseAim = true;
 	float AxisMoveUp;
@@ -255,11 +244,7 @@ public:
 
 
 	/// Input
-		/** setup pawn specific input handlers */
 	virtual void SetupPlayerInputComponent(class UInputComponent* InputComponent) override;
-
-	//void StartWeaponFire() const;
-	//void StopWeaponFire() const;
 
 	void UseItemStart();
 	void UseItemStop();
@@ -299,7 +284,7 @@ public:
 
 	IEquippable* GetCurrentEquippable() const;
 
-	bool IsRunning() const;
+	bool IsRunning() const { return bIsRunning; }
 	bool IsTargeting() const;
 	float GetRunningSpeed() const { return RunningSpeed; }
 	
@@ -345,8 +330,6 @@ private:
 	FVector2D TrackCameraWithAimGamepad() const;
 	void ExperimentalMouseAimTracking(float DT);
 
-	//void SimulateAdsMode(bool IsAdsing);
-	//void DrawAdsLine(const FColor& Color, float LineLength) const;
 
 
 
@@ -358,12 +341,6 @@ private:
 
 	UFUNCTION()
 		void OnRep_TintChanged() const;
-
-	//UFUNCTION(Server, Reliable, WithValidation)
-	//	void ServerRPC_AdsPressed();
-
-	//UFUNCTION(Server, Reliable, WithValidation)
-	//	void ServerRPC_AdsReleased();
 
 	UFUNCTION(Server, Reliable, WithValidation)
 		void ServerRPC_TryInteract();

@@ -479,11 +479,7 @@ void AHeroCharacter::SetRunning(bool bNewIsRunning)
 		GetCharacterMovement()->MaxAcceleration = 1250;
 		GetCharacterMovement()->BrakingFrictionFactor = 1;
 		GetCharacterMovement()->BrakingDecelerationWalking = 250;
-
-	//	bUseControllerRotationYaw = false;
-	//	GetCharacterMovement()->bOrientRotationToMovement = true;
-
-
+		
 		if (bCancelReloadOnRun && GetCurrentWeapon()) GetCurrentWeapon()->CancelAnyReload();
 	}
 	else // Is Walking 
@@ -491,12 +487,7 @@ void AHeroCharacter::SetRunning(bool bNewIsRunning)
 		// Config movement properties TODO Make these data driven (BP) and use Meaty char movement comp
 		GetCharacterMovement()->MaxAcceleration = 3000;
 		GetCharacterMovement()->BrakingFrictionFactor = 2;
-		//GetCharacterMovement()->bUseSeparateBrakingFriction = false;
 		GetCharacterMovement()->BrakingDecelerationWalking = 3000;
-
-	//	bUseControllerRotationYaw = true;;
-	//	GetCharacterMovement()->bOrientRotationToMovement = false;
-
 
 		LastRunEnded = FDateTime::Now();
 	}
@@ -507,26 +498,6 @@ void AHeroCharacter::SetRunning(bool bNewIsRunning)
 	{
 		ServerSetRunning(bNewIsRunning);
 	}
-}
-
-bool AHeroCharacter::IsRunning() const
-{
-	return bIsRunning;
-
-	//FVector Velocity = GetVelocity().GetSafeNormal2D();
-	//FVector Facing = GetActorForwardVector();
-
-	//bool bIsRunning = bIsRunning && !GetVelocity().IsZero() 
-	//	&& (Velocity | Facing) > FMath::Cos(FMath::DegreesToRadians(SprintMaxAngle));
-
-	//// Debug
-	//if (false && bIsRunning)
-	//{
-	//	const float Angle = FMath::RadiansToDegrees(FMath::Acos(Velocity | Facing));
-	//	UE_LOG(LogTemp, Warning, TEXT("Sprinting! %fd"), Angle);
-	//}
-
-	//return bIsRunning;
 }
 
 void AHeroCharacter::ServerSetRunning_Implementation(bool bNewWantsToRun)
@@ -925,20 +896,8 @@ AWeapon* AHeroCharacter::AuthSpawnWeapon(TSubclassOf<AWeapon> weaponClass)
 		this,
 		ESpawnActorCollisionHandlingMethod::AlwaysSpawn);
 
-	//if (Weapon == nullptr) { return nullptr; }
-
-
-	//// Configure it
-	//auto rules = FAttachmentTransformRules{ EAttachmentRule::KeepRelative, true };
-	//Weapon->AttachToComponent(
-	//	GetMesh(), 
-	//	rules,
-	//	SocketName);
-
 	Weapon->SetHeroControllerId(GetHeroController()->PlayerState->PlayerId);
 
-
-	// Finish him!
 	UGameplayStatics::FinishSpawningActor(Weapon, TF);
 
 	return Weapon;
@@ -1389,15 +1348,6 @@ bool AHeroCharacter::CanGiveWeapon(const TSubclassOf<AWeapon>& Class, OUT float&
 	// Get pickup delay
 	const bool bIdealSlotAlreadyContainsWeapon = GetWeapon(GoodSlot) != nullptr;
 	OutDelay = bIdealSlotAlreadyContainsWeapon ? 2 : 0;
-
-
-	//// Dont pickup the weapon if it's the same as the one we're already holding
-	//if (GoodSlot == CurrentWeaponSlot && GetCurrentWeapon() && GetCurrentWeapon()->IsA(Class))
-	//{
-	//	return false; // Don't pick up weapon of same type
-	//}
-
-	// Always allow pickup of weapon - for now
 	return true;
 }
 
