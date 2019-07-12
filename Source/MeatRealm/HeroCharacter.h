@@ -5,6 +5,7 @@
 #include "CoreMinimal.h"
 #include "GameFramework/Character.h"
 #include "Interfaces/AffectableInterface.h"
+//#include "Interfaces/EquippableDelegate.h"
 
 #include "HeroCharacter.generated.h"
 
@@ -31,6 +32,8 @@ class MEATREALM_API AHeroCharacter : public ACharacter, public IAffectableInterf
 
 
 public:
+	void NukeItemFromInventory(AItemBase* Equippable);
+	void NotifyEquippableIsExpended(AItemBase* Equippable);
 
 	UPROPERTY(EditAnywhere, Category = Camera)
 		bool bLeanCameraWithAim = true;

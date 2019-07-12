@@ -27,6 +27,52 @@
 
 /// Lifecycle
 
+void AHeroCharacter::NukeItemFromInventory(AItemBase* Equippable)
+{
+	check(Equippable);
+
+	// TODO Find item in inventory
+
+	if (HealthSlot == Equippable)
+	{
+
+		if (CurrentInventorySlot == EInventorySlots::Health)
+		{
+			if (LastInventorySlot != CurrentInventorySlot)
+			{
+				EquipSlot(LastInventorySlot);
+			}
+			else
+			{	// Fallback
+				EquipSlot(EInventorySlots::Primary);
+			}
+		}
+		//TODO Ensure unequipped
+		//Equippable->Unequip();
+		Equippable->ExitInventory();
+		// TODO Create a collection of items to be cleared out each tick after a second of chillin out. Just to give things a chance to settle
+
+		HealthSlot = nullptr;
+	}
+}
+
+void AHeroCharacter::NotifyEquippableIsExpended(AItemBase* Equippable)
+{
+	LogMsgWithRole("AHeroCharacter::NotifyEquippableIsExpended()");
+	check (HasAuthority())
+
+	if (HealthSlot)
+	{
+
+		LogMsgWithRole("Healthslot got shit");
+		if (HealthSlot == Equippable)
+		{
+			LogMsgWithRole("Healthslot got the SAME shit");
+			NukeItemFromInventory(HealthSlot);
+		}
+	}
+}
+
 AHeroCharacter::AHeroCharacter(const FObjectInitializer& ObjectInitializer) : Super(
 	ObjectInitializer.SetDefaultSubobjectClass<UMeatyCharacterMovementComponent>(
 		ACharacter::CharacterMovementComponentName))
@@ -815,8 +861,6 @@ void AHeroCharacter::GiveItemToPlayer(TSubclassOf<AItemBase> ItemClass)
 		this,
 		ESpawnActorCollisionHandlingMethod::AlwaysSpawn);
 
-	Item->SetRecipient(this);
-
 	UGameplayStatics::FinishSpawningActor(Item, TF);
 
 
@@ -846,6 +890,8 @@ void AHeroCharacter::GiveItemToPlayer(TSubclassOf<AItemBase> ItemClass)
 		// Add to inv
 		HealthSlot = Item;
 		Item->EnterInventory();
+		Item->SetRecipient(this);
+		Item->SetDelegate(this);
 
 		// Remove from inv
 		if (ToRemove)

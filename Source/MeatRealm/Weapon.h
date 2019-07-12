@@ -9,6 +9,7 @@
 
 #include "Weapon.generated.h"
 
+class AHeroCharacter;
 class UWeaponReceiverComponent;
 class IAffectableInterface;
 class UArrowComponent;
@@ -101,6 +102,7 @@ public:
 	void ExitInventory() override;
 	EInventoryCategory GetInventoryCategory() override { return EInventoryCategory::Weapon; }
 	virtual bool ShouldHideWhenUnequipped() override { return false; }
+	void SetDelegate(AHeroCharacter* Delegate) { }
 	/* End IEquippable */
 
 	void Input_PullTrigger();

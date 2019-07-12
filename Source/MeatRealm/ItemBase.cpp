@@ -6,6 +6,8 @@
 #include "Interfaces/AffectableInterface.h"
 #include "Components/StaticMeshComponent.h"
 #include "UnrealNetwork.h"
+#include "HeroCharacter.h"
+#include "Interfaces/EquippableDelegate.h"
 
 AItemBase::AItemBase()
 {
@@ -35,6 +37,29 @@ void AItemBase::ExitInventory()
 {
 	check(HasAuthority())
 	Recipient = nullptr;
+}
+
+void AItemBase::SetDelegate(AHeroCharacter* NewDelegate)
+{
+	UE_LOG(LogTemp, Warning, TEXT("AItemBase::SetDelegate  Delegate set"));
+	check (HasAuthority())
+
+	Delegate = NewDelegate;
+	
+	//IEquippableDelegate* I = (IEquippableDelegate*)NewDelegate;
+	//if (I)
+	//{
+	//	UE_LOG(LogTemp, Warning, TEXT("AItemBase::SetDelegate  Delegate set"));
+	//	Delegate = I;
+
+	//}
+	//else
+	//{
+	//	UE_LOG(LogTemp, Warning, TEXT("AItemBase::SetDelegate - fail"));
+
+	//}
+
+
 }
 
 void AItemBase::BeginPlay()
@@ -81,12 +106,24 @@ void AItemBase::UseStart()
 	auto UseComplete = [&]
 	{
 		UE_LOG(LogTemp, Warning, TEXT("AItemBase::UseComplete"));
-		ApplyItem(Recipient);
-		OnUsageSuccess.Broadcast();
+		
+		
+
+	//	OnUsageSuccess.Broadcast();
 
 		bIsInUse = false;
 		UsageProgress = 100;
 		SetActorTickEnabled(false);
+
+		if (HasAuthority())
+		{
+			ApplyItem(Recipient);
+			if (Delegate)
+			{
+				UE_LOG(LogTemp, Warning, TEXT("AItemBase::UseComplete - NotifyEquippableIsExpended"));
+				Delegate->NotifyEquippableIsExpended(this);
+			}
+		}
 	};
 
 	GetWorldTimerManager().SetTimer(UsageTimerHandle, UseComplete, UsageDuration, false);

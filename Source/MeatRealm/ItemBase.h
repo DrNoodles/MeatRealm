@@ -6,12 +6,14 @@
 #include "GameFramework/Actor.h"
 #include "TimerManager.h"
 #include "Interfaces/Equippable.h"
+#include "Interfaces/EquippableDelegate.h"
 
 #include "ItemBase.generated.h"
 
+class AHeroCharacter;
 class IAffectableInterface;
 
-DECLARE_DYNAMIC_MULTICAST_DELEGATE(FUsageSuccess);
+//DECLARE_DYNAMIC_MULTICAST_DELEGATE(FUsageSuccess);
 
 UCLASS()
 class MEATREALM_API AItemBase : public AActor, public IEquippable
@@ -32,16 +34,16 @@ public:
 	UPROPERTY(EditAnywhere)
 		float EquipDuration = 0.5;
 
-	UPROPERTY(BlueprintAssignable, Category = "Event Dispatchers")
-		FUsageSuccess OnUsageSuccess;
+	//UPROPERTY(BlueprintAssignable, Category = "Event Dispatchers")
+	//	FUsageSuccess OnUsageSuccess;
 
 
 private:
 	FDateTime UsageStartTime;
-
 	FTimerHandle UsageTimerHandle;
-
 	IAffectableInterface* Recipient = nullptr;
+	AHeroCharacter* Delegate = nullptr; // TODO This is a horrible coupling. Make it a UInventoryComponent. Using an interface is a fools errand in UE4
+
 
 	UPROPERTY(VisibleAnywhere)
 		USceneComponent* RootComp = nullptr;
@@ -65,6 +67,7 @@ public:
 	void SetHidden(bool bIsHidden) override { SetActorHiddenInGame(bIsHidden); }
 	void EnterInventory() override;
 	void ExitInventory() override;
+	void SetDelegate(AHeroCharacter* Delegate) override;
 	virtual bool ShouldHideWhenUnequipped() override { return true; }
 	virtual EInventoryCategory GetInventoryCategory() override
 	{
