@@ -20,10 +20,10 @@ class MEATREALM_API AItemBase : public AActor, public IEquippable
 
 
 public:
-	UPROPERTY(BlueprintReadOnly, Replicated)
+	UPROPERTY(BlueprintReadOnly)
 		float UsageProgress = 0;
 
-	UPROPERTY(BlueprintReadOnly, Replicated)
+	UPROPERTY(BlueprintReadOnly)
 		bool bIsInUse;
 
 	UPROPERTY(EditAnywhere)

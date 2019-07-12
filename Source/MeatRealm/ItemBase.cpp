@@ -39,17 +39,19 @@ void AItemBase::ExitInventory()
 
 void AItemBase::BeginPlay()
 {
-	SetActorTickInterval(.1); // tick every 10th of a sec
+	//SetActorTickInterval(.1); // tick every 10th of a sec
 	SetActorTickEnabled(false);
 }
 
 void AItemBase::Tick(float DT)
 {
+	if (HasAuthority()) return;
+
+	// Do client side progress update
 	if (bIsInUse)
 	{
 		const auto ElapsedReloadTime = (FDateTime::Now() - UsageStartTime).GetTotalSeconds();
 		UsageProgress = ElapsedReloadTime / UsageDuration;
-
 		//UE_LOG(LogTemp, Warning, TEXT("AItemBase::Tick - Progress:%f"), UsageProgress);
 	}
 }
@@ -135,12 +137,6 @@ void AItemBase::Unequip()
 
 // Replication 
 
-void AItemBase::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
-{
-	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
-	DOREPLIFETIME_CONDITION(AItemBase, UsageProgress, COND_OwnerOnly);
-	DOREPLIFETIME_CONDITION(AItemBase, bIsInUse, COND_OwnerOnly);
-}
 void AItemBase::ServerUseStart_Implementation()
 {
 	UseStart();
