@@ -9,8 +9,10 @@
 AItemBase::AItemBase()
 {
 	bAlwaysRelevant = true;
-	PrimaryActorTick.bCanEverTick = false;
 	SetReplicates(true);
+
+	PrimaryActorTick.bCanEverTick = true;
+	RegisterAllActorTickFunctions(true, false); // necessary for SetActorTickEnabled() to work
 
 	RootComp = CreateDefaultSubobject<USceneComponent>(TEXT("Root"));
 	RootComponent = RootComp;
@@ -33,8 +35,31 @@ void AItemBase::ExitInventory()
 	Recipient = nullptr;
 }
 
+void AItemBase::BeginPlay()
+{
+	SetActorTickEnabled(false);
+}
+
+void AItemBase::Tick(float DT)
+{
+
+	if (bIsInUse)
+	{
+		const auto ElapsedReloadTime = (FDateTime::Now() - UsageStartTime).GetTotalSeconds();
+		UsageProgress = ElapsedReloadTime / UsageDuration;
+
+		UE_LOG(LogTemp, Warning, TEXT("AItemBase::Tick - Progress:%f"), UsageProgress);
+
+	}
+	else
+		UE_LOG(LogTemp, Warning, TEXT("AItemBase::Tick"));
+
+
+}
+
 void AItemBase::UseStart()
 {
+
 	if (!HasAuthority())
 	{
 		ServerUseStart();
@@ -42,11 +67,23 @@ void AItemBase::UseStart()
 
 	UE_LOG(LogTemp, Warning, TEXT("AItemBase::UseStart"));
 
+
+	// Start the usage!
+	SetActorTickEnabled(true);
+	bIsInUse = true;
+	UsageStartTime = FDateTime::Now();
+	UsageProgress = 0;
+
+
+	// Use complete function - TODO Break this out into its own private method
 	auto UseComplete = [&]
 	{
 		UE_LOG(LogTemp, Warning, TEXT("AItemBase::UseComplete"));
 		ApplyItem(Recipient);
 		OnUsageSuccess.Broadcast();
+
+		UsageProgress = 100;
+		SetActorTickEnabled(false);
 	};
 
 	GetWorldTimerManager().SetTimer(UsageTimerHandle, UseComplete, UsageDuration, false);
@@ -60,7 +97,11 @@ void AItemBase::UseStop()
 	}
 
 	UE_LOG(LogTemp, Warning, TEXT("AItemBase::UseStop"));
+
 	GetWorldTimerManager().ClearTimer(UsageTimerHandle);
+	SetActorTickEnabled(false);
+	bIsInUse = false;
+	UsageProgress = 0;
 }
 
 void AItemBase::SetRecipient(IAffectableInterface* const TheRecipient)

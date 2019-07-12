@@ -23,13 +23,19 @@ public:
 	UPROPERTY(EditAnywhere)
 		float UsageDuration = 2;
 
+	UPROPERTY(BlueprintReadOnly)
+		float UsageProgress = 0;
+
 	UPROPERTY(EditAnywhere)
 		float EquipDuration = 0.5;
 
 	UPROPERTY(BlueprintAssignable, Category = "Event Dispatchers")
 		FUsageSuccess OnUsageSuccess;
-	
+
 private:
+	FDateTime UsageStartTime;
+	bool bIsInUse;
+
 	FTimerHandle UsageTimerHandle;
 	IAffectableInterface* Recipient = nullptr;
 
@@ -71,6 +77,9 @@ protected:
 
 
 private:
+	virtual void BeginPlay() override;
+	void Tick(float DeltaSeconds) override;
+
 	UFUNCTION(Server, Reliable, WithValidation)
 		void ServerUseStart();
 
