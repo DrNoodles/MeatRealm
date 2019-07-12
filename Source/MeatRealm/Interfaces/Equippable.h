@@ -43,4 +43,6 @@ public:
 		virtual void EnterInventory() = 0;
 	UFUNCTION()
 		virtual void ExitInventory() = 0;
+	UFUNCTION()
+		virtual bool ShouldHideWhenUnequipped() = 0;
 };

@@ -1011,7 +1011,7 @@ void AHeroCharacter::EquipSlot(const EInventorySlots Slot)
 	{
 		//LogMsgWithRole("Un-equip new slot");
 		OldEquippable->Unequip();
-		OldEquippable->SetHidden(false);
+		OldEquippable->SetHidden(OldEquippable->ShouldHideWhenUnequipped());
 	}
 
 
@@ -1041,34 +1041,32 @@ void AHeroCharacter::RefreshWeaponAttachments() const
 {
 	const FAttachmentTransformRules Rules{ EAttachmentRule::SnapToTarget, true };
 
+	
+	// Attach weapons to the correct locations
 	auto W1 = GetWeapon(EInventorySlots::Primary);
 	auto W2 = GetWeapon(EInventorySlots::Secondary);
 
-
-	/*if (IsRunning())
+	if (CurrentInventorySlot == EInventorySlots::Primary)
+	{
+		if (W1) W1->AttachToComponent(GetMesh(), Rules, HandSocketName);
+		if (W2) W2->AttachToComponent(GetMesh(), Rules, Holster2SocketName);
+	}
+	else if (CurrentInventorySlot == EInventorySlots::Secondary)
+	{
+		if (W1) W1->AttachToComponent(GetMesh(), Rules, Holster1SocketName);
+		if (W2) W2->AttachToComponent(GetMesh(), Rules, HandSocketName);
+	}
+	else
 	{
 		if (W1) W1->AttachToComponent(GetMesh(), Rules, Holster1SocketName);
 		if (W2) W2->AttachToComponent(GetMesh(), Rules, Holster2SocketName);
 	}
-	else*/ // Is Normal
+
+
+	if (CurrentInventorySlot == EInventorySlots::Health)
 	{
-		if (CurrentInventorySlot == EInventorySlots::Undefined)
-		{
-			if (W1) W1->AttachToComponent(GetMesh(), Rules, Holster1SocketName);
-			if (W2) W2->AttachToComponent(GetMesh(), Rules, Holster2SocketName);
-		}
-
-		if (CurrentInventorySlot == EInventorySlots::Primary)
-		{
-			if (W1) W1->AttachToComponent(GetMesh(), Rules, HandSocketName);
-			if (W2) W2->AttachToComponent(GetMesh(), Rules, Holster2SocketName);
-		}
-
-		if (CurrentInventorySlot == EInventorySlots::Secondary)
-		{
-			if (W1) W1->AttachToComponent(GetMesh(), Rules, Holster1SocketName);
-			if (W2) W2->AttachToComponent(GetMesh(), Rules, HandSocketName);
-		}
+		auto HP = GetItem(CurrentInventorySlot);
+		if (HP) HP->AttachToComponent(GetMesh(), Rules, HandSocketName);
 	}
 }
 

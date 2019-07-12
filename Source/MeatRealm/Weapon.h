@@ -100,6 +100,7 @@ public:
 	void EnterInventory() override;
 	void ExitInventory() override;
 	EInventoryCategory GetInventoryCategory() override { return EInventoryCategory::Weapon; }
+	virtual bool ShouldHideWhenUnequipped() override { return false; }
 	/* End IEquippable */
 
 	void Input_PullTrigger();

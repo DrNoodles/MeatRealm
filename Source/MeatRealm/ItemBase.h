@@ -54,6 +54,7 @@ public:
 	void SetHidden(bool bIsHidden) override { SetActorHiddenInGame(bIsHidden); }
 	void EnterInventory() override;
 	void ExitInventory() override;
+	virtual bool ShouldHideWhenUnequipped() override { return true; }
 	virtual EInventoryCategory GetInventoryCategory() override
 	{
 		unimplemented();
