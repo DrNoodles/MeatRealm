@@ -73,6 +73,12 @@ private:
 	UFUNCTION(Server, Reliable, WithValidation)
 		void ServerUseStart();
 
-	//UFUNCTION(Server, Reliable, WithValidation)
-	//	void ServerUseStop();
+	UFUNCTION(Server, Reliable, WithValidation)
+		void ServerUseStop();
+
+	UFUNCTION(Server, Reliable, WithValidation)
+		void ServerEquip();
+
+	UFUNCTION(Server, Reliable, WithValidation)
+		void ServerUnequip();
 };

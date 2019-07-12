@@ -33,16 +33,14 @@ void AItemBase::ExitInventory()
 	Recipient = nullptr;
 }
 
-
 void AItemBase::UseStart()
 {
-	if (Role < ROLE_Authority)
+	if (!HasAuthority())
 	{
 		ServerUseStart();
 	}
 
 	UE_LOG(LogTemp, Warning, TEXT("AItemBase::UseStart"));
-	UseStop();
 
 	auto UseComplete = [&]
 	{
@@ -56,7 +54,10 @@ void AItemBase::UseStart()
 
 void AItemBase::UseStop()
 {
-	// TODO Server client support
+	if (!HasAuthority())
+	{
+		ServerUseStop();
+	}
 
 	UE_LOG(LogTemp, Warning, TEXT("AItemBase::UseStop"));
 	GetWorldTimerManager().ClearTimer(UsageTimerHandle);
@@ -70,12 +71,22 @@ void AItemBase::SetRecipient(IAffectableInterface* const TheRecipient)
 
 void AItemBase::Equip()
 {
+	if (!HasAuthority())
+	{
+		ServerEquip();
+	}
+
 	UE_LOG(LogTemp, Warning, TEXT("AItemBase::Equip"));
 	UseStop();
 }
 
 void AItemBase::Unequip()
 {
+	if (!HasAuthority())
+	{
+		ServerUnequip();
+	}
+
 	UE_LOG(LogTemp, Warning, TEXT("AItemBase::Unequip"));
 	UseStop();
 }
@@ -90,6 +101,30 @@ void AItemBase::ServerUseStart_Implementation()
 	UseStart();
 }
 bool AItemBase::ServerUseStart_Validate()
+{
+	return true;
+}
+void AItemBase::ServerUseStop_Implementation()
+{
+	UseStop();
+}
+bool AItemBase::ServerUseStop_Validate()
+{
+	return true;
+}
+void AItemBase::ServerEquip_Implementation()
+{
+	Equip();
+}
+bool AItemBase::ServerEquip_Validate()
+{
+	return true;
+}
+void AItemBase::ServerUnequip_Implementation()
+{
+	Unequip();
+}
+bool AItemBase::ServerUnequip_Validate()
 {
 	return true;
 }
