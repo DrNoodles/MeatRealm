@@ -220,11 +220,13 @@ public:
 	UFUNCTION()
 	bool AuthTryGiveHealth(float Hp) override;
 	UFUNCTION()
+	bool CanGiveArmour() override;
+	UFUNCTION()
+	bool AuthTryGiveArmour(float Delta) override;
+	UFUNCTION()
 	bool CanGiveAmmo() override;
 	UFUNCTION()
 	bool AuthTryGiveAmmo() override;
-	UFUNCTION()
-	bool AuthTryGiveArmour(float Delta) override;
 	UFUNCTION()
 	bool AuthTryGiveWeapon(const TSubclassOf<AWeapon>& Class) override;
 	UFUNCTION()

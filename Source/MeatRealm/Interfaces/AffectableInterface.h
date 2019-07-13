@@ -30,7 +30,9 @@ public: // NOTE This interface breaks the I in SOLID. But it'll do for now.
 		virtual bool CanGiveHealth() = 0;
 	UFUNCTION()
 		virtual bool AuthTryGiveHealth(float Hp) = 0;
-	
+
+	UFUNCTION()
+		virtual bool CanGiveArmour() = 0;
 	UFUNCTION()
 		virtual bool AuthTryGiveArmour(float Delta) = 0;
 

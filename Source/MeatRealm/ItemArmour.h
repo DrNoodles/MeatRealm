@@ -5,16 +5,16 @@
 #include "CoreMinimal.h"
 #include "ItemBase.h"
 
-#include "ItemHealth.generated.h"
+#include "ItemArmour.generated.h"
 
 UCLASS()
-class MEATREALM_API AItemHealth : public AItemBase
+class MEATREALM_API AItemArmour : public AItemBase
 {
 	GENERATED_BODY()
 
 public:
 	UPROPERTY(EditAnywhere)
-		float Health = 25;
+		float Armour = 25;
 
 private:
 	bool CanApplyItem(IAffectableInterface* const Affectable) override;

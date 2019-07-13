@@ -1328,7 +1328,7 @@ bool AHeroCharacter::AuthTryGiveHealth(float Hp)
 	//LogMsgWithRole("TryGiveHealth");
 	if (!HasAuthority()) return false;
 
-	if (Health == MaxHealth) return false;
+	if (!CanGiveHealth()) return false;
 
 	Health = FMath::Min(Health + Hp, MaxHealth);
 	return true;
@@ -1373,11 +1373,17 @@ bool AHeroCharacter::AuthTryGiveAmmo()
 	return false;
 }
 
+
+bool AHeroCharacter::CanGiveArmour()
+{
+	return Armour < MaxArmour;
+}
+
 bool AHeroCharacter::AuthTryGiveArmour(float Delta)
 {
 	//LogMsgWithRole("TryGiveArmour");
 	if (!HasAuthority()) return false;
-	if (Armour == MaxArmour) return false;
+	if (!CanGiveArmour()) return false;
 
 	Armour = FMath::Min(Armour + Delta, MaxArmour);
 	return true;
