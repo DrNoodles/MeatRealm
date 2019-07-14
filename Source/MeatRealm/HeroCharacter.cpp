@@ -1129,10 +1129,23 @@ void AHeroCharacter::RefreshWeaponAttachments() const
 	}
 
 
+	// TODO Optimise this when refactoring the inventory at some point! It's horribly brute force.
+	for (auto HP: HealthSlot)
+	{
+		HP->SetHidden(true);
+	}
+	for (auto AP : ArmourSlot)
+	{
+		AP->SetHidden(true);
+	}
 	if (CurrentInventorySlot == EInventorySlots::Health || CurrentInventorySlot == EInventorySlots::Armour)
 	{
 		auto Item = GetItem(CurrentInventorySlot);
-		if (Item) Item->AttachToComponent(GetMesh(), Rules, HandSocketName);
+		if (Item)
+		{
+			Item->AttachToComponent(GetMesh(), Rules, HandSocketName);
+			Item->SetHidden(false);
+		}
 	}
 }
 
@@ -1143,7 +1156,11 @@ void AHeroCharacter::NotifyItemIsExpended(AItemBase* Item)
 	check(HasAuthority())
 
 	auto WasRemoved = RemoveEquippableFromInventory(Item);
-	if (WasRemoved) Item->Destroy();
+	if (WasRemoved)
+	{
+		Item->Destroy();
+		RefreshWeaponAttachments();
+	}
 }
 
 
