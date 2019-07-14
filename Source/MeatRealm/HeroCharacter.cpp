@@ -988,7 +988,7 @@ AWeapon* AHeroCharacter::AssignWeaponToInventorySlot(AWeapon* Weapon, EInventory
 	//if (Removed) Removed->Destroy();
 	return ToRemove;
 }
-IEquippable* AHeroCharacter::RemoveEquippableFromInventory(IEquippable* Equippable)
+bool AHeroCharacter::RemoveEquippableFromInventory(IEquippable* Equippable)
 {
 	check(Equippable);
 
@@ -996,7 +996,7 @@ IEquippable* AHeroCharacter::RemoveEquippableFromInventory(IEquippable* Equippab
 
 
 	auto NewSlot = EInventorySlots::Primary;
-	IEquippable* Removed = nullptr;
+	bool WasRemoved = false;
 
 	if (ArmourSlot == Equippable)
 	{
@@ -1005,7 +1005,7 @@ IEquippable* AHeroCharacter::RemoveEquippableFromInventory(IEquippable* Equippab
 			NewSlot = LastInventorySlot;
 		}
 		Equippable->ExitInventory();
-		Removed = Equippable;
+		WasRemoved = true;
 
 		ArmourSlot = nullptr;
 	}
@@ -1018,15 +1018,16 @@ IEquippable* AHeroCharacter::RemoveEquippableFromInventory(IEquippable* Equippab
 			NewSlot = LastInventorySlot;
 		}
 		Equippable->ExitInventory();
-		Removed = Equippable;
+		WasRemoved = true;
 
 		HealthSlot = nullptr;
 	}
 
 
 	EquipSlot(NewSlot);
-	
-	return Removed;
+	RefreshWeaponAttachments();
+
+	return WasRemoved;
 }
 
 
@@ -1124,7 +1125,8 @@ void AHeroCharacter::NotifyItemIsExpended(AItemBase* Item)
 	LogMsgWithRole("AHeroCharacter::NotifyEquippableIsExpended()");
 	check(HasAuthority())
 
-	auto Removed = RemoveEquippableFromInventory(Item);
+	auto WasRemoved = RemoveEquippableFromInventory(Item);
+	if (WasRemoved) Item->Destroy();
 }
 
 

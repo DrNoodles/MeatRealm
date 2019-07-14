@@ -33,7 +33,7 @@ class MEATREALM_API AHeroCharacter : public ACharacter, public IAffectableInterf
 
 
 public:
-	IEquippable* RemoveEquippableFromInventory(IEquippable* Equippable);
+	bool RemoveEquippableFromInventory(IEquippable* Equippable);
 	void NotifyItemIsExpended(AItemBase* Item);
 
 	UPROPERTY(EditAnywhere, Category = Camera)
