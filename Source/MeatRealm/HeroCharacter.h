@@ -339,8 +339,8 @@ private:
 
 	void GiveItemToPlayer(TSubclassOf<class AItemBase> ItemClass);
 
-	AItemBase* GetLastHealthItemOrNull() const;
-	AItemBase* GetLastArmourItemOrNull() const;
+	AItemBase* GetFirstHealthItemOrNull() const;
+	AItemBase* GetFirstArmourItemOrNull() const;
 
 	void GiveWeaponToPlayer(TSubclassOf<class AWeapon> WeaponClass);
 	AWeapon* AuthSpawnWeapon(TSubclassOf<AWeapon> weaponClass);

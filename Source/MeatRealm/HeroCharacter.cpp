@@ -788,8 +788,8 @@ AItemBase* AHeroCharacter::GetItem(EInventorySlots Slot) const
 {
 	switch (Slot)
 	{
-	case EInventorySlots::Health: return GetLastHealthItemOrNull();
-	case EInventorySlots::Armour: return GetLastArmourItemOrNull();
+	case EInventorySlots::Health: return GetFirstHealthItemOrNull();
+	case EInventorySlots::Armour: return GetFirstArmourItemOrNull();
 		//case EInventorySlots::Secondary: return SecondaryWeaponSlot;
 
 	default:
@@ -802,8 +802,8 @@ IEquippable* AHeroCharacter::GetEquippable(EInventorySlots Slot) const
 	{
 	case EInventorySlots::Primary: return PrimaryWeaponSlot;
 	case EInventorySlots::Secondary: return SecondaryWeaponSlot;
-	case EInventorySlots::Health: return GetLastHealthItemOrNull();
-	case EInventorySlots::Armour: return GetLastArmourItemOrNull();
+	case EInventorySlots::Health: return GetFirstHealthItemOrNull();
+	case EInventorySlots::Armour: return GetFirstArmourItemOrNull();
 
 	case EInventorySlots::Undefined:
 	default:;
@@ -906,14 +906,13 @@ void AHeroCharacter::GiveItemToPlayer(TSubclassOf<AItemBase> ItemClass)
 	LogMsgWithRole("AHeroCharacter::GiveItemToPlayer2");
 }
 
-AItemBase* AHeroCharacter::GetLastHealthItemOrNull() const
+AItemBase* AHeroCharacter::GetFirstHealthItemOrNull() const
 {
-	return HealthSlot.Num() > 0 ? HealthSlot.Last() : nullptr;
+	return HealthSlot.Num() > 0 ? HealthSlot[0] : nullptr;
 }
-
-AItemBase* AHeroCharacter::GetLastArmourItemOrNull() const
+AItemBase* AHeroCharacter::GetFirstArmourItemOrNull() const
 {
-	return ArmourSlot.Num() > 0 ? ArmourSlot.Last() : nullptr;
+	return ArmourSlot.Num() > 0 ? ArmourSlot[0] : nullptr;
 }
 
 void AHeroCharacter::GiveWeaponToPlayer(TSubclassOf<class AWeapon> WeaponClass)
@@ -1128,16 +1127,6 @@ void AHeroCharacter::RefreshWeaponAttachments() const
 		if (W2) W2->AttachToComponent(GetMesh(), Rules, Holster2SocketName);
 	}
 
-
-	// TODO Optimise this when refactoring the inventory at some point! It's horribly brute force.
-	for (auto HP: HealthSlot)
-	{
-		HP->SetHidden(true);
-	}
-	for (auto AP : ArmourSlot)
-	{
-		AP->SetHidden(true);
-	}
 	if (CurrentInventorySlot == EInventorySlots::Health || CurrentInventorySlot == EInventorySlots::Armour)
 	{
 		auto Item = GetItem(CurrentInventorySlot);
