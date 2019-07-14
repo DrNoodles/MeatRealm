@@ -36,6 +36,7 @@ void AItemBase::ExitInventory()
 {
 	check(HasAuthority())
 	Recipient = nullptr;
+	Delegate = nullptr;
 }
 
 void AItemBase::SetDelegate(AHeroCharacter* NewDelegate)

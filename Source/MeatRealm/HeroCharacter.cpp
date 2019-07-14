@@ -855,6 +855,7 @@ void AHeroCharacter::GiveItemToPlayer(TSubclassOf<AItemBase> ItemClass)
 
 	UGameplayStatics::FinishSpawningActor(Item, TF);
 
+	Item->SetHidden(true);
 
 	// Find correct slot
 	auto Slot = EInventorySlots::Undefined;
