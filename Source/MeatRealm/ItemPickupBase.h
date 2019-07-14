@@ -4,19 +4,29 @@
 
 #include "CoreMinimal.h"
 #include "PickupBase.h"
-
-#include "AmmoPickup.generated.h"
+#include "ItemPickupBase.generated.h"
 
 /**
  * 
  */
 UCLASS()
-class MEATREALM_API AAmmoPickup : public APickupBase
+class MEATREALM_API AItemPickupBase : public APickupBase
 {
 	GENERATED_BODY()
 
-protected:
+public:
+	AItemPickupBase()
+	{
+		bExplicitInteraction = true;
+	}
 
 	bool CanInteract(IAffectableInterface* const Affectable, float& OutDelay) override;
+
+protected:
+
 	bool TryApplyAffect(IAffectableInterface* const Affectable) override;
+
+private:
+	UPROPERTY(EditDefaultsOnly, Category = Pickup)
+		TSubclassOf<class AItemBase> ItemClass;
 };

@@ -13,7 +13,7 @@
 #include "TimerManager.h"
 #include "Projectile.h"
 #include "HeroCharacter.h"
-
+#include "Interfaces/AffectableInterface.h"
 
 //void AWeapon::GetLifetimeReplicatedProps(TArray< FLifetimeProperty >& OutLifetimeProps) const
 //{
@@ -62,38 +62,46 @@ AWeapon::AWeapon()
 // INPUT //////////////////////
 
 
-void AWeapon::Draw()
+void AWeapon::Equip()
 {
 	if (!HasAuthority())
 	{
-		ServerRPC_Draw();
+		ServerRPC_Equip();
 		return; // TODO Remove return to enable client preditiction (currently broken)
 	}
 	ReceiverComp->DrawWeapon();
 }
-void AWeapon::ServerRPC_Draw_Implementation()
+void AWeapon::ServerRPC_Equip_Implementation()
 {
-	Draw();
+	Equip();
 }
-bool AWeapon::ServerRPC_Draw_Validate()
+bool AWeapon::ServerRPC_Equip_Validate()
 {
 	return true;
 }
 
-void AWeapon::Holster()
+void AWeapon::Unequip()
 {
 	if (!HasAuthority())
 	{
-		ServerRPC_Holster();
+		ServerRPC_Unequip();
 		return; // TODO Remove return to enable client preditiction (currently broken)
 	}
 	ReceiverComp->HolsterWeapon();
 }
-void AWeapon::ServerRPC_Holster_Implementation()
+
+void AWeapon::EnterInventory()
 {
-	Holster();
 }
-bool AWeapon::ServerRPC_Holster_Validate()
+void AWeapon::ExitInventory()
+{
+}
+
+void AWeapon::ServerRPC_Unequip_Implementation()
+{
+	Unequip();
+}
+bool AWeapon::ServerRPC_Unequip_Validate()
 {
 	return true;
 }
@@ -187,7 +195,10 @@ bool AWeapon::ServerRPC_AdsReleased_Validate()
 {
 	return true;
 }
-
+bool AWeapon::CanGiveAmmo()
+{
+	return ReceiverComp->CanGiveAmmo();
+}
 bool AWeapon::TryGiveAmmo()
 {
 	return ReceiverComp->TryGiveAmmo();

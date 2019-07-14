@@ -22,6 +22,8 @@
 #include "TimerManager.h"
 #include "Engine/World.h"
 #include "DrawDebugHelpers.h"
+#include "Interfaces/Equippable.h"
+#include "Weapon.h"
 
 /// Lifecycle
 
@@ -85,17 +87,27 @@ void AHeroCharacter::EndPlay(const EEndPlayReason::Type EndPlayReason)
 {
 	if (ROLE_Authority == Role)
 	{
-		LastWeaponSlot = EWeaponSlots::Undefined;
-		CurrentWeaponSlot = EWeaponSlots::Undefined;
-		if (Slot1)
+		LastInventorySlot = EInventorySlots::Undefined;
+		CurrentInventorySlot = EInventorySlots::Undefined;
+		if (PrimaryWeaponSlot)
 		{
-			Slot1->Destroy();
-			Slot1 = nullptr;
+			PrimaryWeaponSlot->Destroy();
+			PrimaryWeaponSlot = nullptr;
 		}
-		if (Slot2)
+		if (SecondaryWeaponSlot)
 		{
-			Slot2->Destroy();
-			Slot2 = nullptr;
+			SecondaryWeaponSlot->Destroy();
+			SecondaryWeaponSlot = nullptr;
+		}
+
+		for (auto* HP: HealthSlot)
+		{
+			HP->Destroy();
+		}
+
+		for (auto* AP : ArmourSlot)
+		{
+			AP->Destroy();
 		}
 	}
 }
@@ -122,9 +134,11 @@ void AHeroCharacter::Restart()
 void AHeroCharacter::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
 {
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
-	DOREPLIFETIME(AHeroCharacter, CurrentWeaponSlot);
-	DOREPLIFETIME(AHeroCharacter, Slot1);
-	DOREPLIFETIME(AHeroCharacter, Slot2);
+	DOREPLIFETIME(AHeroCharacter, CurrentInventorySlot);
+	DOREPLIFETIME(AHeroCharacter, PrimaryWeaponSlot);
+	DOREPLIFETIME(AHeroCharacter, SecondaryWeaponSlot);
+	DOREPLIFETIME(AHeroCharacter, HealthSlot);
+	DOREPLIFETIME(AHeroCharacter, ArmourSlot);
 	DOREPLIFETIME(AHeroCharacter, Health);
 	DOREPLIFETIME(AHeroCharacter, Armour);
 	DOREPLIFETIME(AHeroCharacter, TeamTint);
@@ -135,13 +149,13 @@ void AHeroCharacter::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLi
 	DOREPLIFETIME_CONDITION(AHeroCharacter, bIsTargeting, COND_SkipOwner);
 
 	// Just the owner
-	DOREPLIFETIME_CONDITION(AHeroCharacter, LastWeaponSlot, COND_OwnerOnly);
+	DOREPLIFETIME_CONDITION(AHeroCharacter, LastInventorySlot, COND_OwnerOnly);
 
 }
 
 void AHeroCharacter::ScanForWeaponPickups(float DeltaSeconds)
 {
-	auto* const Pickup = ScanForInteractable<AWeaponPickupBase>();
+	auto* const Pickup = ScanForInteractable<APickupBase>();
 
 	float PickupDelay;
 	if (Pickup && Pickup->CanInteract(this, OUT PickupDelay))
@@ -165,9 +179,13 @@ void AHeroCharacter::ScanForWeaponPickups(float DeltaSeconds)
 				break;
 			}
 		}
-		auto asdf = ActionText.ToString();
 		if (World)
-			DrawDebugString(World, Pickup->GetActorLocation() + FVector{0, 0, 200}, "Equip (" + asdf + ")", nullptr, FColor::White, DeltaSeconds * 0.5);
+		{
+			auto Str = FString::Printf(TEXT("Grab (%s)"), *ActionText.ToString());
+			const auto YOffset = -5.f * Str.Len();
+
+			DrawDebugString(World, FVector{ 50, YOffset, 100 },	Str, Pickup, FColor::White, DeltaSeconds * 0.5);
+		}
 
 		//LogMsgWithRole("Can Interact! ");
 	}
@@ -374,6 +392,7 @@ void AHeroCharacter::TickRunning(float DT)
 }
 
 
+
 // Input
 void AHeroCharacter::SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent)
 {
@@ -382,7 +401,72 @@ void AHeroCharacter::SetupPlayerInputComponent(class UInputComponent* PlayerInpu
 	PlayerInputComponent->BindAction("RunToggle", IE_Pressed, this, &AHeroCharacter::OnRunToggle);
 	PlayerInputComponent->BindAction("Run", IE_Pressed, this, &AHeroCharacter::OnStartRunning);
 	PlayerInputComponent->BindAction("Run", IE_Released, this, &AHeroCharacter::OnStopRunning);
+	PlayerInputComponent->BindAction("EquipHealth", IE_Pressed, this, &AHeroCharacter::OnEquipHealth);
+	PlayerInputComponent->BindAction("EquipArmour", IE_Pressed, this, &AHeroCharacter::OnEquipArmour);
+
 }
+
+void AHeroCharacter::UseItemStart()
+{
+	LogMsgWithRole("AHeroCharacter::UseItemStart");
+	auto Item = GetCurrentItem();
+	if (!Item) return;
+	Item->UseStart();
+}
+void AHeroCharacter::UseItemStop()
+{
+	LogMsgWithRole("AHeroCharacter::UseItemStop");
+	auto Item = GetCurrentItem();
+	if (!Item) return;
+	Item->UseStop();
+}
+
+void AHeroCharacter::OnEquipHealth()
+{
+	EquipHealth();
+
+	if (Role < ROLE_Authority)
+	{
+		ServerEquipHealth();
+	}
+}
+void AHeroCharacter::EquipHealth()
+{
+	EquipSlot(EInventorySlots::Health);
+}
+void AHeroCharacter::ServerEquipHealth_Implementation()
+{
+	EquipHealth();
+}
+bool AHeroCharacter::ServerEquipHealth_Validate()
+{
+	return true;
+}
+
+
+void AHeroCharacter::OnEquipArmour()
+{
+	EquipArmour();
+
+	if (Role < ROLE_Authority)
+	{
+		ServerEquipArmour();
+	}
+}
+void AHeroCharacter::EquipArmour()
+{
+	EquipSlot(EInventorySlots::Armour);
+}
+void AHeroCharacter::ServerEquipArmour_Implementation()
+{
+	EquipArmour();
+}
+bool AHeroCharacter::ServerEquipArmour_Validate()
+{
+	return true;
+}
+
+
 void AHeroCharacter::OnRunToggle()
 {
 	if (IsRunning())
@@ -427,11 +511,7 @@ void AHeroCharacter::SetRunning(bool bNewIsRunning)
 		GetCharacterMovement()->MaxAcceleration = 1250;
 		GetCharacterMovement()->BrakingFrictionFactor = 1;
 		GetCharacterMovement()->BrakingDecelerationWalking = 250;
-
-	//	bUseControllerRotationYaw = false;
-	//	GetCharacterMovement()->bOrientRotationToMovement = true;
-
-
+		
 		if (bCancelReloadOnRun && GetCurrentWeapon()) GetCurrentWeapon()->CancelAnyReload();
 	}
 	else // Is Walking 
@@ -439,12 +519,7 @@ void AHeroCharacter::SetRunning(bool bNewIsRunning)
 		// Config movement properties TODO Make these data driven (BP) and use Meaty char movement comp
 		GetCharacterMovement()->MaxAcceleration = 3000;
 		GetCharacterMovement()->BrakingFrictionFactor = 2;
-		//GetCharacterMovement()->bUseSeparateBrakingFriction = false;
 		GetCharacterMovement()->BrakingDecelerationWalking = 3000;
-
-	//	bUseControllerRotationYaw = true;;
-	//	GetCharacterMovement()->bOrientRotationToMovement = false;
-
 
 		LastRunEnded = FDateTime::Now();
 	}
@@ -455,26 +530,6 @@ void AHeroCharacter::SetRunning(bool bNewIsRunning)
 	{
 		ServerSetRunning(bNewIsRunning);
 	}
-}
-
-bool AHeroCharacter::IsRunning() const
-{
-	return bIsRunning;
-
-	//FVector Velocity = GetVelocity().GetSafeNormal2D();
-	//FVector Facing = GetActorForwardVector();
-
-	//bool bIsRunning = bIsRunning && !GetVelocity().IsZero() 
-	//	&& (Velocity | Facing) > FMath::Cos(FMath::DegreesToRadians(SprintMaxAngle));
-
-	//// Debug
-	//if (false && bIsRunning)
-	//{
-	//	const float Angle = FMath::RadiansToDegrees(FMath::Acos(Velocity | Facing));
-	//	UE_LOG(LogTemp, Warning, TEXT("Sprinting! %fd"), Angle);
-	//}
-
-	//return bIsRunning;
 }
 
 void AHeroCharacter::ServerSetRunning_Implementation(bool bNewWantsToRun)
@@ -580,18 +635,46 @@ void AHeroCharacter::Input_FirePressed()
 	auto* MyPC = Cast<AHeroController>(Controller);
 	if (MyPC && MyPC->IsGameInputAllowed())
 	{
-		if (bIsRunning || IsRunning())
+		auto Equippable = GetEquippable(CurrentInventorySlot);
+		const auto Category = Equippable ? Equippable->GetInventoryCategory() : EInventoryCategory::Undefined;
+
+		if (Category == EInventoryCategory::Undefined) return;
+
+		if (Category == EInventoryCategory::Health || Category == EInventoryCategory::Armour)
 		{
-			SetRunning(false);
+			UseItemStart();
 		}
-		StartWeaponFire();
+
+
+		// Fire weapon
+		if (Category == EInventoryCategory::Weapon)
+		{
+			if (bIsRunning || IsRunning())
+			{
+				SetRunning(false);
+			}
+			StartWeaponFire();
+		}
 	}
 }
 
 void AHeroCharacter::Input_FireReleased()
 {
-	StopWeaponFire();
-	//if (GetCurrentWeapon()) GetCurrentWeapon()->Input_ReleaseTrigger();
+	auto Equippable = GetCurrentEquippable();
+
+	const auto Category = Equippable ? Equippable->GetInventoryCategory() : EInventoryCategory::Undefined;
+
+	if (Category == EInventoryCategory::Undefined) return;
+
+	if (Category == EInventoryCategory::Health || Category == EInventoryCategory::Armour)
+	{
+		UseItemStop();
+	}
+
+	if (Category == EInventoryCategory::Weapon)
+	{
+		StopWeaponFire();
+	}
 }
 
 void AHeroCharacter::Input_AdsPressed()
@@ -632,6 +715,7 @@ void AHeroCharacter::Input_Reload() const
 // TODO Make this handle both client/server requests to fire - like ads pressed etc.
 void AHeroCharacter::StartWeaponFire()
 {
+	LogMsgWithRole("AHeroCharacter::StartWeaponFire");
 	if (!bWantsToFire)
 	{
 		bWantsToFire = true;
@@ -664,6 +748,8 @@ void AHeroCharacter::StartWeaponFire()
 
 void AHeroCharacter::StopWeaponFire()
 {
+	LogMsgWithRole("AHeroCharacter::StopWeaponFire");
+
 	if (bWantsToFire)
 	{
 		bWantsToFire = false;
@@ -683,50 +769,169 @@ bool AHeroCharacter::IsFiring() const
 };
 
 
-// Weapon spawning
 
-AWeapon* AHeroCharacter::GetWeapon(EWeaponSlots Slot) const
+
+// Inventory - Getters
+
+AWeapon* AHeroCharacter::GetWeapon(EInventorySlots Slot) const
 {
 	switch (Slot)
 	{
-	case EWeaponSlots::Primary: return Slot1;
-	case EWeaponSlots::Secondary: return Slot2;
+	case EInventorySlots::Primary: return PrimaryWeaponSlot;
+	case EInventorySlots::Secondary: return SecondaryWeaponSlot;
 
-	case EWeaponSlots::Undefined:
 	default:
 		return nullptr;
 	}
 }
+AItemBase* AHeroCharacter::GetItem(EInventorySlots Slot) const
+{
+	switch (Slot)
+	{
+	case EInventorySlots::Health: return GetLastHealthItemOrNull();
+	case EInventorySlots::Armour: return GetLastArmourItemOrNull();
+		//case EInventorySlots::Secondary: return SecondaryWeaponSlot;
+
+	default:
+		return nullptr;
+	}
+}
+IEquippable* AHeroCharacter::GetEquippable(EInventorySlots Slot) const
+{
+	switch (Slot)
+	{
+	case EInventorySlots::Primary: return PrimaryWeaponSlot;
+	case EInventorySlots::Secondary: return SecondaryWeaponSlot;
+	case EInventorySlots::Health: return GetLastHealthItemOrNull();
+	case EInventorySlots::Armour: return GetLastArmourItemOrNull();
+
+	case EInventorySlots::Undefined:
+	default:;
+	}
+
+	return nullptr;
+}
+
+int AHeroCharacter::GetHealthItemCount() const
+{
+	return HealthSlot.Num();
+}
+int AHeroCharacter::GetArmourItemCount() const
+{
+	return ArmourSlot.Num();
+}
 
 AWeapon* AHeroCharacter::GetCurrentWeapon() const
 {
-	return GetWeapon(CurrentWeaponSlot);
+	return GetWeapon(CurrentInventorySlot);
+}
+AItemBase* AHeroCharacter::GetCurrentItem() const
+{
+	return GetItem(CurrentInventorySlot);
+}
+IEquippable* AHeroCharacter::GetCurrentEquippable() const
+{
+	return GetEquippable(CurrentInventorySlot);
 }
 
-//AWeapon* AHeroCharacter::GetHolsteredWeapon() const
-//{
-//	if (CurrentWeaponSlot == EWeaponSlots::Primary) return GetWeapon(EWeaponSlots::Secondary);
-//	if (CurrentWeaponSlot == EWeaponSlots::Secondary) return GetWeapon(EWeaponSlots::Primary);
-//	return nullptr;
-//}
 
+// Inventory - Spawning
+
+void AHeroCharacter::GiveItemToPlayer(TSubclassOf<AItemBase> ItemClass)
+{
+	LogMsgWithRole("AHeroCharacter::GiveItemToPlayer");
+
+	check(HasAuthority() && GetWorld() && ItemClass)
+
+
+		// Spawn the item at the hand socket
+		const auto TF = GetMesh()->GetSocketTransform(HandSocketName, RTS_World);
+		auto* Item = GetWorld()->SpawnActorDeferred<AItemBase>(
+		ItemClass,
+		TF,
+		this,
+		this,
+		ESpawnActorCollisionHandlingMethod::AlwaysSpawn);
+
+	UGameplayStatics::FinishSpawningActor(Item, TF);
+
+	Item->SetHidden(true);
+
+	// Find correct slot
+	auto Slot = EInventorySlots::Undefined;
+
+	switch (Item->GetInventoryCategory()) {
+	case EInventoryCategory::Health: Slot = EInventorySlots::Health; break;
+	case EInventoryCategory::Armour: Slot = EInventorySlots::Armour; break;
+	case EInventoryCategory::Weapon: break;
+	case EInventoryCategory::Undefined: break;
+	case EInventoryCategory::Throwable: break;
+	default:;
+	}
+
+
+	// Assign Item to inventory slot - TODO Combine this with the Assign weapon to slot code
+	switch (Slot) {
+
+	case EInventorySlots::Health:
+	{
+		// Add to inv
+		HealthSlot.Add(Item);
+		Item->EnterInventory();
+		Item->SetRecipient(this);
+		Item->SetDelegate(this);
+	}
+	break;
+
+	case EInventorySlots::Armour:
+	{
+		// Add to inv
+		ArmourSlot.Add(Item);
+		Item->EnterInventory();
+		Item->SetRecipient(this);
+		Item->SetDelegate(this);
+	}
+	break;
+
+	case EInventorySlots::Undefined: break;
+	case EInventorySlots::Primary: break;
+	case EInventorySlots::Secondary: break;
+	default:;
+	}
+
+
+	// Put it in our hands! TODO - Or not?
+	EquipSlot(Slot);
+
+	LogMsgWithRole("AHeroCharacter::GiveItemToPlayer2");
+}
+
+AItemBase* AHeroCharacter::GetLastHealthItemOrNull() const
+{
+	return HealthSlot.Num() > 0 ? HealthSlot.Last() : nullptr;
+}
+
+AItemBase* AHeroCharacter::GetLastArmourItemOrNull() const
+{
+	return ArmourSlot.Num() > 0 ? ArmourSlot.Last() : nullptr;
+}
 
 void AHeroCharacter::GiveWeaponToPlayer(TSubclassOf<class AWeapon> WeaponClass)
 {
 	const auto Weapon = AuthSpawnWeapon(WeaponClass);
-	const auto Slot = FindGoodSlot();
+	const auto Slot = FindGoodWeaponSlot();
 	const auto RemovedWeapon = AssignWeaponToInventorySlot(Weapon, Slot);
 
 	if (RemovedWeapon)
 	{
 		// If it's the same slot, replay the equip weapon
+		RemovedWeapon->ExitInventory();
 		RemovedWeapon->Destroy();
-		CurrentWeaponSlot = EWeaponSlots::Undefined;
+		CurrentInventorySlot = EInventorySlots::Undefined;
 	}
 
-	EquipWeapon(Slot);
+	EquipSlot(Slot);
 }
-
 AWeapon* AHeroCharacter::AuthSpawnWeapon(TSubclassOf<AWeapon> weaponClass)
 {
 	//LogMsgWithRole("AHeroCharacter::ServerRPC_SpawnWeapon");
@@ -744,139 +949,205 @@ AWeapon* AHeroCharacter::AuthSpawnWeapon(TSubclassOf<AWeapon> weaponClass)
 		this,
 		ESpawnActorCollisionHandlingMethod::AlwaysSpawn);
 
-	//if (Weapon == nullptr) { return nullptr; }
-
-
-	//// Configure it
-	//auto rules = FAttachmentTransformRules{ EAttachmentRule::KeepRelative, true };
-	//Weapon->AttachToComponent(
-	//	GetMesh(), 
-	//	rules,
-	//	SocketName);
-
 	Weapon->SetHeroControllerId(GetHeroController()->PlayerState->PlayerId);
 
-
-	// Finish him!
 	UGameplayStatics::FinishSpawningActor(Weapon, TF);
 
 	return Weapon;
 }
-
-EWeaponSlots AHeroCharacter::FindGoodSlot() const
+EInventorySlots AHeroCharacter::FindGoodWeaponSlot() const
 {
-	// Find an empty slot, if none exists, 
-	if (!Slot1) return EWeaponSlots::Primary;
-	if (!Slot2) return EWeaponSlots::Secondary;
-	return CurrentWeaponSlot;
+	// Find an empty slot, if one exists
+	if (!PrimaryWeaponSlot) return EInventorySlots::Primary;
+	if (!SecondaryWeaponSlot) return EInventorySlots::Secondary;
+
+	// If we currently have a weapon selected, replace that.
+	if (CurrentInventorySlot == EInventorySlots::Primary || CurrentInventorySlot == EInventorySlots::Secondary)
+		return CurrentInventorySlot;
+
+	// If the last inventory slot was a weapon, use that
+	if (LastInventorySlot == EInventorySlots::Primary || LastInventorySlot == EInventorySlots::Secondary)
+		return LastInventorySlot;
+
+	return EInventorySlots::Primary; // just default to the first slot
 }
-
-AWeapon* AHeroCharacter::AssignWeaponToInventorySlot(AWeapon* Weapon, EWeaponSlots Slot)
+AWeapon* AHeroCharacter::AssignWeaponToInventorySlot(AWeapon* Weapon, EInventorySlots Slot)
 {
-	const auto Removed = GetWeapon(Slot);
+	bool IsNotAWeaponSlot = Slot != EInventorySlots::Primary && Slot != EInventorySlots::Secondary;
+	if (IsNotAWeaponSlot)
+	{
+		UE_LOG(LogTemp, Error, TEXT("Attempting to equip a weapon into a non weapon slot: %d"), Slot);
+		return nullptr;
+	}
+
+	const auto ToRemove = GetWeapon(Slot);
 
 	//SetWeapon(Weapon, Slot);
 	// This does not free up resources by design! If needed, first get the weapon before overwriting it
-	if (Slot == EWeaponSlots::Primary) Slot1 = Weapon;
-	if (Slot == EWeaponSlots::Secondary) Slot2 = Weapon;
-
+	if (Slot == EInventorySlots::Primary) PrimaryWeaponSlot = Weapon;
+	if (Slot == EInventorySlots::Secondary) SecondaryWeaponSlot = Weapon;
+	Weapon->EnterInventory();
 
 	//// Cleanup previous weapon // TODO Drop this on ground
 	//if (Removed) Removed->Destroy();
-	return Removed;
+	return ToRemove;
+}
+bool AHeroCharacter::RemoveEquippableFromInventory(IEquippable* Equippable)
+{
+	check(Equippable);
+
+	// TODO Create a collection of items to be cleared out each tick after a second of chillin out. Just to give things a chance to settle
+
+	auto bMustChangeSlot = false;
+	bool WasRemoved = false;
+
+
+	if (Equippable->GetInventoryCategory() == EInventoryCategory::Health)
+	{
+		const auto Index = HealthSlot.IndexOfByPredicate([Equippable](AItemBase* Item)
+		{
+			return Item == Equippable;
+		});
+
+		if (Index != INDEX_NONE)
+		{
+			Equippable->ExitInventory();
+			HealthSlot.RemoveAt(Index);
+			WasRemoved = true;
+
+			bMustChangeSlot = HealthSlot.Num() == 0 && CurrentInventorySlot == EInventorySlots::Health;
+		}
+	}
+
+
+
+	if (Equippable->GetInventoryCategory() == EInventoryCategory::Armour)
+	{
+		const auto Index = ArmourSlot.IndexOfByPredicate([Equippable](AItemBase* Item)
+			{
+				return Item == Equippable;
+			});
+
+		if (Index != INDEX_NONE)
+		{
+			Equippable->ExitInventory();
+			ArmourSlot.RemoveAt(Index);
+			WasRemoved = true;
+
+			bMustChangeSlot = ArmourSlot.Num() == 0 && CurrentInventorySlot == EInventorySlots::Armour;
+		}
+	}
+
+	if (bMustChangeSlot)
+	{
+		const auto NewSlot = LastInventorySlot != CurrentInventorySlot ? LastInventorySlot : EInventorySlots::Primary;
+		EquipSlot(NewSlot);
+	}
+
+	return WasRemoved;
 }
 
-void AHeroCharacter::EquipWeapon(const EWeaponSlots Slot)
+
+// Inventory - Equipping
+
+void AHeroCharacter::EquipSlot(const EInventorySlots Slot)
 {
-	/*if (bIsEquipping) return;
-	bIsEquipping = true;*/
-
-
 	// Already selected?
-	if (CurrentWeaponSlot == Slot) return;
+	if (CurrentInventorySlot == Slot) return;
 
 	// Desired slot is empty?
-	auto NewWeapon = GetWeapon(Slot);
-	if (!NewWeapon) return;
+	auto NewEquippable = GetEquippable(Slot);
+	if (!NewEquippable) return;
 
 
-	LastWeaponSlot = CurrentWeaponSlot;
-	CurrentWeaponSlot = Slot;
-	//LastWeaponSlot = OldSlot;
+	LastInventorySlot = CurrentInventorySlot;
+	CurrentInventorySlot = Slot;
 
 
-	// TODO Some management code here to delay for the duration of holster/draw and cancel if certain things happen
-
+	// TODO Some delay on holster
+	
 
 	// Clear any existing Equip timer
-	GetWorld()->GetTimerManager().ClearTimer(DrawWeaponTimerHandle);
+	GetWorld()->GetTimerManager().ClearTimer(EquipTimerHandle);
 
 
-	// Holster old weapon
-	auto OldWeapon = GetWeapon(LastWeaponSlot);
-	if (OldWeapon)
+	// Unequip old 
+	auto OldEquippable = GetEquippable(LastInventorySlot);
+	if (OldEquippable)
 	{
-		OldWeapon->Holster();
-		OldWeapon->SetActorHiddenInGame(false); // make sure old weapon is visible
+		//LogMsgWithRole("Un-equip new slot");
+		OldEquippable->Unequip();
+		OldEquippable->SetHidden(OldEquippable->ShouldHideWhenUnequipped());
 	}
 
 
-	// Hold new weapon
-	if (NewWeapon)
+	// Equip new
+	if (NewEquippable)
 	{
-		LogMsgWithRole("DrawNewWeapon");
-		NewWeapon->Draw();
-		NewWeapon->SetActorHiddenInGame(true);
+		//LogMsgWithRole("Equip new slot");
+		NewEquippable->Equip();
+		NewEquippable->SetHidden(true);
+		const float DrawDuration = NewEquippable->GetEquipDuration();
 
-		const auto DrawDuration = NewWeapon->GetDrawDuration();
-		GetWorld()->GetTimerManager().SetTimer(DrawWeaponTimerHandle, this, &AHeroCharacter::MakeCurrentWeaponVisible, DrawDuration, false);
+		GetWorldTimerManager().SetTimer(EquipTimerHandle, this, &AHeroCharacter::MakeEquippedItemVisible, DrawDuration, false);
 	}
 
 	RefreshWeaponAttachments();
 }
-
-
-void AHeroCharacter::MakeCurrentWeaponVisible() const
+void AHeroCharacter::MakeEquippedItemVisible() const
 {
-	LogMsgWithRole("ShowWeapon");
-	if (GetCurrentWeapon()) GetCurrentWeapon()->SetActorHiddenInGame(false);
+	//LogMsgWithRole("MakeEquippedItemVisible");
+	IEquippable* Item = GetEquippable(CurrentInventorySlot);
+
+	if (Item) Item->SetHidden(false);
+
 	RefreshWeaponAttachments();
 }
-
 void AHeroCharacter::RefreshWeaponAttachments() const
 {
 	const FAttachmentTransformRules Rules{ EAttachmentRule::SnapToTarget, true };
 
-	auto W1 = GetWeapon(EWeaponSlots::Primary);
-	auto W2 = GetWeapon(EWeaponSlots::Secondary);
+	
+	// Attach weapons to the correct locations
+	auto W1 = GetWeapon(EInventorySlots::Primary);
+	auto W2 = GetWeapon(EInventorySlots::Secondary);
 
-
-	/*if (IsRunning())
+	if (CurrentInventorySlot == EInventorySlots::Primary)
+	{
+		if (W1) W1->AttachToComponent(GetMesh(), Rules, HandSocketName);
+		if (W2) W2->AttachToComponent(GetMesh(), Rules, Holster2SocketName);
+	}
+	else if (CurrentInventorySlot == EInventorySlots::Secondary)
+	{
+		if (W1) W1->AttachToComponent(GetMesh(), Rules, Holster1SocketName);
+		if (W2) W2->AttachToComponent(GetMesh(), Rules, HandSocketName);
+	}
+	else
 	{
 		if (W1) W1->AttachToComponent(GetMesh(), Rules, Holster1SocketName);
 		if (W2) W2->AttachToComponent(GetMesh(), Rules, Holster2SocketName);
 	}
-	else*/ // Is Normal
+
+
+	if (CurrentInventorySlot == EInventorySlots::Health || CurrentInventorySlot == EInventorySlots::Armour)
 	{
-		if (CurrentWeaponSlot == EWeaponSlots::Undefined)
-		{
-			if (W1) W1->AttachToComponent(GetMesh(), Rules, Holster1SocketName);
-			if (W2) W2->AttachToComponent(GetMesh(), Rules, Holster2SocketName);
-		}
-
-		if (CurrentWeaponSlot == EWeaponSlots::Primary)
-		{
-			if (W1) W1->AttachToComponent(GetMesh(), Rules, HandSocketName);
-			if (W2) W2->AttachToComponent(GetMesh(), Rules, Holster2SocketName);
-		}
-
-		if (CurrentWeaponSlot == EWeaponSlots::Secondary)
-		{
-			if (W1) W1->AttachToComponent(GetMesh(), Rules, Holster1SocketName);
-			if (W2) W2->AttachToComponent(GetMesh(), Rules, HandSocketName);
-		}
+		auto Item = GetItem(CurrentInventorySlot);
+		if (Item) Item->AttachToComponent(GetMesh(), Rules, HandSocketName);
 	}
 }
+
+
+void AHeroCharacter::NotifyItemIsExpended(AItemBase* Item)
+{
+	LogMsgWithRole("AHeroCharacter::NotifyEquippableIsExpended()");
+	check(HasAuthority())
+
+	auto WasRemoved = RemoveEquippableFromInventory(Item);
+	if (WasRemoved) Item->Destroy();
+}
+
+
+
 
 
 // Camera tracks aim
@@ -1110,27 +1381,33 @@ void AHeroCharacter::AuthApplyDamage(uint32 InstigatorHeroControllerId, float Da
 	}
 }
 
+bool AHeroCharacter::CanGiveHealth()
+{
+	return Health < MaxHealth;
+}
+
 bool AHeroCharacter::AuthTryGiveHealth(float Hp)
 {
 	//LogMsgWithRole("TryGiveHealth");
 	if (!HasAuthority()) return false;
 
-	if (Health == MaxHealth) return false;
+	if (!CanGiveHealth()) return false;
 
 	Health = FMath::Min(Health + Hp, MaxHealth);
 	return true;
 }
 
-bool AHeroCharacter::AuthTryGiveAmmo()
+bool AHeroCharacter::CanGiveAmmo()
 {
-	//LogMsgWithRole("AHeroCharacter::TryGiveAmmo");
-	if (!HasAuthority()) return false;
-
+	return FindWeaponToReceiveAmmo() != nullptr;
+}
+AWeapon* AHeroCharacter::FindWeaponToReceiveAmmo() const
+{
 	// Try give ammo to equipped weapon
 	AWeapon* CurrentWeapon = GetCurrentWeapon();
-	if (CurrentWeapon && CurrentWeapon->TryGiveAmmo())
+	if (CurrentWeapon && CurrentWeapon->CanGiveAmmo())
 	{
-		return true; // ammo given to main weapon
+		return CurrentWeapon; // ammo given to main weapon
 	}
 
 	// TODO Give ammo to current weapon, if that fails give it to the other slot. If no weapon is equipped, give it to the first holstered gun found
@@ -1138,22 +1415,38 @@ bool AHeroCharacter::AuthTryGiveAmmo()
 
 	// Try give ammo to alternate weapon!
 	AWeapon* AltWeap = nullptr;
-	if (CurrentWeaponSlot == EWeaponSlots::Primary) AltWeap = GetWeapon(EWeaponSlots::Secondary);
-	if (CurrentWeaponSlot == EWeaponSlots::Secondary) AltWeap = GetWeapon(EWeaponSlots::Primary);
+	if (CurrentInventorySlot == EInventorySlots::Primary) AltWeap = GetWeapon(EInventorySlots::Secondary);
+	if (CurrentInventorySlot == EInventorySlots::Secondary) AltWeap = GetWeapon(EInventorySlots::Primary);
 	if (AltWeap && AltWeap->TryGiveAmmo())
 	{
-		return true; // ammo given to alt weapon
+		return AltWeap; // ammo given to alt weapon
 	}
 
+	return nullptr;
+}
+bool AHeroCharacter::AuthTryGiveAmmo()
+{
+	//LogMsgWithRole("AHeroCharacter::TryGiveAmmo");
+	if (!HasAuthority()) return false;
+
+	auto Weap = FindWeaponToReceiveAmmo();
+	if (Weap) 
+		return Weap->TryGiveAmmo();
 
 	return false;
+}
+
+
+bool AHeroCharacter::CanGiveArmour()
+{
+	return Armour < MaxArmour;
 }
 
 bool AHeroCharacter::AuthTryGiveArmour(float Delta)
 {
 	//LogMsgWithRole("TryGiveArmour");
 	if (!HasAuthority()) return false;
-	if (Armour == MaxArmour) return false;
+	if (!CanGiveArmour()) return false;
 
 	Armour = FMath::Min(Armour + Delta, MaxArmour);
 	return true;
@@ -1175,20 +1468,34 @@ bool AHeroCharacter::AuthTryGiveWeapon(const TSubclassOf<AWeapon>& Class)
 
 bool AHeroCharacter::CanGiveWeapon(const TSubclassOf<AWeapon>& Class, OUT float& OutDelay)
 {
-	EWeaponSlots GoodSlot = FindGoodSlot();
+	EInventorySlots GoodSlot = FindGoodWeaponSlot();
 
 	// Get pickup delay
 	const bool bIdealSlotAlreadyContainsWeapon = GetWeapon(GoodSlot) != nullptr;
 	OutDelay = bIdealSlotAlreadyContainsWeapon ? 2 : 0;
+	return true;
+}
 
+bool AHeroCharacter::CanGiveItem(const TSubclassOf<AItemBase>& Class, float& OutDelay)
+{
+	LogMsgWithRole("AHeroCharacter::CanGiveItem");
+	OutDelay = 0;
+	return true;
+}
 
-	//// Dont pickup the weapon if it's the same as the one we're already holding
-	//if (GoodSlot == CurrentWeaponSlot && GetCurrentWeapon() && GetCurrentWeapon()->IsA(Class))
-	//{
-	//	return false; // Don't pick up weapon of same type
-	//}
+bool AHeroCharacter::TryGiveItem(const TSubclassOf<AItemBase>& Class)
+{
+	LogMsgWithRole("AHeroCharacter::TryGiveItem");
 
-	// Always allow pickup of weapon - for now
+	check(HasAuthority());
+	check(Class != nullptr);
+
+	//LogMsgWithRole("AHeroCharacter::TryGiveWeapon");
+
+	float OutDelay;
+	if (!CanGiveItem(Class, OUT OutDelay)) return false;
+
+	GiveItemToPlayer(Class);
 	return true;
 }
 
@@ -1245,7 +1552,7 @@ void AHeroCharacter::ServerRPC_TryInteract_Implementation()
 {
 	//LogMsgWithRole("AHeroCharacter::ServerRPC_TryInteract_Implementation()");
 
-	auto* const Pickup = ScanForInteractable<AWeaponPickupBase>();
+	auto* const Pickup = ScanForInteractable<APickupBase>();
 
 	float PickupDelay;
 
@@ -1266,7 +1573,7 @@ bool AHeroCharacter::ServerRPC_TryInteract_Validate()
 
 void AHeroCharacter::ServerRPC_EquipPrimaryWeapon_Implementation()
 {
-	EquipWeapon(EWeaponSlots::Primary);
+	EquipSlot(EInventorySlots::Primary);
 }
 
 bool AHeroCharacter::ServerRPC_EquipPrimaryWeapon_Validate()
@@ -1276,7 +1583,7 @@ bool AHeroCharacter::ServerRPC_EquipPrimaryWeapon_Validate()
 
 void AHeroCharacter::ServerRPC_EquipSecondaryWeapon_Implementation()
 {
-	EquipWeapon(EWeaponSlots::Secondary);
+	EquipSlot(EInventorySlots::Secondary);
 }
 
 bool AHeroCharacter::ServerRPC_EquipSecondaryWeapon_Validate()
@@ -1287,16 +1594,16 @@ bool AHeroCharacter::ServerRPC_EquipSecondaryWeapon_Validate()
 
 void AHeroCharacter::ServerRPC_ToggleWeapon_Implementation()
 {
-	switch (CurrentWeaponSlot)
+	switch (CurrentInventorySlot)
 	{
-	case EWeaponSlots::Primary:
-		EquipWeapon(EWeaponSlots::Secondary);
+	case EInventorySlots::Primary:
+		EquipSlot(EInventorySlots::Secondary);
 		break;
 
-	case EWeaponSlots::Undefined:
-	case EWeaponSlots::Secondary:
+	case EInventorySlots::Undefined:
+	case EInventorySlots::Secondary:
 	default:
-		EquipWeapon(EWeaponSlots::Primary);
+		EquipSlot(EInventorySlots::Primary);
 	}
 }
 
@@ -1374,6 +1681,14 @@ AHeroController* AHeroCharacter::GetHeroController() const
 float AHeroCharacter::GetTargetingSpeedModifier() const
 {
 	return GetCurrentWeapon() ? GetCurrentWeapon()->GetAdsMovementScale() : 1;
+}
+
+bool AHeroCharacter::IsReloading() const
+{
+	auto W = GetCurrentWeapon();
+	if (W && W->IsReloading()) return true;
+
+	return false;
 }
 
 bool AHeroCharacter::IsBackpedaling(const FVector& MoveDir, const FVector& AimDir, int BackpedalAngle)

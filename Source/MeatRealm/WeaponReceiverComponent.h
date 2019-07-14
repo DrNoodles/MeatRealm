@@ -223,6 +223,7 @@ public:
 	void Reload();
 	void AdsPressed();
 	void AdsReleased();
+	bool CanGiveAmmo();
 	bool TryGiveAmmo();
 	bool IsEquipping() const { return WeaponState.Mode == EWeaponModes::Equipping; }
 	void CancelAnyReload();

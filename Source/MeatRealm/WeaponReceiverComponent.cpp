@@ -63,6 +63,10 @@ void UWeaponReceiverComponent::AdsReleased()
 	InputState.AdsRequested = false;
 	WeaponState.IsAdsing = InputState.AdsRequested;
 }
+bool UWeaponReceiverComponent::CanGiveAmmo()
+{
+	return WeaponState.AmmoInPool < AmmoPoolSize;
+}
 bool UWeaponReceiverComponent::TryGiveAmmo()
 {
 	if (WeaponState.AmmoInPool == AmmoPoolSize) return false;
