@@ -121,7 +121,7 @@ void AItemBase::UseStart()
 			if (Delegate)
 			{
 				UE_LOG(LogTemp, Warning, TEXT("AItemBase::UseComplete - NotifyEquippableIsExpended"));
-				Delegate->NotifyEquippableIsExpended(this);
+				Delegate->NotifyItemIsExpended(this);
 			}
 		}
 	};

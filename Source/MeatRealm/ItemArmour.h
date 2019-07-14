@@ -19,5 +19,5 @@ public:
 private:
 	bool CanApplyItem(IAffectableInterface* const Affectable) override;
 	void ApplyItem(IAffectableInterface* const Affectable) override;
-	EInventoryCategory GetInventoryCategory() override { return EInventoryCategory::Health; }
+	EInventoryCategory GetInventoryCategory() override { return EInventoryCategory::Armour; }
 };

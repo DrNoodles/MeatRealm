@@ -27,52 +27,6 @@
 
 /// Lifecycle
 
-void AHeroCharacter::NukeItemFromInventory(AItemBase* Equippable)
-{
-	check(Equippable);
-
-	// TODO Find item in inventory
-
-	if (HealthSlot == Equippable)
-	{
-
-		if (CurrentInventorySlot == EInventorySlots::Health)
-		{
-			if (LastInventorySlot != CurrentInventorySlot)
-			{
-				EquipSlot(LastInventorySlot);
-			}
-			else
-			{	// Fallback
-				EquipSlot(EInventorySlots::Primary);
-			}
-		}
-		//TODO Ensure unequipped
-		//Equippable->Unequip();
-		Equippable->ExitInventory();
-		// TODO Create a collection of items to be cleared out each tick after a second of chillin out. Just to give things a chance to settle
-
-		HealthSlot = nullptr;
-	}
-}
-
-void AHeroCharacter::NotifyEquippableIsExpended(AItemBase* Equippable)
-{
-	LogMsgWithRole("AHeroCharacter::NotifyEquippableIsExpended()");
-	check (HasAuthority())
-
-	if (HealthSlot)
-	{
-
-		LogMsgWithRole("Healthslot got shit");
-		if (HealthSlot == Equippable)
-		{
-			LogMsgWithRole("Healthslot got the SAME shit");
-			NukeItemFromInventory(HealthSlot);
-		}
-	}
-}
-
 AHeroCharacter::AHeroCharacter(const FObjectInitializer& ObjectInitializer) : Super(
 	ObjectInitializer.SetDefaultSubobjectClass<UMeatyCharacterMovementComponent>(
 		ACharacter::CharacterMovementComponentName))
@@ -174,6 +128,7 @@ void AHeroCharacter::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLi
 	DOREPLIFETIME(AHeroCharacter, PrimaryWeaponSlot);
 	DOREPLIFETIME(AHeroCharacter, SecondaryWeaponSlot);
 	DOREPLIFETIME(AHeroCharacter, HealthSlot);
+	DOREPLIFETIME(AHeroCharacter, ArmourSlot);
 	DOREPLIFETIME(AHeroCharacter, Health);
 	DOREPLIFETIME(AHeroCharacter, Armour);
 	DOREPLIFETIME(AHeroCharacter, TeamTint);
@@ -437,6 +392,7 @@ void AHeroCharacter::SetupPlayerInputComponent(class UInputComponent* PlayerInpu
 	PlayerInputComponent->BindAction("Run", IE_Pressed, this, &AHeroCharacter::OnStartRunning);
 	PlayerInputComponent->BindAction("Run", IE_Released, this, &AHeroCharacter::OnStopRunning);
 	PlayerInputComponent->BindAction("EquipHealth", IE_Pressed, this, &AHeroCharacter::OnEquipHealth);
+	PlayerInputComponent->BindAction("EquipArmour", IE_Pressed, this, &AHeroCharacter::OnEquipArmour);
 
 }
 
@@ -466,10 +422,6 @@ void AHeroCharacter::OnEquipHealth()
 }
 void AHeroCharacter::EquipHealth()
 {
-	// TODO Ask inventory to equip health
-
-	// TODO Return if health already equipped or zero health items
-
 	EquipSlot(EInventorySlots::Health);
 }
 void AHeroCharacter::ServerEquipHealth_Implementation()
@@ -480,6 +432,30 @@ bool AHeroCharacter::ServerEquipHealth_Validate()
 {
 	return true;
 }
+
+
+void AHeroCharacter::OnEquipArmour()
+{
+	EquipArmour();
+
+	if (Role < ROLE_Authority)
+	{
+		ServerEquipArmour();
+	}
+}
+void AHeroCharacter::EquipArmour()
+{
+	EquipSlot(EInventorySlots::Armour);
+}
+void AHeroCharacter::ServerEquipArmour_Implementation()
+{
+	EquipArmour();
+}
+bool AHeroCharacter::ServerEquipArmour_Validate()
+{
+	return true;
+}
+
 
 void AHeroCharacter::OnRunToggle()
 {
@@ -803,6 +779,7 @@ AItemBase* AHeroCharacter::GetItem(EInventorySlots Slot) const
 	switch (Slot)
 	{
 	case EInventorySlots::Health: return HealthSlot;
+	case EInventorySlots::Armour: return ArmourSlot;
 		//case EInventorySlots::Secondary: return SecondaryWeaponSlot;
 
 	default:
@@ -816,6 +793,7 @@ IEquippable* AHeroCharacter::GetEquippable(EInventorySlots Slot) const
 	case EInventorySlots::Primary: return PrimaryWeaponSlot;
 	case EInventorySlots::Secondary: return SecondaryWeaponSlot;
 	case EInventorySlots::Health: return HealthSlot;
+	case EInventorySlots::Armour: return ArmourSlot;
 
 	case EInventorySlots::Undefined:
 	default:;
@@ -827,6 +805,10 @@ IEquippable* AHeroCharacter::GetEquippable(EInventorySlots Slot) const
 int AHeroCharacter::GetHealthItemCount() const
 {
 	return HealthSlot == nullptr ? 0 : 1;
+}
+int AHeroCharacter::GetArmourItemCount() const
+{
+	return ArmourSlot == nullptr ? 0 : 1;
 }
 
 AWeapon* AHeroCharacter::GetCurrentWeapon() const
@@ -854,7 +836,7 @@ void AHeroCharacter::GiveItemToPlayer(TSubclassOf<AItemBase> ItemClass)
 
 		// Spawn the item at the hand socket
 		const auto TF = GetMesh()->GetSocketTransform(HandSocketName, RTS_World);
-	auto* Item = GetWorld()->SpawnActorDeferred<AItemBase>(
+		auto* Item = GetWorld()->SpawnActorDeferred<AItemBase>(
 		ItemClass,
 		TF,
 		this,
@@ -868,13 +850,10 @@ void AHeroCharacter::GiveItemToPlayer(TSubclassOf<AItemBase> ItemClass)
 	auto Slot = EInventorySlots::Undefined;
 
 	switch (Item->GetInventoryCategory()) {
-	case EInventoryCategory::Health:
-		Slot = EInventorySlots::Health;
-		break;
-
+	case EInventoryCategory::Health: Slot = EInventorySlots::Health; break;
+	case EInventoryCategory::Armour: Slot = EInventorySlots::Armour; break;
 	case EInventoryCategory::Weapon: break;
 	case EInventoryCategory::Undefined: break;
-	case EInventoryCategory::Armour: break;
 	case EInventoryCategory::Throwable: break;
 	default:;
 	}
@@ -889,6 +868,25 @@ void AHeroCharacter::GiveItemToPlayer(TSubclassOf<AItemBase> ItemClass)
 
 		// Add to inv
 		HealthSlot = Item;
+		Item->EnterInventory();
+		Item->SetRecipient(this);
+		Item->SetDelegate(this);
+
+		// Remove from inv
+		if (ToRemove)
+		{
+			ToRemove->ExitInventory();
+			ToRemove->Destroy();
+		}
+	}
+	break;
+
+	case EInventorySlots::Armour:
+	{
+		auto ToRemove = ArmourSlot;
+
+		// Add to inv
+		ArmourSlot = Item;
 		Item->EnterInventory();
 		Item->SetRecipient(this);
 		Item->SetDelegate(this);
@@ -990,6 +988,46 @@ AWeapon* AHeroCharacter::AssignWeaponToInventorySlot(AWeapon* Weapon, EInventory
 	//if (Removed) Removed->Destroy();
 	return ToRemove;
 }
+IEquippable* AHeroCharacter::RemoveEquippableFromInventory(IEquippable* Equippable)
+{
+	check(Equippable);
+
+	// TODO Create a collection of items to be cleared out each tick after a second of chillin out. Just to give things a chance to settle
+
+
+	auto NewSlot = EInventorySlots::Primary;
+	IEquippable* Removed = nullptr;
+
+	if (ArmourSlot == Equippable)
+	{
+		if (CurrentInventorySlot == EInventorySlots::Armour && LastInventorySlot != CurrentInventorySlot)
+		{
+			NewSlot = LastInventorySlot;
+		}
+		Equippable->ExitInventory();
+		Removed = Equippable;
+
+		ArmourSlot = nullptr;
+	}
+
+
+	if (HealthSlot == Equippable)
+	{
+		if (CurrentInventorySlot == EInventorySlots::Health && LastInventorySlot != CurrentInventorySlot)
+		{
+			NewSlot = LastInventorySlot;
+		}
+		Equippable->ExitInventory();
+		Removed = Equippable;
+
+		HealthSlot = nullptr;
+	}
+
+
+	EquipSlot(NewSlot);
+	
+	return Removed;
+}
 
 
 // Inventory - Equipping
@@ -1073,15 +1111,21 @@ void AHeroCharacter::RefreshWeaponAttachments() const
 	}
 
 
-	if (CurrentInventorySlot == EInventorySlots::Health)
+	if (CurrentInventorySlot == EInventorySlots::Health || CurrentInventorySlot == EInventorySlots::Armour)
 	{
-		auto HP = GetItem(CurrentInventorySlot);
-		if (HP) HP->AttachToComponent(GetMesh(), Rules, HandSocketName);
+		auto Item = GetItem(CurrentInventorySlot);
+		if (Item) Item->AttachToComponent(GetMesh(), Rules, HandSocketName);
 	}
 }
 
 
+void AHeroCharacter::NotifyItemIsExpended(AItemBase* Item)
+{
+	LogMsgWithRole("AHeroCharacter::NotifyEquippableIsExpended()");
+	check(HasAuthority())
 
+	auto Removed = RemoveEquippableFromInventory(Item);
+}
 
 
 

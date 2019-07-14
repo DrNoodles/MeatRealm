@@ -23,6 +23,7 @@ enum class EInventorySlots : uint8
 	Primary = 1,
 	Secondary = 2,
 	Health = 3,
+	Armour = 4,
 };
 
 UCLASS()
@@ -32,8 +33,8 @@ class MEATREALM_API AHeroCharacter : public ACharacter, public IAffectableInterf
 
 
 public:
-	void NukeItemFromInventory(AItemBase* Equippable);
-	void NotifyEquippableIsExpended(AItemBase* Equippable);
+	IEquippable* RemoveEquippableFromInventory(IEquippable* Equippable);
+	void NotifyItemIsExpended(AItemBase* Item);
 
 	UPROPERTY(EditAnywhere, Category = Camera)
 		bool bLeanCameraWithAim = true;
@@ -191,7 +192,8 @@ private:
 		AWeapon* SecondaryWeaponSlot = nullptr;
 	UPROPERTY(Replicated)
 		AItemBase* HealthSlot = nullptr;
-
+	UPROPERTY(Replicated)
+		AItemBase* ArmourSlot = nullptr;
 
 
 public:
@@ -287,6 +289,8 @@ public:
 
 	UFUNCTION(BlueprintCallable)
 		int GetHealthItemCount() const;
+	UFUNCTION(BlueprintCallable)
+		int GetArmourItemCount() const;
 
 	UFUNCTION(BlueprintCallable)
 	AWeapon* GetCurrentWeapon() const;
@@ -315,6 +319,13 @@ private:
 	void EquipHealth();
 	UFUNCTION(Server, Reliable, WithValidation)
 	void ServerEquipHealth();
+
+
+	void OnEquipArmour();
+	void EquipArmour();
+	UFUNCTION(Server, Reliable, WithValidation)
+		void ServerEquipArmour();
+
 
 	void OnRunToggle();
 	void OnStartRunning();
