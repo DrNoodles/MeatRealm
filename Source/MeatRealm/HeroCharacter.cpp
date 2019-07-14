@@ -901,7 +901,7 @@ void AHeroCharacter::GiveItemToPlayer(TSubclassOf<AItemBase> ItemClass)
 
 
 	// Put it in our hands! TODO - Or not?
-	EquipSlot(Slot);
+	//EquipSlot(Slot);
 
 	LogMsgWithRole("AHeroCharacter::GiveItemToPlayer2");
 }
