@@ -191,11 +191,11 @@ private:
 	UPROPERTY(Replicated)
 		AWeapon* SecondaryWeaponSlot = nullptr;
 	UPROPERTY(Replicated)
-		AItemBase* HealthSlot = nullptr;
+		TArray<AItemBase*> HealthSlot{};
 	UPROPERTY(Replicated)
-		AItemBase* ArmourSlot = nullptr;
+		TArray<AItemBase*> ArmourSlot{};
 
-
+	
 public:
 	AHeroCharacter(const FObjectInitializer& ObjectInitializer);
 	void Restart() override;
@@ -333,10 +333,14 @@ private:
 	void SetRunning(bool bNewIsRunning);
 
 
+
+
 	void SetTargeting(bool bNewTargeting);
 
 	void GiveItemToPlayer(TSubclassOf<class AItemBase> ItemClass);
 
+	AItemBase* GetLastHealthItemOrNull() const;
+	AItemBase* GetLastArmourItemOrNull() const;
 
 	void GiveWeaponToPlayer(TSubclassOf<class AWeapon> WeaponClass);
 	AWeapon* AuthSpawnWeapon(TSubclassOf<AWeapon> weaponClass);

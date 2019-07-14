@@ -14,7 +14,6 @@ AItemBase::AItemBase()
 	bAlwaysRelevant = true;
 	SetReplicates(true);
 
-
 	PrimaryActorTick.bCanEverTick = true;
 	RegisterAllActorTickFunctions(true, false); // necessary for SetActorTickEnabled() to work
 
@@ -43,23 +42,7 @@ void AItemBase::SetDelegate(AHeroCharacter* NewDelegate)
 {
 	UE_LOG(LogTemp, Warning, TEXT("AItemBase::SetDelegate  Delegate set"));
 	check (HasAuthority())
-
 	Delegate = NewDelegate;
-	
-	//IEquippableDelegate* I = (IEquippableDelegate*)NewDelegate;
-	//if (I)
-	//{
-	//	UE_LOG(LogTemp, Warning, TEXT("AItemBase::SetDelegate  Delegate set"));
-	//	Delegate = I;
-
-	//}
-	//else
-	//{
-	//	UE_LOG(LogTemp, Warning, TEXT("AItemBase::SetDelegate - fail"));
-
-	//}
-
-
 }
 
 void AItemBase::BeginPlay()
@@ -106,14 +89,13 @@ void AItemBase::UseStart()
 	auto UseComplete = [&]
 	{
 		UE_LOG(LogTemp, Warning, TEXT("AItemBase::UseComplete"));
-		
-		
 
-	//	OnUsageSuccess.Broadcast();
 
 		bIsInUse = false;
 		UsageProgress = 100;
 		SetActorTickEnabled(false);
+
+		//	OnUsageSuccess.Broadcast();
 
 		if (HasAuthority())
 		{
@@ -177,11 +159,6 @@ void AItemBase::Unequip()
 
 
 // Replication 
-//void AItemBase::GetLifetimeReplicatedProps(TArray< FLifetimeProperty >& OutLifetimeProps) const
-//{
-//	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
-//	DOREPLIFETIME_CONDITION(AItemBase, Recipient, COND_OwnerOnly);
-//}
 void AItemBase::ServerUseStart_Implementation()
 {
 	UseStart();

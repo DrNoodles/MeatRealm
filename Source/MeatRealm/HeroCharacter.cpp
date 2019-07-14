@@ -99,6 +99,16 @@ void AHeroCharacter::EndPlay(const EEndPlayReason::Type EndPlayReason)
 			SecondaryWeaponSlot->Destroy();
 			SecondaryWeaponSlot = nullptr;
 		}
+
+		for (auto* HP: HealthSlot)
+		{
+			HP->Destroy();
+		}
+
+		for (auto* AP : ArmourSlot)
+		{
+			AP->Destroy();
+		}
 	}
 }
 
@@ -778,8 +788,8 @@ AItemBase* AHeroCharacter::GetItem(EInventorySlots Slot) const
 {
 	switch (Slot)
 	{
-	case EInventorySlots::Health: return HealthSlot;
-	case EInventorySlots::Armour: return ArmourSlot;
+	case EInventorySlots::Health: return GetLastHealthItemOrNull();
+	case EInventorySlots::Armour: return GetLastArmourItemOrNull();
 		//case EInventorySlots::Secondary: return SecondaryWeaponSlot;
 
 	default:
@@ -792,8 +802,8 @@ IEquippable* AHeroCharacter::GetEquippable(EInventorySlots Slot) const
 	{
 	case EInventorySlots::Primary: return PrimaryWeaponSlot;
 	case EInventorySlots::Secondary: return SecondaryWeaponSlot;
-	case EInventorySlots::Health: return HealthSlot;
-	case EInventorySlots::Armour: return ArmourSlot;
+	case EInventorySlots::Health: return GetLastHealthItemOrNull();
+	case EInventorySlots::Armour: return GetLastArmourItemOrNull();
 
 	case EInventorySlots::Undefined:
 	default:;
@@ -804,11 +814,11 @@ IEquippable* AHeroCharacter::GetEquippable(EInventorySlots Slot) const
 
 int AHeroCharacter::GetHealthItemCount() const
 {
-	return HealthSlot == nullptr ? 0 : 1;
+	return HealthSlot.Num();
 }
 int AHeroCharacter::GetArmourItemCount() const
 {
-	return ArmourSlot == nullptr ? 0 : 1;
+	return ArmourSlot.Num();
 }
 
 AWeapon* AHeroCharacter::GetCurrentWeapon() const
@@ -864,39 +874,21 @@ void AHeroCharacter::GiveItemToPlayer(TSubclassOf<AItemBase> ItemClass)
 
 	case EInventorySlots::Health:
 	{
-		auto ToRemove = HealthSlot;
-
 		// Add to inv
-		HealthSlot = Item;
+		HealthSlot.Add(Item);
 		Item->EnterInventory();
 		Item->SetRecipient(this);
 		Item->SetDelegate(this);
-
-		// Remove from inv
-		if (ToRemove)
-		{
-			ToRemove->ExitInventory();
-			ToRemove->Destroy();
-		}
 	}
 	break;
 
 	case EInventorySlots::Armour:
 	{
-		auto ToRemove = ArmourSlot;
-
 		// Add to inv
-		ArmourSlot = Item;
+		ArmourSlot.Add(Item);
 		Item->EnterInventory();
 		Item->SetRecipient(this);
 		Item->SetDelegate(this);
-
-		// Remove from inv
-		if (ToRemove)
-		{
-			ToRemove->ExitInventory();
-			ToRemove->Destroy();
-		}
 	}
 	break;
 
@@ -912,6 +904,17 @@ void AHeroCharacter::GiveItemToPlayer(TSubclassOf<AItemBase> ItemClass)
 
 	LogMsgWithRole("AHeroCharacter::GiveItemToPlayer2");
 }
+
+AItemBase* AHeroCharacter::GetLastHealthItemOrNull() const
+{
+	return HealthSlot.Num() > 0 ? HealthSlot.Last() : nullptr;
+}
+
+AItemBase* AHeroCharacter::GetLastArmourItemOrNull() const
+{
+	return ArmourSlot.Num() > 0 ? ArmourSlot.Last() : nullptr;
+}
+
 void AHeroCharacter::GiveWeaponToPlayer(TSubclassOf<class AWeapon> WeaponClass)
 {
 	const auto Weapon = AuthSpawnWeapon(WeaponClass);
@@ -994,38 +997,51 @@ bool AHeroCharacter::RemoveEquippableFromInventory(IEquippable* Equippable)
 
 	// TODO Create a collection of items to be cleared out each tick after a second of chillin out. Just to give things a chance to settle
 
-
-	auto NewSlot = EInventorySlots::Primary;
+	auto bMustChangeSlot = false;
 	bool WasRemoved = false;
 
-	if (ArmourSlot == Equippable)
-	{
-		if (CurrentInventorySlot == EInventorySlots::Armour && LastInventorySlot != CurrentInventorySlot)
-		{
-			NewSlot = LastInventorySlot;
-		}
-		Equippable->ExitInventory();
-		WasRemoved = true;
 
-		ArmourSlot = nullptr;
+	if (Equippable->GetInventoryCategory() == EInventoryCategory::Health)
+	{
+		const auto Index = HealthSlot.IndexOfByPredicate([Equippable](AItemBase* Item)
+		{
+			return Item == Equippable;
+		});
+
+		if (Index != INDEX_NONE)
+		{
+			Equippable->ExitInventory();
+			HealthSlot.RemoveAt(Index);
+			WasRemoved = true;
+
+			bMustChangeSlot = HealthSlot.Num() == 0 && CurrentInventorySlot == EInventorySlots::Health;
+		}
 	}
 
 
-	if (HealthSlot == Equippable)
-	{
-		if (CurrentInventorySlot == EInventorySlots::Health && LastInventorySlot != CurrentInventorySlot)
-		{
-			NewSlot = LastInventorySlot;
-		}
-		Equippable->ExitInventory();
-		WasRemoved = true;
 
-		HealthSlot = nullptr;
+	if (Equippable->GetInventoryCategory() == EInventoryCategory::Armour)
+	{
+		const auto Index = ArmourSlot.IndexOfByPredicate([Equippable](AItemBase* Item)
+			{
+				return Item == Equippable;
+			});
+
+		if (Index != INDEX_NONE)
+		{
+			Equippable->ExitInventory();
+			ArmourSlot.RemoveAt(Index);
+			WasRemoved = true;
+
+			bMustChangeSlot = ArmourSlot.Num() == 0 && CurrentInventorySlot == EInventorySlots::Armour;
+		}
 	}
 
-
-	EquipSlot(NewSlot);
-	RefreshWeaponAttachments();
+	if (bMustChangeSlot)
+	{
+		const auto NewSlot = LastInventorySlot != CurrentInventorySlot ? LastInventorySlot : EInventorySlots::Primary;
+		EquipSlot(NewSlot);
+	}
 
 	return WasRemoved;
 }
