@@ -32,7 +32,7 @@ protected:
 		float UsageDuration = 2;
 
 	UPROPERTY(EditAnywhere)
-		float EquipDuration = 0.5;
+		float EquipDuration = 0.3;
 
 	//UPROPERTY(BlueprintAssignable, Category = "Event Dispatchers")
 	//	FUsageSuccess OnUsageSuccess;

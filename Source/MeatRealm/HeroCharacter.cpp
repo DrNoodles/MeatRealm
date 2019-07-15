@@ -47,6 +47,7 @@ AHeroCharacter::AHeroCharacter(const FObjectInitializer& ObjectInitializer) : Su
 	// Configure character movement
 	GetCharacterMovement()->MaxWalkSpeed = WalkSpeed;
 	GetCharacterMovement()->AirControl = 0.2f;
+	GetCharacterMovement()->MaxAcceleration = 3000;
 
 	// Create a camera boom (pulls in towards the player if there is a collision)
 	CameraBoom = CreateDefaultSubobject<USpringArmComponent>(TEXT("CameraBoom"));
@@ -1086,9 +1087,8 @@ void AHeroCharacter::EquipSlot(const EInventorySlots Slot)
 		//LogMsgWithRole("Equip new slot");
 		NewEquippable->Equip();
 		NewEquippable->SetHidden(true);
-		const float DrawDuration = NewEquippable->GetEquipDuration();
 
-		GetWorldTimerManager().SetTimer(EquipTimerHandle, this, &AHeroCharacter::MakeEquippedItemVisible, DrawDuration, false);
+		GetWorldTimerManager().SetTimer(EquipTimerHandle, this, &AHeroCharacter::MakeEquippedItemVisible, NewEquippable->GetEquipDuration(), false);
 	}
 
 	RefreshWeaponAttachments();
@@ -1130,11 +1130,7 @@ void AHeroCharacter::RefreshWeaponAttachments() const
 	if (CurrentInventorySlot == EInventorySlots::Health || CurrentInventorySlot == EInventorySlots::Armour)
 	{
 		auto Item = GetItem(CurrentInventorySlot);
-		if (Item)
-		{
-			Item->AttachToComponent(GetMesh(), Rules, HandSocketName);
-			Item->SetHidden(false);
-		}
+		if (Item) Item->AttachToComponent(GetMesh(), Rules, HandSocketName);
 	}
 }
 
@@ -1486,6 +1482,28 @@ bool AHeroCharacter::CanGiveItem(const TSubclassOf<AItemBase>& Class, float& Out
 {
 	LogMsgWithRole("AHeroCharacter::CanGiveItem");
 	OutDelay = 0;
+
+	// Health and Armour items have limits. Check if we're under those limits
+
+	const int HealthCount = HealthSlot.Num();
+	const int ArmourCount = ArmourSlot.Num();
+
+	// If we certainly have space, lets go!
+	if (HealthCount < HealthSlotLimit && ArmourCount < ArmourSlotLimit)
+		return true;
+
+
+	// Need to create an instance to see what category it is
+	auto Temp = NewObject<AItemBase>(this, Class);
+	const auto Category = Temp->GetInventoryCategory();
+	Temp->Destroy();
+
+	if (Category == EInventoryCategory::Health && HealthCount == HealthSlotLimit)
+		return false;
+
+	if (Category == EInventoryCategory::Armour && ArmourCount == ArmourSlotLimit)
+		return false;
+
 	return true;
 }
 
