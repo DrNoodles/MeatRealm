@@ -12,7 +12,10 @@
 class AHeroCharacter;
 class IAffectableInterface;
 
-//DECLARE_DYNAMIC_MULTICAST_DELEGATE(FUsageSuccess);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE(FUsageDenied);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE(FUsageStarted);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE(FUsageSuccess);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE(FUsageCancelled);
 
 UCLASS()
 class MEATREALM_API AItemBase : public AActor, public IEquippable
@@ -29,9 +32,19 @@ protected:
 		bool bIsInUse;
 
 
-	//UPROPERTY(BlueprintAssignable, Category = "Event Dispatchers")
-	//	FUsageSuccess OnUsageSuccess;
+	UPROPERTY(BlueprintAssignable, Category = "Event Dispatchers")
+		FUsageDenied OnUsageDenied;
 
+	UPROPERTY(BlueprintAssignable, Category = "Event Dispatchers")
+		FUsageStarted OnUsageStarted;
+
+	UPROPERTY(BlueprintAssignable, Category = "Event Dispatchers")
+		FUsageSuccess OnUsageSuccess;
+
+	UPROPERTY(BlueprintAssignable, Category = "Event Dispatchers")
+		FUsageCancelled OnUsageCancelled;
+
+	
 private:
 	FDateTime UsageStartTime;
 	FTimerHandle UsageTimerHandle;

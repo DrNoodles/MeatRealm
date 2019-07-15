@@ -46,6 +46,8 @@ void AItemBase::SetDelegate(AHeroCharacter* NewDelegate)
 
 void AItemBase::BeginPlay()
 {
+	UE_LOG(LogTemp, Warning, TEXT("AItemBase::BeginPlay"));
+	Super::BeginPlay();
 	//SetActorTickInterval(.1); // tick every 10th of a sec
 	SetActorTickEnabled(false);
 }
@@ -81,13 +83,18 @@ void AItemBase::UsePressed()
 	if (bIsInUse) return;
 	
 
-	if (!CanApplyItem(Recipient)) return;
+	if (!CanApplyItem(Recipient))
+	{
+		OnUsageDenied.Broadcast();
+		return;
+	}
 
 	// Start the usage!
 	SetActorTickEnabled(true);
 	bIsInUse = true;
 	UsageStartTime = FDateTime::Now();
 	UsageProgress = 0;
+	OnUsageStarted.Broadcast();
 
 
 	// Use complete function - TODO Break this out into its own private method
@@ -95,12 +102,11 @@ void AItemBase::UsePressed()
 	{
 		UE_LOG(LogTemp, Warning, TEXT("AItemBase::UseComplete"));
 
-
 		bIsInUse = false;
 		UsageProgress = 100;
 		SetActorTickEnabled(false);
 
-		//	OnUsageSuccess.Broadcast();
+		OnUsageSuccess.Broadcast();
 
 		if (HasAuthority())
 		{
@@ -149,6 +155,8 @@ void AItemBase::StopAnyUsage()
 	SetActorTickEnabled(false);
 	bIsInUse = false;
 	UsageProgress = 0;
+
+	OnUsageCancelled.Broadcast();
 }
 
 void AItemBase::SetRecipient(IAffectableInterface* const TheRecipient)
