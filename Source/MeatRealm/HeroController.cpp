@@ -295,25 +295,25 @@ void AHeroController::Input_FaceRight(float Value)
 void AHeroController::Input_FirePressed()
 {
 	auto Char = GetHeroCharacter();
-	if (Char) Char->Input_FirePressed();
+	if (Char) Char->Input_PrimaryPressed();
 }
 
 void AHeroController::Input_FireReleased()
 {
 	auto Char = GetHeroCharacter();
-	if (Char) Char->Input_FireReleased();
+	if (Char) Char->Input_PrimaryReleased();
 }
 
 void AHeroController::Input_AdsPressed()
 {
 	auto Char = GetHeroCharacter();
-	if (Char) Char->Input_AdsPressed();
+	if (Char) Char->Input_SecondaryPressed();
 }
 
 void AHeroController::Input_AdsReleased()
 {
 	auto Char = GetHeroCharacter();
-	if (Char) Char->Input_AdsReleased();
+	if (Char) Char->Input_SecondaryReleased();
 }
 
 void AHeroController::Input_Reload()
