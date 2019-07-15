@@ -1086,9 +1086,8 @@ void AHeroCharacter::EquipSlot(const EInventorySlots Slot)
 		//LogMsgWithRole("Equip new slot");
 		NewEquippable->Equip();
 		NewEquippable->SetHidden(true);
-		const float DrawDuration = NewEquippable->GetEquipDuration();
 
-		GetWorldTimerManager().SetTimer(EquipTimerHandle, this, &AHeroCharacter::MakeEquippedItemVisible, DrawDuration, false);
+		GetWorldTimerManager().SetTimer(EquipTimerHandle, this, &AHeroCharacter::MakeEquippedItemVisible, NewEquippable->GetEquipDuration(), false);
 	}
 
 	RefreshWeaponAttachments();
@@ -1130,11 +1129,7 @@ void AHeroCharacter::RefreshWeaponAttachments() const
 	if (CurrentInventorySlot == EInventorySlots::Health || CurrentInventorySlot == EInventorySlots::Armour)
 	{
 		auto Item = GetItem(CurrentInventorySlot);
-		if (Item)
-		{
-			Item->AttachToComponent(GetMesh(), Rules, HandSocketName);
-			Item->SetHidden(false);
-		}
+		if (Item) Item->AttachToComponent(GetMesh(), Rules, HandSocketName);
 	}
 }
 
