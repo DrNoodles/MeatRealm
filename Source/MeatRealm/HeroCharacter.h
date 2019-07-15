@@ -145,6 +145,12 @@ protected:
 	UPROPERTY(Replicated, BlueprintReadOnly)
 		EInventorySlots CurrentInventorySlot = EInventorySlots::Undefined;
 
+	UPROPERTY(EditAnywhere, BlueprintReadOnly)
+	int32 HealthSlotLimit = 6;
+	
+	UPROPERTY(EditAnywhere, BlueprintReadOnly)
+	int32 ArmourSlotLimit = 6;
+
 private:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Camera, meta = (AllowPrivateAccess = "true"))
 		class USpringArmComponent* CameraBoom;
@@ -233,6 +239,8 @@ public:
 	bool AuthTryGiveWeapon(const TSubclassOf<AWeapon>& Class) override;
 	UFUNCTION()
 	bool CanGiveWeapon(const TSubclassOf<AWeapon>& Class, float& OutDelay) override;
+	
+	// TODO Add EInventoryCategory as param to optimise checks. 
 	UFUNCTION()
 	bool CanGiveItem(const TSubclassOf<AItemBase>& Class, float& OutDelay) override;
 	UFUNCTION()

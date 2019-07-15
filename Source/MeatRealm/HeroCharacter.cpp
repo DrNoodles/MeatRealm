@@ -1481,6 +1481,28 @@ bool AHeroCharacter::CanGiveItem(const TSubclassOf<AItemBase>& Class, float& Out
 {
 	LogMsgWithRole("AHeroCharacter::CanGiveItem");
 	OutDelay = 0;
+
+	// Health and Armour items have limits. Check if we're under those limits
+
+	const int HealthCount = HealthSlot.Num();
+	const int ArmourCount = ArmourSlot.Num();
+
+	// If we certainly have space, lets go!
+	if (HealthCount < HealthSlotLimit && ArmourCount < ArmourSlotLimit)
+		return true;
+
+
+	// Need to create an instance to see what category it is
+	auto Temp = NewObject<AItemBase>(this, Class);
+	const auto Category = Temp->GetInventoryCategory();
+	Temp->Destroy();
+
+	if (Category == EInventoryCategory::Health && HealthCount == HealthSlotLimit)
+		return false;
+
+	if (Category == EInventoryCategory::Armour && ArmourCount == ArmourSlotLimit)
+		return false;
+
 	return true;
 }
 
