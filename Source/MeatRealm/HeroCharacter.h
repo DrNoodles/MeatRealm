@@ -36,6 +36,8 @@ public:
 	bool RemoveEquippableFromInventory(IEquippable* Equippable);
 	void NotifyItemIsExpended(AItemBase* Item);
 
+	float GetHealingMovementSpeed() const { return HealingMovementSpeed; }
+
 	UPROPERTY(EditAnywhere, Category = Camera)
 		bool bLeanCameraWithAim = true;
 
@@ -78,6 +80,9 @@ public:
 
 	UPROPERTY(EditAnywhere)
 		float RunningReloadSpeed = 425;
+
+	UPROPERTY(EditAnywhere)
+		float HealingMovementSpeed = 250;
 
 	UPROPERTY(EditAnywhere)
 		float WalkSpeed = 375;
