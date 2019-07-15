@@ -438,19 +438,23 @@ void AHeroCharacter::SetupPlayerInputComponent(class UInputComponent* PlayerInpu
 
 }
 
-void AHeroCharacter::UseItemStart()
+void AHeroCharacter::UseItemPressed() const
 {
-	LogMsgWithRole("AHeroCharacter::UseItemStart");
+	LogMsgWithRole("AHeroCharacter::UseItemPressed");
 	auto Item = GetCurrentItem();
-	if (!Item) return;
-	Item->UseStart();
+	if (Item) Item->UsePressed();
 }
-void AHeroCharacter::UseItemStop()
+void AHeroCharacter::UseItemReleased() const
 {
-	LogMsgWithRole("AHeroCharacter::UseItemStop");
+	LogMsgWithRole("AHeroCharacter::UseItemReleased");
 	auto Item = GetCurrentItem();
-	if (!Item) return;
-	Item->UseStop();
+	if (Item) Item->UseReleased();
+}
+void AHeroCharacter::UseItemCancelled() const
+{
+	LogMsgWithRole("AHeroCharacter::UseItemCancelled");
+	auto Item = GetCurrentItem();
+	if (Item) Item->Cancel();
 }
 
 void AHeroCharacter::OnEquipHealth()
@@ -662,24 +666,16 @@ void AHeroCharacter::ServerSetTargeting_Implementation(bool bNewTargeting)
 //	DrawDebugLine(GetWorld(), Start, End, Color, false, -1., 0, 2.f);
 //}
 
-void AHeroCharacter::Input_FirePressed()
+void AHeroCharacter::Input_PrimaryPressed()
 {
 	auto* MyPC = Cast<AHeroController>(Controller);
 	if (MyPC && MyPC->IsGameInputAllowed())
 	{
-		auto Equippable = GetEquippable(CurrentInventorySlot);
-		const auto Category = Equippable ? Equippable->GetInventoryCategory() : EInventoryCategory::Undefined;
-
-		if (Category == EInventoryCategory::Undefined) return;
-
-		if (Category == EInventoryCategory::Health || Category == EInventoryCategory::Armour)
+		if (HasAnItemEquipped())
 		{
-			UseItemStart();
+			UseItemPressed();
 		}
-
-
-		// Fire weapon
-		if (Category == EInventoryCategory::Weapon)
+		else if (HasAWeaponEquipped())
 		{
 			if (bIsRunning || IsRunning())
 			{
@@ -690,43 +686,44 @@ void AHeroCharacter::Input_FirePressed()
 	}
 }
 
-void AHeroCharacter::Input_FireReleased()
+void AHeroCharacter::Input_PrimaryReleased()
 {
-	auto Equippable = GetCurrentEquippable();
-
-	const auto Category = Equippable ? Equippable->GetInventoryCategory() : EInventoryCategory::Undefined;
-
-	if (Category == EInventoryCategory::Undefined) return;
-
-	if (Category == EInventoryCategory::Health || Category == EInventoryCategory::Armour)
+	if (HasAnItemEquipped())
 	{
-		UseItemStop();
+		UseItemReleased();
 	}
-
-	if (Category == EInventoryCategory::Weapon)
+	else if (HasAWeaponEquipped())
 	{
 		StopWeaponFire();
 	}
 }
 
-void AHeroCharacter::Input_AdsPressed()
+void AHeroCharacter::Input_SecondaryPressed()
 {
 	auto* MyPC = Cast<AHeroController>(Controller);
 	if (MyPC && MyPC->IsGameInputAllowed())
 	{
-		if (bIsRunning || IsRunning())
+		if (HasAnItemEquipped())
 		{
-			SetRunning(false);
+			UseItemCancelled();
 		}
-		SetTargeting(true);
+		else if (HasAWeaponEquipped())
+		{
+			if (bIsRunning || IsRunning())
+			{
+				SetRunning(false);
+			}
+			SetTargeting(true);
+		}
 	}
 }
 
-void AHeroCharacter::Input_AdsReleased()
+void AHeroCharacter::Input_SecondaryReleased()
 {
-	//SimulateAdsMode(false);
-	//ServerRPC_AdsReleased();
-	SetTargeting(false);
+	if (HasAWeaponEquipped())
+	{
+		SetTargeting(false);
+	}
 }
 
 void AHeroCharacter::Input_Reload() const
@@ -864,6 +861,17 @@ AItemBase* AHeroCharacter::GetCurrentItem() const
 IEquippable* AHeroCharacter::GetCurrentEquippable() const
 {
 	return GetEquippable(CurrentInventorySlot);
+}
+
+bool AHeroCharacter::HasAnItemEquipped() const
+{
+	auto Equippable = GetEquippable(CurrentInventorySlot);
+	return Equippable->Is(EInventoryCategory::Health) || Equippable->Is(EInventoryCategory::Armour);
+}
+bool AHeroCharacter::HasAWeaponEquipped() const
+{
+	auto Equippable = GetEquippable(CurrentInventorySlot);
+	return Equippable->Is(EInventoryCategory::Weapon);// || Equippable->Is(EInventoryCategory::Throwable);
 }
 
 

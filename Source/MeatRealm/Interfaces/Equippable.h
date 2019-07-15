@@ -47,4 +47,9 @@ public:
 		virtual bool ShouldHideWhenUnequipped() = 0;
 	UFUNCTION()
 		virtual void SetDelegate(AHeroCharacter* Delegate) = 0; // TODO Split out an inventory component in HeroCharacter and pass that in here instead as the delegate. UInventoryComponent. Mmmmmm hawt
+
+	// Below have Default implmenetations
+
+	UFUNCTION()
+		virtual bool Is(EInventoryCategory Category);
 };

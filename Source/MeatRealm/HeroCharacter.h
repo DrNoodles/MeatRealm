@@ -263,22 +263,24 @@ public:
 	/// Input
 	virtual void SetupPlayerInputComponent(class UInputComponent* InputComponent) override;
 
-	void UseItemStart();
-	void UseItemStop();
+	void UseItemPressed() const;
+	void UseItemReleased() const;
+	void UseItemCancelled() const;
 
 
 	void StartWeaponFire();
 	void StopWeaponFire();
 	bool IsFiring() const;
 
-	void Input_FirePressed();
-	void Input_FireReleased();
-	void Input_AdsPressed();
-	void Input_AdsReleased();
+	void Input_PrimaryPressed();
+	void Input_PrimaryReleased();
+	void Input_SecondaryPressed();
+	void Input_SecondaryReleased();
 	void Input_Reload() const;
 
 	UFUNCTION(BlueprintCallable)
 	AWeapon* GetWeapon(EInventorySlots Slot) const;
+
 	AItemBase* GetItem(EInventorySlots Slot) const;
 	IEquippable* GetEquippable(EInventorySlots Slot) const;
 
@@ -345,11 +347,16 @@ private:
 
 	void SetTargeting(bool bNewTargeting);
 
-	void GiveItemToPlayer(TSubclassOf<class AItemBase> ItemClass);
+
+
+
+	bool HasAnItemEquipped() const;
+	bool HasAWeaponEquipped() const;
 
 	AItemBase* GetFirstHealthItemOrNull() const;
 	AItemBase* GetFirstArmourItemOrNull() const;
-
+	
+	void GiveItemToPlayer(TSubclassOf<class AItemBase> ItemClass);
 	void GiveWeaponToPlayer(TSubclassOf<class AWeapon> WeaponClass);
 	AWeapon* AuthSpawnWeapon(TSubclassOf<AWeapon> weaponClass);
 	EInventorySlots FindGoodWeaponSlot() const;
@@ -357,6 +364,8 @@ private:
 	void EquipSlot(EInventorySlots Slot);
 	void MakeEquippedItemVisible() const;
 	void RefreshWeaponAttachments() const;
+
+
 
 	static FVector2D GetGameViewportSize();
 	static FVector2D CalcLinearLeanVectorUnclipped(const FVector2D& CursorLoc, const FVector2D& ViewportSize);

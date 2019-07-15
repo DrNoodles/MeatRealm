@@ -63,17 +63,19 @@ void AItemBase::Tick(float DT)
 	}
 }
 
-void AItemBase::UseStart()
+void AItemBase::UsePressed()
 {
 	if (!HasAuthority())
 	{
-		ServerUseStart();
+		ServerUsePressed();
 	}
 
-	UE_LOG(LogTemp, Warning, TEXT("AItemBase::UseStart"));
+	UE_LOG(LogTemp, Warning, TEXT("AItemBase::UsePressed"));
 
 
+	if (bIsInUse) return;
 	
+
 	if (!CanApplyItem(Recipient)) return;
 
 	// Start the usage!
@@ -109,14 +111,34 @@ void AItemBase::UseStart()
 	GetWorldTimerManager().SetTimer(UsageTimerHandle, UseComplete, UsageDuration, false);
 }
 
-void AItemBase::UseStop()
+void AItemBase::UseReleased()
+{
+	if (!bIsHoldToUse) return;
+
+	if (!HasAuthority())
+	{
+		ServerUseReleased();
+	}
+
+	UE_LOG(LogTemp, Warning, TEXT("AItemBase::UseReleased"));
+	StopAnyUsage();
+
+}
+
+void AItemBase::Cancel()
 {
 	if (!HasAuthority())
 	{
-		ServerUseStop();
+		ServerCancel();
 	}
 
-	UE_LOG(LogTemp, Warning, TEXT("AItemBase::UseStop"));
+	UE_LOG(LogTemp, Warning, TEXT("AItemBase::Cancel"));
+	StopAnyUsage();
+}
+
+void AItemBase::StopAnyUsage()
+{
+	if (!bIsInUse) return;
 
 	GetWorldTimerManager().ClearTimer(UsageTimerHandle);
 	SetActorTickEnabled(false);
@@ -139,7 +161,7 @@ void AItemBase::Equip()
 	}
 
 	UE_LOG(LogTemp, Warning, TEXT("AItemBase::Equip"));
-	UseStop();
+	StopAnyUsage();
 }
 
 void AItemBase::Unequip()
@@ -150,26 +172,34 @@ void AItemBase::Unequip()
 	}
 
 	UE_LOG(LogTemp, Warning, TEXT("AItemBase::Unequip"));
-	UseStop();
+	StopAnyUsage();
 }
 
 
 
 
 // Replication 
-void AItemBase::ServerUseStart_Implementation()
+void AItemBase::ServerUsePressed_Implementation()
 {
-	UseStart();
+	UsePressed();
 }
-bool AItemBase::ServerUseStart_Validate()
+bool AItemBase::ServerUsePressed_Validate()
 {
 	return true;
 }
-void AItemBase::ServerUseStop_Implementation()
+void AItemBase::ServerUseReleased_Implementation()
 {
-	UseStop();
+	UseReleased();
 }
-bool AItemBase::ServerUseStop_Validate()
+bool AItemBase::ServerUseReleased_Validate()
+{
+	return true;
+}
+void AItemBase::ServerCancel_Implementation()
+{
+	Cancel();
+}
+bool AItemBase::ServerCancel_Validate()
 {
 	return true;
 }
