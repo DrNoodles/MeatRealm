@@ -246,7 +246,7 @@ public:
 	AHeroController* GetHeroController() const;
 	float GetTargetingSpeedModifier() const;
 	bool IsReloading() const;
-	
+	bool IsUsingItem() const;
 
 
 	static bool IsBackpedaling(const FVector& MoveDir, const FVector& AimDir, int BackpedalAngle);

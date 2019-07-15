@@ -4,10 +4,9 @@
 #include "ItemBase.h"
 #include "Engine/World.h"
 #include "Interfaces/AffectableInterface.h"
-#include "Components/StaticMeshComponent.h"
-#include "UnrealNetwork.h"
+#include "Components/SkeletalMeshComponent.h"
 #include "HeroCharacter.h"
-#include "Interfaces/EquippableDelegate.h"
+#include "UnrealNetwork.h"
 
 AItemBase::AItemBase()
 {
@@ -30,7 +29,6 @@ AItemBase::AItemBase()
 void AItemBase::EnterInventory()
 {
 	check(HasAuthority())
-
 }
 void AItemBase::ExitInventory()
 {
@@ -67,7 +65,6 @@ void AItemBase::Tick(float DT)
 
 void AItemBase::UseStart()
 {
-
 	if (!HasAuthority())
 	{
 		ServerUseStart();

@@ -1691,8 +1691,16 @@ float AHeroCharacter::GetTargetingSpeedModifier() const
 
 bool AHeroCharacter::IsReloading() const
 {
-	auto W = GetCurrentWeapon();
+	const auto W = GetCurrentWeapon();
 	if (W && W->IsReloading()) return true;
+
+	return false;
+}
+
+bool AHeroCharacter::IsUsingItem() const
+{
+	const auto Item = GetCurrentItem();
+	if (Item && Item->IsInUse()) return true;
 
 	return false;
 }

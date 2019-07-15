@@ -6,7 +6,6 @@
 #include "GameFramework/Actor.h"
 #include "TimerManager.h"
 #include "Interfaces/Equippable.h"
-#include "Interfaces/EquippableDelegate.h"
 
 #include "ItemBase.generated.h"
 
@@ -22,6 +21,7 @@ class MEATREALM_API AItemBase : public AActor, public IEquippable
 
 
 public:
+protected:
 	UPROPERTY(BlueprintReadOnly)
 		float UsageProgress = 0;
 
@@ -36,7 +36,6 @@ public:
 
 	//UPROPERTY(BlueprintAssignable, Category = "Event Dispatchers")
 	//	FUsageSuccess OnUsageSuccess;
-
 
 private:
 	FDateTime UsageStartTime;
@@ -57,7 +56,8 @@ public:
 
 	void UseStart();
 	void UseStop();
-	
+
+	bool IsInUse() const { return bIsInUse; }
 	void SetRecipient(IAffectableInterface* const TheRecipient);
 
 	/* IEquippable */
