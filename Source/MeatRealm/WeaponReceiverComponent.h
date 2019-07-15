@@ -189,7 +189,10 @@ protected:
 
 	UPROPERTY(BlueprintReadOnly, Replicated)
 		FWeaponState WeaponState {};
-	
+
+	UFUNCTION(BlueprintCallable)
+		float GetReloadTimeRemaining() const { return (1 - WeaponState.ReloadProgress) * ReloadTime; }
+
 private:
 	UPROPERTY(EditAnywhere)
 		float AdsLineLength = 1500; // cm

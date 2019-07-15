@@ -137,7 +137,6 @@ public:
 
 
 protected:
-
 private:
 
 	UFUNCTION(Server, Reliable, WithValidation)
