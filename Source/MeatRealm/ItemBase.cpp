@@ -50,6 +50,11 @@ void AItemBase::BeginPlay()
 	SetActorTickEnabled(false);
 }
 
+float AItemBase::GetUsageTimeRemaining() const
+{
+	return (1 - UsageProgress) * UsageDuration;
+}
+
 void AItemBase::Tick(float DT)
 {
 	if (HasAuthority()) return;

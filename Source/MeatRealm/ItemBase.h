@@ -93,10 +93,15 @@ protected:
 	{
 		unimplemented();
 	}
-	
+
+
+	UFUNCTION(BlueprintCallable)
+		float GetUsageTimeRemaining() const;
+
 
 private:
 	virtual void BeginPlay() override;
+
 	void Tick(float DeltaSeconds) override;
 
 	void StopAnyUsage();
