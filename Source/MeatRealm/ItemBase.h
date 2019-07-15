@@ -28,11 +28,6 @@ protected:
 	UPROPERTY(BlueprintReadOnly)
 		bool bIsInUse;
 
-	UPROPERTY(EditAnywhere)
-		float UsageDuration = 2;
-
-	UPROPERTY(EditAnywhere)
-		float EquipDuration = 0.5;
 
 	//UPROPERTY(BlueprintAssignable, Category = "Event Dispatchers")
 	//	FUsageSuccess OnUsageSuccess;
@@ -42,6 +37,16 @@ private:
 	FTimerHandle UsageTimerHandle;
 	IAffectableInterface* Recipient = nullptr;
 	AHeroCharacter* Delegate = nullptr; // TODO This is a horrible coupling. Make it a UInventoryComponent. Using an interface is a fools errand in UE4
+
+	UPROPERTY(EditAnywhere)
+		float UsageDuration = 2;
+
+	// When true the player much hold the use key for the duration. When false it's a use to start, another use to cancel
+	UPROPERTY(EditAnywhere)
+		bool bIsHoldToUse = false;
+
+	UPROPERTY(EditAnywhere)
+		float EquipDuration = 0.3;
 
 
 	UPROPERTY(VisibleAnywhere)
@@ -54,8 +59,9 @@ private:
 public:
 	AItemBase();
 
-	void UseStart();
-	void UseStop();
+	void UsePressed();
+	void UseReleased();
+	void Cancel();
 
 	bool IsInUse() const { return bIsInUse; }
 	void SetRecipient(IAffectableInterface* const TheRecipient);
@@ -87,17 +93,27 @@ protected:
 	{
 		unimplemented();
 	}
-	
+
+
+	UFUNCTION(BlueprintCallable)
+		float GetUsageTimeRemaining() const;
+
 
 private:
 	virtual void BeginPlay() override;
+
 	void Tick(float DeltaSeconds) override;
 
-	UFUNCTION(Server, Reliable, WithValidation)
-		void ServerUseStart();
+	void StopAnyUsage();
 
 	UFUNCTION(Server, Reliable, WithValidation)
-		void ServerUseStop();
+		void ServerUsePressed();
+
+	UFUNCTION(Server, Reliable, WithValidation)
+		void ServerUseReleased();
+
+	UFUNCTION(Server, Reliable, WithValidation)
+		void ServerCancel();
 
 	UFUNCTION(Server, Reliable, WithValidation)
 		void ServerEquip();

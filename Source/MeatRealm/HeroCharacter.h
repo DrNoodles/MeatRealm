@@ -98,17 +98,17 @@ public:
 
 	// Degrees per second
 	UPROPERTY(EditAnywhere)
-		float RunTurnRateBase = 45;
+		float RunTurnRateBase = 90;
 
 	UPROPERTY(EditAnywhere)
-		float RunTurnRateMax = 270;
+		float RunTurnRateMax = 360;
 
 	// Seconds until an action works after running 
 	UPROPERTY(EditAnywhere)
-		float RunCooldown = 0.5;
+		float RunCooldown = 0.4;
 
 	UPROPERTY(EditAnywhere)
-	bool bCancelReloadOnRun = true;
+	bool bCancelReloadOnRun = false;
 
 	// Not replicated cuz diff local vs server time;
 	FDateTime LastRunEnded;
@@ -144,6 +144,12 @@ protected:
 
 	UPROPERTY(Replicated, BlueprintReadOnly)
 		EInventorySlots CurrentInventorySlot = EInventorySlots::Undefined;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly)
+	int32 HealthSlotLimit = 6;
+	
+	UPROPERTY(EditAnywhere, BlueprintReadOnly)
+	int32 ArmourSlotLimit = 6;
 
 private:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Camera, meta = (AllowPrivateAccess = "true"))
@@ -233,6 +239,8 @@ public:
 	bool AuthTryGiveWeapon(const TSubclassOf<AWeapon>& Class) override;
 	UFUNCTION()
 	bool CanGiveWeapon(const TSubclassOf<AWeapon>& Class, float& OutDelay) override;
+	
+	// TODO Add EInventoryCategory as param to optimise checks. 
 	UFUNCTION()
 	bool CanGiveItem(const TSubclassOf<AItemBase>& Class, float& OutDelay) override;
 	UFUNCTION()
@@ -255,22 +263,24 @@ public:
 	/// Input
 	virtual void SetupPlayerInputComponent(class UInputComponent* InputComponent) override;
 
-	void UseItemStart();
-	void UseItemStop();
+	void UseItemPressed() const;
+	void UseItemReleased() const;
+	void UseItemCancelled() const;
 
 
 	void StartWeaponFire();
 	void StopWeaponFire();
 	bool IsFiring() const;
 
-	void Input_FirePressed();
-	void Input_FireReleased();
-	void Input_AdsPressed();
-	void Input_AdsReleased();
+	void Input_PrimaryPressed();
+	void Input_PrimaryReleased();
+	void Input_SecondaryPressed();
+	void Input_SecondaryReleased();
 	void Input_Reload() const;
 
 	UFUNCTION(BlueprintCallable)
 	AWeapon* GetWeapon(EInventorySlots Slot) const;
+
 	AItemBase* GetItem(EInventorySlots Slot) const;
 	IEquippable* GetEquippable(EInventorySlots Slot) const;
 
@@ -337,11 +347,16 @@ private:
 
 	void SetTargeting(bool bNewTargeting);
 
-	void GiveItemToPlayer(TSubclassOf<class AItemBase> ItemClass);
+
+
+
+	bool HasAnItemEquipped() const;
+	bool HasAWeaponEquipped() const;
 
 	AItemBase* GetFirstHealthItemOrNull() const;
 	AItemBase* GetFirstArmourItemOrNull() const;
-
+	
+	void GiveItemToPlayer(TSubclassOf<class AItemBase> ItemClass);
 	void GiveWeaponToPlayer(TSubclassOf<class AWeapon> WeaponClass);
 	AWeapon* AuthSpawnWeapon(TSubclassOf<AWeapon> weaponClass);
 	EInventorySlots FindGoodWeaponSlot() const;
@@ -349,6 +364,8 @@ private:
 	void EquipSlot(EInventorySlots Slot);
 	void MakeEquippedItemVisible() const;
 	void RefreshWeaponAttachments() const;
+
+
 
 	static FVector2D GetGameViewportSize();
 	static FVector2D CalcLinearLeanVectorUnclipped(const FVector2D& CursorLoc, const FVector2D& ViewportSize);

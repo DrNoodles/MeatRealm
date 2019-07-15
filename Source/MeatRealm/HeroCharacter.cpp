@@ -47,6 +47,7 @@ AHeroCharacter::AHeroCharacter(const FObjectInitializer& ObjectInitializer) : Su
 	// Configure character movement
 	GetCharacterMovement()->MaxWalkSpeed = WalkSpeed;
 	GetCharacterMovement()->AirControl = 0.2f;
+	GetCharacterMovement()->MaxAcceleration = 3000;
 
 	// Create a camera boom (pulls in towards the player if there is a collision)
 	CameraBoom = CreateDefaultSubobject<USpringArmComponent>(TEXT("CameraBoom"));
@@ -167,21 +168,51 @@ void AHeroCharacter::ScanForWeaponPickups(float DeltaSeconds)
 		TArray<FInputActionKeyMapping> Mappings;
 		InputSettings->GetActionMappingByName("Interact", OUT Mappings);
 
-		auto ActionText = FText::FromString("Undefined");
+		FString ActionText = "Undefined";
 		for (FInputActionKeyMapping Mapping : Mappings)
 		{
 			bool canUseKeyboardKey = bUseMouseAim && !Mapping.Key.IsGamepadKey();
 			bool canUseGamepadKey = !bUseMouseAim && Mapping.Key.IsGamepadKey();
 
-			if (canUseKeyboardKey || canUseGamepadKey)
+			if (canUseKeyboardKey)
 			{
-				ActionText = Mapping.Key.GetDisplayName();
+				ActionText = Mapping.Key.GetDisplayName().ToString();
 				break;
 			}
+
+			// Hacky! Make the gamepad text not bloody horrible
+			if (canUseGamepadKey)
+			{
+				ActionText = Mapping.Key.ToString();
+				const FString S = Mapping.Key.ToString();
+
+				if (S == "Gamepad_FaceButton_Bottom") { ActionText = "A"; break;}
+				if (S == "Gamepad_FaceButton_Right") { ActionText = "B"; break;}
+				if (S == "Gamepad_FaceButton_Left") { ActionText = "X"; break;}
+				if (S == "Gamepad_FaceButton_Top") { ActionText = "Y"; break;}
+				if (S == "Gamepad_DPad_Up") { ActionText = "Up"; break;}
+				if (S == "Gamepad_DPad_Down") { ActionText = "Down"; break;}
+				if (S == "Gamepad_DPad_Right") { ActionText = "Right"; break;}
+				if (S == "Gamepad_DPad_Left") { ActionText = "Left"; break;}
+				if (S == "Gamepad_LeftShoulder") { ActionText = "LB"; break;}
+				if (S == "Gamepad_RightShoulder") { ActionText = "RB"; break;}
+				if (S == "Gamepad_LeftTrigger") { ActionText = "LT"; break;}
+				if (S == "Gamepad_RightTrigger") { ActionText = "RT"; break;}
+				/*
+				static const FKey Gamepad_LeftThumbstick;
+				static const FKey Gamepad_RightThumbstick;
+				static const FKey Gamepad_Special_Left;
+				static const FKey Gamepad_Special_Left_X;
+				static const FKey Gamepad_Special_Left_Y;
+				static const FKey Gamepad_Special_Right;
+
+				*/
+			}
+			
 		}
 		if (World)
 		{
-			auto Str = FString::Printf(TEXT("Grab (%s)"), *ActionText.ToString());
+			auto Str = FString::Printf(TEXT("Grab (%s)"), *ActionText);
 			const auto YOffset = -5.f * Str.Len();
 
 			DrawDebugString(World, FVector{ 50, YOffset, 100 },	Str, Pickup, FColor::White, DeltaSeconds * 0.5);
@@ -216,8 +247,9 @@ void AHeroCharacter::Tick(float DeltaSeconds)
 	else
 	{
 		TickWalking(DeltaSeconds);
-		ScanForWeaponPickups(DeltaSeconds);
 	}
+
+	ScanForWeaponPickups(DeltaSeconds);
 
 
 	// Track camera with aim
@@ -406,19 +438,23 @@ void AHeroCharacter::SetupPlayerInputComponent(class UInputComponent* PlayerInpu
 
 }
 
-void AHeroCharacter::UseItemStart()
+void AHeroCharacter::UseItemPressed() const
 {
-	LogMsgWithRole("AHeroCharacter::UseItemStart");
+	LogMsgWithRole("AHeroCharacter::UseItemPressed");
 	auto Item = GetCurrentItem();
-	if (!Item) return;
-	Item->UseStart();
+	if (Item) Item->UsePressed();
 }
-void AHeroCharacter::UseItemStop()
+void AHeroCharacter::UseItemReleased() const
 {
-	LogMsgWithRole("AHeroCharacter::UseItemStop");
+	LogMsgWithRole("AHeroCharacter::UseItemReleased");
 	auto Item = GetCurrentItem();
-	if (!Item) return;
-	Item->UseStop();
+	if (Item) Item->UseReleased();
+}
+void AHeroCharacter::UseItemCancelled() const
+{
+	LogMsgWithRole("AHeroCharacter::UseItemCancelled");
+	auto Item = GetCurrentItem();
+	if (Item) Item->Cancel();
 }
 
 void AHeroCharacter::OnEquipHealth()
@@ -630,24 +666,16 @@ void AHeroCharacter::ServerSetTargeting_Implementation(bool bNewTargeting)
 //	DrawDebugLine(GetWorld(), Start, End, Color, false, -1., 0, 2.f);
 //}
 
-void AHeroCharacter::Input_FirePressed()
+void AHeroCharacter::Input_PrimaryPressed()
 {
 	auto* MyPC = Cast<AHeroController>(Controller);
 	if (MyPC && MyPC->IsGameInputAllowed())
 	{
-		auto Equippable = GetEquippable(CurrentInventorySlot);
-		const auto Category = Equippable ? Equippable->GetInventoryCategory() : EInventoryCategory::Undefined;
-
-		if (Category == EInventoryCategory::Undefined) return;
-
-		if (Category == EInventoryCategory::Health || Category == EInventoryCategory::Armour)
+		if (HasAnItemEquipped())
 		{
-			UseItemStart();
+			UseItemPressed();
 		}
-
-
-		// Fire weapon
-		if (Category == EInventoryCategory::Weapon)
+		else if (HasAWeaponEquipped())
 		{
 			if (bIsRunning || IsRunning())
 			{
@@ -658,43 +686,44 @@ void AHeroCharacter::Input_FirePressed()
 	}
 }
 
-void AHeroCharacter::Input_FireReleased()
+void AHeroCharacter::Input_PrimaryReleased()
 {
-	auto Equippable = GetCurrentEquippable();
-
-	const auto Category = Equippable ? Equippable->GetInventoryCategory() : EInventoryCategory::Undefined;
-
-	if (Category == EInventoryCategory::Undefined) return;
-
-	if (Category == EInventoryCategory::Health || Category == EInventoryCategory::Armour)
+	if (HasAnItemEquipped())
 	{
-		UseItemStop();
+		UseItemReleased();
 	}
-
-	if (Category == EInventoryCategory::Weapon)
+	else if (HasAWeaponEquipped())
 	{
 		StopWeaponFire();
 	}
 }
 
-void AHeroCharacter::Input_AdsPressed()
+void AHeroCharacter::Input_SecondaryPressed()
 {
 	auto* MyPC = Cast<AHeroController>(Controller);
 	if (MyPC && MyPC->IsGameInputAllowed())
 	{
-		if (bIsRunning || IsRunning())
+		if (HasAnItemEquipped())
 		{
-			SetRunning(false);
+			UseItemCancelled();
 		}
-		SetTargeting(true);
+		else if (HasAWeaponEquipped())
+		{
+			if (bIsRunning || IsRunning())
+			{
+				SetRunning(false);
+			}
+			SetTargeting(true);
+		}
 	}
 }
 
-void AHeroCharacter::Input_AdsReleased()
+void AHeroCharacter::Input_SecondaryReleased()
 {
-	//SimulateAdsMode(false);
-	//ServerRPC_AdsReleased();
-	SetTargeting(false);
+	if (HasAWeaponEquipped())
+	{
+		SetTargeting(false);
+	}
 }
 
 void AHeroCharacter::Input_Reload() const
@@ -832,6 +861,17 @@ AItemBase* AHeroCharacter::GetCurrentItem() const
 IEquippable* AHeroCharacter::GetCurrentEquippable() const
 {
 	return GetEquippable(CurrentInventorySlot);
+}
+
+bool AHeroCharacter::HasAnItemEquipped() const
+{
+	auto Equippable = GetEquippable(CurrentInventorySlot);
+	return Equippable->Is(EInventoryCategory::Health) || Equippable->Is(EInventoryCategory::Armour);
+}
+bool AHeroCharacter::HasAWeaponEquipped() const
+{
+	auto Equippable = GetEquippable(CurrentInventorySlot);
+	return Equippable->Is(EInventoryCategory::Weapon);// || Equippable->Is(EInventoryCategory::Throwable);
 }
 
 
@@ -1086,9 +1126,8 @@ void AHeroCharacter::EquipSlot(const EInventorySlots Slot)
 		//LogMsgWithRole("Equip new slot");
 		NewEquippable->Equip();
 		NewEquippable->SetHidden(true);
-		const float DrawDuration = NewEquippable->GetEquipDuration();
 
-		GetWorldTimerManager().SetTimer(EquipTimerHandle, this, &AHeroCharacter::MakeEquippedItemVisible, DrawDuration, false);
+		GetWorldTimerManager().SetTimer(EquipTimerHandle, this, &AHeroCharacter::MakeEquippedItemVisible, NewEquippable->GetEquipDuration(), false);
 	}
 
 	RefreshWeaponAttachments();
@@ -1130,11 +1169,7 @@ void AHeroCharacter::RefreshWeaponAttachments() const
 	if (CurrentInventorySlot == EInventorySlots::Health || CurrentInventorySlot == EInventorySlots::Armour)
 	{
 		auto Item = GetItem(CurrentInventorySlot);
-		if (Item)
-		{
-			Item->AttachToComponent(GetMesh(), Rules, HandSocketName);
-			Item->SetHidden(false);
-		}
+		if (Item) Item->AttachToComponent(GetMesh(), Rules, HandSocketName);
 	}
 }
 
@@ -1486,6 +1521,28 @@ bool AHeroCharacter::CanGiveItem(const TSubclassOf<AItemBase>& Class, float& Out
 {
 	LogMsgWithRole("AHeroCharacter::CanGiveItem");
 	OutDelay = 0;
+
+	// Health and Armour items have limits. Check if we're under those limits
+
+	const int HealthCount = HealthSlot.Num();
+	const int ArmourCount = ArmourSlot.Num();
+
+	// If we certainly have space, lets go!
+	if (HealthCount < HealthSlotLimit && ArmourCount < ArmourSlotLimit)
+		return true;
+
+
+	// Need to create an instance to see what category it is
+	auto Temp = NewObject<AItemBase>(this, Class);
+	const auto Category = Temp->GetInventoryCategory();
+	Temp->Destroy();
+
+	if (Category == EInventoryCategory::Health && HealthCount == HealthSlotLimit)
+		return false;
+
+	if (Category == EInventoryCategory::Armour && ArmourCount == ArmourSlotLimit)
+		return false;
+
 	return true;
 }
 
