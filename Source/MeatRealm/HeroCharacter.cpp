@@ -866,11 +866,13 @@ IEquippable* AHeroCharacter::GetCurrentEquippable() const
 bool AHeroCharacter::HasAnItemEquipped() const
 {
 	auto Equippable = GetEquippable(CurrentInventorySlot);
+	if (!Equippable) return false;
 	return Equippable->Is(EInventoryCategory::Health) || Equippable->Is(EInventoryCategory::Armour);
 }
 bool AHeroCharacter::HasAWeaponEquipped() const
 {
 	auto Equippable = GetEquippable(CurrentInventorySlot);
+	if (!Equippable) return false;
 	return Equippable->Is(EInventoryCategory::Weapon);// || Equippable->Is(EInventoryCategory::Throwable);
 }
 
