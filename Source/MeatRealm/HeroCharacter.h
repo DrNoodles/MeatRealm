@@ -98,17 +98,17 @@ public:
 
 	// Degrees per second
 	UPROPERTY(EditAnywhere)
-		float RunTurnRateBase = 45;
+		float RunTurnRateBase = 90;
 
 	UPROPERTY(EditAnywhere)
-		float RunTurnRateMax = 270;
+		float RunTurnRateMax = 360;
 
 	// Seconds until an action works after running 
 	UPROPERTY(EditAnywhere)
-		float RunCooldown = 0.5;
+		float RunCooldown = 0.4;
 
 	UPROPERTY(EditAnywhere)
-	bool bCancelReloadOnRun = true;
+	bool bCancelReloadOnRun = false;
 
 	// Not replicated cuz diff local vs server time;
 	FDateTime LastRunEnded;
