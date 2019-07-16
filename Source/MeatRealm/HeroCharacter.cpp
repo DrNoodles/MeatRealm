@@ -479,7 +479,6 @@ bool AHeroCharacter::ServerEquipHealth_Validate()
 	return true;
 }
 
-
 void AHeroCharacter::OnEquipArmour()
 {
 	EquipArmour();
@@ -501,6 +500,90 @@ bool AHeroCharacter::ServerEquipArmour_Validate()
 {
 	return true;
 }
+
+void AHeroCharacter::OnEquipPrimaryWeapon()
+{
+	if (Role < ROLE_Authority)
+	{
+		ServerEquipPrimaryWeapon();
+	}
+
+	EquipSlot(EInventorySlots::Primary);
+}
+void AHeroCharacter::ServerEquipPrimaryWeapon_Implementation()
+{
+	OnEquipPrimaryWeapon();
+}
+bool AHeroCharacter::ServerEquipPrimaryWeapon_Validate()
+{
+	return true;
+}
+
+void AHeroCharacter::OnEquipSecondaryWeapon()
+{
+	if (Role < ROLE_Authority)
+	{
+		ServerEquipSecondaryWeapon();
+	}
+
+	EquipSlot(EInventorySlots::Secondary);
+}
+void AHeroCharacter::ServerEquipSecondaryWeapon_Implementation()
+{
+	OnEquipSecondaryWeapon();
+}
+bool AHeroCharacter::ServerEquipSecondaryWeapon_Validate()
+{
+	return true;
+}
+
+void AHeroCharacter::OnToggleWeapon()
+{
+	if (Role < ROLE_Authority)
+	{
+		ServerToggleWeapon();
+	}
+
+	ToggleWeapon();
+}
+void AHeroCharacter::ToggleWeapon()
+{
+	EInventorySlots TargetSlot;
+
+	if (HasAWeaponEquipped())
+	{
+		if (CurrentInventorySlot == EInventorySlots::Primary)
+		{
+			TargetSlot = EInventorySlots::Secondary;
+		}
+		else
+		{
+			TargetSlot = EInventorySlots::Primary;
+		}
+	}
+	else // Not a weapon!
+	{
+		if (LastInventorySlot == EInventorySlots::Primary || LastInventorySlot == EInventorySlots::Secondary)
+		{
+			TargetSlot = LastInventorySlot;
+		}
+		else
+		{
+			TargetSlot = EInventorySlots::Primary; // Default to primary
+		}
+	}
+
+	EquipSlot(TargetSlot);
+}
+void AHeroCharacter::ServerToggleWeapon_Implementation()
+{
+	ToggleWeapon();
+}
+bool AHeroCharacter::ServerToggleWeapon_Validate()
+{
+	return true;
+}
+
 
 
 void AHeroCharacter::OnRunToggle()
@@ -577,6 +660,8 @@ bool AHeroCharacter::ServerSetRunning_Validate(bool bNewWantsToRun)
 {
 	return true;
 }
+
+
 
 
 // Ads mode
@@ -1171,10 +1256,14 @@ void AHeroCharacter::RefreshWeaponAttachments() const
 	if (CurrentInventorySlot == EInventorySlots::Health || CurrentInventorySlot == EInventorySlots::Armour)
 	{
 		auto Item = GetItem(CurrentInventorySlot);
-		if (Item) Item->AttachToComponent(GetMesh(), Rules, HandSocketName);
+		if (Item)
+		{
+			Item->AttachToComponent(GetMesh(), Rules, HandSocketName);
+			Item->SetHidden(false); // This means it'll be visible even it's mid equip. 
+		}
+
 	}
 }
-
 
 void AHeroCharacter::NotifyItemIsExpended(AItemBase* Item)
 {
@@ -1597,22 +1686,6 @@ void AHeroCharacter::Input_Interact()
 	//LogMsgWithRole("AHeroCharacter::Input_Interact()");
 	ServerRPC_TryInteract();
 }
-
-void AHeroCharacter::Input_PrimaryWeapon()
-{
-	ServerRPC_EquipPrimaryWeapon();
-}
-
-void AHeroCharacter::Input_SecondaryWeapon()
-{
-	ServerRPC_EquipSecondaryWeapon();
-}
-
-void AHeroCharacter::Input_ToggleWeapon()
-{
-	ServerRPC_ToggleWeapon();
-}
-
 void AHeroCharacter::ServerRPC_TryInteract_Implementation()
 {
 	//LogMsgWithRole("AHeroCharacter::ServerRPC_TryInteract_Implementation()");
@@ -1629,50 +1702,7 @@ void AHeroCharacter::ServerRPC_TryInteract_Implementation()
 		Pickup->AuthTryInteract(this);
 	}
 }
-
 bool AHeroCharacter::ServerRPC_TryInteract_Validate()
-{
-	return true;
-}
-
-
-void AHeroCharacter::ServerRPC_EquipPrimaryWeapon_Implementation()
-{
-	EquipSlot(EInventorySlots::Primary);
-}
-
-bool AHeroCharacter::ServerRPC_EquipPrimaryWeapon_Validate()
-{
-	return true;
-}
-
-void AHeroCharacter::ServerRPC_EquipSecondaryWeapon_Implementation()
-{
-	EquipSlot(EInventorySlots::Secondary);
-}
-
-bool AHeroCharacter::ServerRPC_EquipSecondaryWeapon_Validate()
-{
-	return true;
-}
-
-
-void AHeroCharacter::ServerRPC_ToggleWeapon_Implementation()
-{
-	switch (CurrentInventorySlot)
-	{
-	case EInventorySlots::Primary:
-		EquipSlot(EInventorySlots::Secondary);
-		break;
-
-	case EInventorySlots::Undefined:
-	case EInventorySlots::Secondary:
-	default:
-		EquipSlot(EInventorySlots::Primary);
-	}
-}
-
-bool AHeroCharacter::ServerRPC_ToggleWeapon_Validate()
 {
 	return true;
 }

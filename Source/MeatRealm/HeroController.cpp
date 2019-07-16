@@ -331,19 +331,19 @@ void AHeroController::Input_Interact()
 void AHeroController::Input_PrimaryWeapon()
 {
 	auto Char = GetHeroCharacter();
-	if (Char) Char->Input_PrimaryWeapon();
+	if (Char) Char->OnEquipPrimaryWeapon();
 }
 
 void AHeroController::Input_SecondaryWeapon()
 {
 	auto Char = GetHeroCharacter();
-	if (Char) Char->Input_SecondaryWeapon();
+	if (Char) Char->OnEquipSecondaryWeapon();
 }
 
 void AHeroController::Input_ToggleWeapon()
 {
 	auto Char = GetHeroCharacter();
-	if (Char) Char->Input_ToggleWeapon();
+	if (Char) Char->OnToggleWeapon();
 }
 
 void AHeroController::SetUseMouseaim(bool bUseMouseAim)

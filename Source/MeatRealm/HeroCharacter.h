@@ -294,12 +294,13 @@ public:
 	void Input_FaceUp(float Value) { AxisFaceUp = Value; }
 	void Input_FaceRight(float Value) { AxisFaceRight = Value; }
 	void Input_Interact();
-	void Input_PrimaryWeapon();
-	void Input_SecondaryWeapon();
-	void Input_ToggleWeapon();
+	void OnEquipPrimaryWeapon();
+	void OnEquipSecondaryWeapon();
+
+	void OnToggleWeapon();
+
 
 	void SetUseMouseAim(bool bUseMouseAimIn) { bUseMouseAim = bUseMouseAimIn; }
-
 
 
 	UFUNCTION(BlueprintCallable)
@@ -320,6 +321,8 @@ public:
 	float GetRunningSpeed() const { return RunningSpeed; }
 	
 	float GetRunningReloadSpeed() const { return RunningReloadSpeed; }
+
+
 
 private:
 
@@ -348,11 +351,7 @@ private:
 	void SetRunning(bool bNewIsRunning);
 
 
-
-
 	void SetTargeting(bool bNewTargeting);
-
-
 
 
 	bool HasAnItemEquipped() const;
@@ -371,15 +370,12 @@ private:
 	void RefreshWeaponAttachments() const;
 
 
-
 	static FVector2D GetGameViewportSize();
 	static FVector2D CalcLinearLeanVectorUnclipped(const FVector2D& CursorLoc, const FVector2D& ViewportSize);
 	void MoveCameraByOffsetVector(const FVector2D& Vector2D, float DeltaSeconds) const;
 	FVector2D TrackCameraWithAimMouse() const;
 	FVector2D TrackCameraWithAimGamepad() const;
 	void ExperimentalMouseAimTracking(float DT);
-
-
 
 
 	UFUNCTION(Server, Reliable, WithValidation)
@@ -395,13 +391,15 @@ private:
 		void ServerRPC_TryInteract();
 
 	UFUNCTION(Server, Reliable, WithValidation)
-		void ServerRPC_EquipPrimaryWeapon();
+		void ServerEquipPrimaryWeapon();
 	
 	UFUNCTION(Server, Reliable, WithValidation)
-		void ServerRPC_EquipSecondaryWeapon();
+		void ServerEquipSecondaryWeapon();
 
+
+	void ToggleWeapon();
 	UFUNCTION(Server, Reliable, WithValidation)
-		void ServerRPC_ToggleWeapon();
+		void ServerToggleWeapon();
 
 
 	template<class T>
