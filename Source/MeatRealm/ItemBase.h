@@ -44,7 +44,7 @@ protected:
 	UPROPERTY(BlueprintAssignable, Category = "Event Dispatchers")
 		FUsageCancelled OnUsageCancelled;
 
-	
+
 private:
 	FDateTime UsageStartTime;
 	FTimerHandle UsageTimerHandle;
@@ -57,6 +57,9 @@ private:
 	// When true the player much hold the use key for the duration. When false it's a use to start, another use to cancel
 	UPROPERTY(EditAnywhere)
 		bool bIsHoldToUse = false;
+
+	UPROPERTY(EditAnywhere)
+		bool bIsAutoUseOnEquip = true;
 
 	UPROPERTY(EditAnywhere)
 		float EquipDuration = 0.3;
@@ -76,6 +79,7 @@ public:
 	void UseReleased();
 	void Cancel();
 
+	bool IsAutoUseOnEquip() const { return bIsAutoUseOnEquip; }
 	bool IsInUse() const { return bIsInUse; }
 	void SetRecipient(IAffectableInterface* const TheRecipient);
 

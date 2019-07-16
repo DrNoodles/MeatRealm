@@ -475,7 +475,7 @@ void AHeroCharacter::EquipSmartHeal()
 
 	if (ArmourSlot.Num() > 0 && CanGiveArmour())
 	{
-		if (Item && Item->GetInventoryCategory() == EInventoryCategory::Armour)
+		if (Item && Item->IsAutoUseOnEquip() && Item->GetInventoryCategory() == EInventoryCategory::Armour)
 		{
 			Item->UsePressed();
 		}
@@ -486,7 +486,7 @@ void AHeroCharacter::EquipSmartHeal()
 	}
 	else if (HealthSlot.Num() > 0 && CanGiveHealth())
 	{
-		if (Item && Item->GetInventoryCategory() == EInventoryCategory::Health)
+		if (Item && Item->IsAutoUseOnEquip() && Item->GetInventoryCategory() == EInventoryCategory::Health)
 		{
 			Item->UsePressed();
 		}

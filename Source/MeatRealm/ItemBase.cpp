@@ -177,7 +177,10 @@ void AItemBase::Equip()
 	StopAnyUsage();
 
 	// Immedaitely start using it (HACKY) TODO Integrate this properly if the test works
-	if (!bIsHoldToUse) UsePressed();
+	if (!bIsHoldToUse && bIsAutoUseOnEquip)
+	{
+		UsePressed();
+	}
 }
 
 void AItemBase::Unequip()
