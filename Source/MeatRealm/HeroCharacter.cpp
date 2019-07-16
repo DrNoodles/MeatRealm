@@ -435,6 +435,7 @@ void AHeroCharacter::SetupPlayerInputComponent(class UInputComponent* PlayerInpu
 	PlayerInputComponent->BindAction("Run", IE_Released, this, &AHeroCharacter::OnStopRunning);
 	PlayerInputComponent->BindAction("EquipHealth", IE_Pressed, this, &AHeroCharacter::OnEquipHealth);
 	PlayerInputComponent->BindAction("EquipArmour", IE_Pressed, this, &AHeroCharacter::OnEquipArmour);
+	PlayerInputComponent->BindAction("EquipSmartHeal", IE_Pressed, this, &AHeroCharacter::OnEquipSmartHeal);
 
 }
 
@@ -455,6 +456,38 @@ void AHeroCharacter::UseItemCancelled() const
 	LogMsgWithRole("AHeroCharacter::UseItemCancelled");
 	auto Item = GetCurrentItem();
 	if (Item) Item->Cancel();
+}
+
+
+void AHeroCharacter::OnEquipSmartHeal()
+{
+	if (Role < ROLE_Authority)
+	{
+		ServerEquipSmartHeal();
+	}
+	
+	EquipSmartHeal();
+}
+void AHeroCharacter::EquipSmartHeal()
+{
+	// Equip priority Armour, then Health, then nothing
+
+	if (ArmourSlot.Num() > 0 && CanGiveArmour())
+	{
+		EquipSlot(EInventorySlots::Armour);
+	}
+	else if (HealthSlot.Num() > 0 && CanGiveHealth())
+	{
+		EquipSlot(EInventorySlots::Health);
+	}
+}
+void AHeroCharacter::ServerEquipSmartHeal_Implementation()
+{
+	EquipSmartHeal();
+}
+bool AHeroCharacter::ServerEquipSmartHeal_Validate()
+{
+	return true;
 }
 
 void AHeroCharacter::OnEquipHealth()

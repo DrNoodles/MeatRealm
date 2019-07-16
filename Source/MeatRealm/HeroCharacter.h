@@ -333,11 +333,15 @@ private:
 	void TickWalking(float DT);
 	void TickRunning(float DT);
 
+	void OnEquipSmartHeal();
+	void EquipSmartHeal();
+	UFUNCTION(Server, Reliable, WithValidation)
+		void ServerEquipSmartHeal();
+
 	void OnEquipHealth();
 	void EquipHealth();
 	UFUNCTION(Server, Reliable, WithValidation)
 	void ServerEquipHealth();
-
 
 	void OnEquipArmour();
 	void EquipArmour();

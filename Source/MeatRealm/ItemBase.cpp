@@ -175,6 +175,9 @@ void AItemBase::Equip()
 
 	UE_LOG(LogTemp, Warning, TEXT("AItemBase::Equip"));
 	StopAnyUsage();
+
+	// Immedaitely start using it (HACKY) TODO Integrate this properly if the test works
+	if (!bIsHoldToUse) UsePressed();
 }
 
 void AItemBase::Unequip()
