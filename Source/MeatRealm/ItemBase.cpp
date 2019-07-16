@@ -96,30 +96,28 @@ void AItemBase::UsePressed()
 	UsageProgress = 0;
 	OnUsageStarted.Broadcast();
 
+	GetWorldTimerManager().SetTimer(UsageTimerHandle, this, &AItemBase::UseComplete, UsageDuration, false);
+}
 
-	// Use complete function - TODO Break this out into its own private method
-	auto UseComplete = [&]
+void AItemBase::UseComplete()
+{
+	UE_LOG(LogTemp, Warning, TEXT("AItemBase::UseComplete"));
+
+	bIsInUse = false;
+	UsageProgress = 100;
+	SetActorTickEnabled(false);
+
+	if (OnUsageSuccess.IsBound()) OnUsageSuccess.Broadcast(); // There was a crash here... Not sure the issue
+
+	if (HasAuthority())
 	{
-		UE_LOG(LogTemp, Warning, TEXT("AItemBase::UseComplete"));
-
-		bIsInUse = false;
-		UsageProgress = 100;
-		SetActorTickEnabled(false);
-
-		OnUsageSuccess.Broadcast();
-
-		if (HasAuthority())
+		ApplyItem(Recipient);
+		if (Delegate)
 		{
-			ApplyItem(Recipient);
-			if (Delegate)
-			{
-				UE_LOG(LogTemp, Warning, TEXT("AItemBase::UseComplete - NotifyEquippableIsExpended"));
-				Delegate->NotifyItemIsExpended(this);
-			}
+			UE_LOG(LogTemp, Warning, TEXT("AItemBase::UseComplete - NotifyEquippableIsExpended"));
+			Delegate->NotifyItemIsExpended(this);
 		}
-	};
-
-	GetWorldTimerManager().SetTimer(UsageTimerHandle, UseComplete, UsageDuration, false);
+	}
 }
 
 void AItemBase::UseReleased()

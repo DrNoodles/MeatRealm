@@ -76,6 +76,7 @@ public:
 	AItemBase();
 
 	void UsePressed();
+	void UseComplete();
 	void UseReleased();
 	void Cancel();
 
