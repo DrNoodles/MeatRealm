@@ -471,14 +471,29 @@ void AHeroCharacter::OnEquipSmartHeal()
 void AHeroCharacter::EquipSmartHeal()
 {
 	// Equip priority Armour, then Health, then nothing
+	auto Item = GetCurrentItem();
 
 	if (ArmourSlot.Num() > 0 && CanGiveArmour())
 	{
-		EquipSlot(EInventorySlots::Armour);
+		if (Item && Item->GetInventoryCategory() == EInventoryCategory::Armour)
+		{
+			Item->UsePressed();
+		}
+		else
+		{
+			EquipSlot(EInventorySlots::Armour);
+		}
 	}
 	else if (HealthSlot.Num() > 0 && CanGiveHealth())
 	{
-		EquipSlot(EInventorySlots::Health);
+		if (Item && Item->GetInventoryCategory() == EInventoryCategory::Health)
+		{
+			Item->UsePressed();
+		}
+		else
+		{
+			EquipSlot(EInventorySlots::Health);
+		}
 	}
 }
 void AHeroCharacter::ServerEquipSmartHeal_Implementation()
