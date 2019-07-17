@@ -516,7 +516,15 @@ void AHeroCharacter::OnEquipHealth()
 }
 void AHeroCharacter::EquipHealth()
 {
-	EquipSlot(EInventorySlots::Health);
+	auto Item = GetCurrentItem();
+	if (Item && Item->IsAutoUseOnEquip() && Item->GetInventoryCategory() == EInventoryCategory::Health)
+	{
+		Item->UsePressed();
+	}
+	else
+	{
+		EquipSlot(EInventorySlots::Health);
+	}
 }
 void AHeroCharacter::ServerEquipHealth_Implementation()
 {
@@ -538,7 +546,15 @@ void AHeroCharacter::OnEquipArmour()
 }
 void AHeroCharacter::EquipArmour()
 {
-	EquipSlot(EInventorySlots::Armour);
+	auto Item = GetCurrentItem();
+	if (Item && Item->IsAutoUseOnEquip() && Item->GetInventoryCategory() == EInventoryCategory::Armour)
+	{
+		Item->UsePressed();
+	}
+	else
+	{
+		EquipSlot(EInventorySlots::Armour);
+	}
 }
 void AHeroCharacter::ServerEquipArmour_Implementation()
 {
