@@ -381,7 +381,7 @@ void AHeroCharacter::TickRunning(float DT)
 	// If input is zero and velocity is zero. Stop running.
 	if (InputVector.SizeSquared() < DeadzoneSquared)
 	{
-		if (GetVelocity().Size() < 100)
+		if (GetVelocity().Size() < 150)
 		{
 			LogMsgWithRole("Stopped running due to no input or velocity");
 			SetRunning(false);
