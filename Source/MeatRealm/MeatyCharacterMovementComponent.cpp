@@ -23,7 +23,11 @@ float UMeatyCharacterMovementComponent::GetMaxSpeed() const
 			MaxSpeed *= HeroChar->GetTargetingSpeedModifier();
 		}
 
-		if (HeroChar->IsRunning())
+		if (HeroChar->IsUsingItem())
+		{
+			MaxSpeed = HeroChar->GetHealingMovementSpeed();
+		}
+		else if (HeroChar->IsRunning())
 		{
 			if (HeroChar->IsReloading())
 			{

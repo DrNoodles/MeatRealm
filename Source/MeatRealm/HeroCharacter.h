@@ -5,21 +5,25 @@
 #include "CoreMinimal.h"
 #include "GameFramework/Character.h"
 #include "Interfaces/AffectableInterface.h"
+//#include "Interfaces/EquippableDelegate.h"
 
 #include "HeroCharacter.generated.h"
 
 class AHeroState;
 class AHeroController;
 class AWeapon;
+class IEquippable;
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FPlayerTintChanged);
 
 UENUM(BlueprintType)
-enum class EWeaponSlots : uint8
+enum class EInventorySlots : uint8
 {
 	Undefined = 0,
 	Primary = 1,
 	Secondary = 2,
+	Health = 3,
+	Armour = 4,
 };
 
 UCLASS()
@@ -29,6 +33,10 @@ class MEATREALM_API AHeroCharacter : public ACharacter, public IAffectableInterf
 
 
 public:
+	bool RemoveEquippableFromInventory(IEquippable* Equippable);
+	void NotifyItemIsExpended(AItemBase* Item);
+
+	float GetHealingMovementSpeed() const { return HealingMovementSpeed; }
 
 	UPROPERTY(EditAnywhere, Category = Camera)
 		bool bLeanCameraWithAim = true;
@@ -67,13 +75,14 @@ public:
 	UPROPERTY(BlueprintReadOnly, Replicated)
 		float Armour = 0.f;
 
-	//UPROPERTY(EditAnywhere)
-	//	float AdsSpeed = 275;
 	UPROPERTY(EditAnywhere)
 		float RunningSpeed = 525;
 
 	UPROPERTY(EditAnywhere)
 		float RunningReloadSpeed = 425;
+
+	UPROPERTY(EditAnywhere)
+		float HealingMovementSpeed = 250;
 
 	UPROPERTY(EditAnywhere)
 		float WalkSpeed = 375;
@@ -92,25 +101,19 @@ public:
 	UPROPERTY(EditAnywhere)
 	float BackpedalSpeedMultiplier = 0.6;
 
-	/*UPROPERTY(EditAnywhere)
-		bool RunTowardLook = true;*/
-
-	//UPROPERTY(EditAnywhere)
-	//	float RunMaxInputAngle = 45;
-
 	// Degrees per second
 	UPROPERTY(EditAnywhere)
-		float RunTurnRateBase = 45;
+		float RunTurnRateBase = 90;
 
 	UPROPERTY(EditAnywhere)
-		float RunTurnRateMax = 270;
+		float RunTurnRateMax = 360;
 
 	// Seconds until an action works after running 
 	UPROPERTY(EditAnywhere)
-		float RunCooldown = 0.5;
+		float RunCooldown = 0.4;
 
 	UPROPERTY(EditAnywhere)
-	bool bCancelReloadOnRun = true;
+	bool bCancelReloadOnRun = false;
 
 	// Not replicated cuz diff local vs server time;
 	FDateTime LastRunEnded;
@@ -145,7 +148,13 @@ protected:
 		UArrowComponent* HolsteredweaponAnchor = nullptr;
 
 	UPROPERTY(Replicated, BlueprintReadOnly)
-		EWeaponSlots CurrentWeaponSlot = EWeaponSlots::Undefined;
+		EInventorySlots CurrentInventorySlot = EInventorySlots::Undefined;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly)
+	int32 HealthSlotLimit = 6;
+	
+	UPROPERTY(EditAnywhere, BlueprintReadOnly)
+	int32 ArmourSlotLimit = 6;
 
 private:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Camera, meta = (AllowPrivateAccess = "true"))
@@ -157,9 +166,6 @@ private:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Camera, meta = (AllowPrivateAccess = "true"))
 		class UCameraComponent* FollowCamera;
 
-	//UPROPERTY(Replicated) // Replicated so we can see enemy aim lines
-	//bool bIsAdsing = false;
-
 	bool bUseMouseAim = true;
 	float AxisMoveUp;
 	float AxisMoveRight;
@@ -169,7 +175,7 @@ private:
 	FVector2D AimPos_ScreenSpace = FVector2D::ZeroVector;
 	FVector AimPos_WorldSpace = FVector::ZeroVector;
 
-	FTimerHandle DrawWeaponTimerHandle;
+	FTimerHandle EquipTimerHandle;
 
 	bool bIsEquipping;
 
@@ -188,16 +194,19 @@ private:
 
 
 	UPROPERTY(Replicated)
-		EWeaponSlots LastWeaponSlot = EWeaponSlots::Undefined;
+		EInventorySlots LastInventorySlot = EInventorySlots::Undefined;
 
 	
 	UPROPERTY(Replicated)
-		AWeapon* Slot1 = nullptr;
+		AWeapon* PrimaryWeaponSlot = nullptr;
 	UPROPERTY(Replicated)
-		AWeapon* Slot2 = nullptr;
+		AWeapon* SecondaryWeaponSlot = nullptr;
+	UPROPERTY(Replicated)
+		TArray<AItemBase*> HealthSlot{};
+	UPROPERTY(Replicated)
+		TArray<AItemBase*> ArmourSlot{};
 
-
-
+	
 public:
 	AHeroCharacter(const FObjectInitializer& ObjectInitializer);
 	void Restart() override;
@@ -220,15 +229,27 @@ public:
 	UFUNCTION()
 	void AuthApplyDamage(uint32 InstigatorHeroControllerId, float Damage, FVector Location) override;
 	UFUNCTION()
+	bool CanGiveHealth() override;
+	UFUNCTION()
 	bool AuthTryGiveHealth(float Hp) override;
 	UFUNCTION()
-	bool AuthTryGiveAmmo() override;
+	bool CanGiveArmour() override;
 	UFUNCTION()
 	bool AuthTryGiveArmour(float Delta) override;
+	UFUNCTION()
+	bool CanGiveAmmo() override;
+	UFUNCTION()
+	bool AuthTryGiveAmmo() override;
 	UFUNCTION()
 	bool AuthTryGiveWeapon(const TSubclassOf<AWeapon>& Class) override;
 	UFUNCTION()
 	bool CanGiveWeapon(const TSubclassOf<AWeapon>& Class, float& OutDelay) override;
+	
+	// TODO Add EInventoryCategory as param to optimise checks. 
+	UFUNCTION()
+	bool CanGiveItem(const TSubclassOf<AItemBase>& Class, float& OutDelay) override;
+	UFUNCTION()
+	bool TryGiveItem(const TSubclassOf<AItemBase>& Class) override;
 	/* End IAffectableInterface */
 
 
@@ -237,65 +258,96 @@ public:
 	AHeroState* GetHeroState() const;
 	AHeroController* GetHeroController() const;
 	float GetTargetingSpeedModifier() const;
-	bool IsReloading() const
-	{
-		auto W = GetCurrentWeapon();
-		if (W && W->IsReloading()) return true;
-
-		return false;
-	}
+	bool IsReloading() const;
+	bool IsUsingItem() const;
 
 
 	static bool IsBackpedaling(const FVector& MoveDir, const FVector& AimDir, int BackpedalAngle);
 
 
 	/// Input
-		/** setup pawn specific input handlers */
 	virtual void SetupPlayerInputComponent(class UInputComponent* InputComponent) override;
 
-	void StartWeaponFire() const;
-	void StopWeaponFire() const;
+	void UseItemPressed() const;
+	void UseItemReleased() const;
+	void UseItemCancelled() const;
+
+
 	void StartWeaponFire();
 	void StopWeaponFire();
 	bool IsFiring() const;
 
-	void Input_FirePressed();
-	void Input_FireReleased();
-	void Input_AdsPressed();
-	void Input_AdsReleased();
+	void Input_PrimaryPressed();
+	void Input_PrimaryReleased();
+	void Input_SecondaryPressed();
+	void Input_SecondaryReleased();
 	void Input_Reload() const;
 
 	UFUNCTION(BlueprintCallable)
-	AWeapon* GetWeapon(EWeaponSlots Slot) const;
+	AWeapon* GetWeapon(EInventorySlots Slot) const;
+
+	AItemBase* GetItem(EInventorySlots Slot) const;
+	IEquippable* GetEquippable(EInventorySlots Slot) const;
 
 	void Input_MoveUp(float Value) {	AxisMoveUp = Value; }
 	void Input_MoveRight(float Value) { AxisMoveRight = Value; }
 	void Input_FaceUp(float Value) { AxisFaceUp = Value; }
 	void Input_FaceRight(float Value) { AxisFaceRight = Value; }
 	void Input_Interact();
-	void Input_PrimaryWeapon();
-	void Input_SecondaryWeapon();
-	void Input_ToggleWeapon();
+	void OnEquipPrimaryWeapon();
+	void OnEquipSecondaryWeapon();
+
+	void OnToggleWeapon();
+
 
 	void SetUseMouseAim(bool bUseMouseAimIn) { bUseMouseAim = bUseMouseAimIn; }
 
-	UFUNCTION(BlueprintCallable)
-		AWeapon* GetCurrentWeapon() const;
-	
-	//AWeapon* GetHolsteredWeapon() const;
 
-	bool IsRunning() const;
+	UFUNCTION(BlueprintCallable)
+		int GetHealthItemCount() const;
+	UFUNCTION(BlueprintCallable)
+		int GetArmourItemCount() const;
+
+	UFUNCTION(BlueprintCallable)
+	AWeapon* GetCurrentWeapon() const;
+
+	UFUNCTION(BlueprintCallable)
+	AItemBase* GetCurrentItem() const;
+
+	IEquippable* GetCurrentEquippable() const;
+
+	bool IsRunning() const { return bIsRunning; }
 	bool IsTargeting() const;
 	float GetRunningSpeed() const { return RunningSpeed; }
 	
 	float GetRunningReloadSpeed() const { return RunningReloadSpeed; }
 
+
+
 private:
+
+	AWeapon* FindWeaponToReceiveAmmo() const;
 
 	void ScanForWeaponPickups(float DeltaSeconds);
 	virtual void Tick(float DeltaSeconds) override;
 	void TickWalking(float DT);
 	void TickRunning(float DT);
+
+	void OnEquipSmartHeal();
+	void EquipSmartHeal();
+	UFUNCTION(Server, Reliable, WithValidation)
+		void ServerEquipSmartHeal();
+
+	void OnEquipHealth();
+	void EquipHealth();
+	UFUNCTION(Server, Reliable, WithValidation)
+	void ServerEquipHealth();
+
+	void OnEquipArmour();
+	void EquipArmour();
+	UFUNCTION(Server, Reliable, WithValidation)
+		void ServerEquipArmour();
+
 
 	void OnRunToggle();
 	void OnStartRunning();
@@ -306,14 +358,21 @@ private:
 	void SetTargeting(bool bNewTargeting);
 
 
+	bool HasAnItemEquipped() const;
+	bool HasAWeaponEquipped() const;
 
+	AItemBase* GetFirstHealthItemOrNull() const;
+	AItemBase* GetFirstArmourItemOrNull() const;
+	
+	void GiveItemToPlayer(TSubclassOf<class AItemBase> ItemClass);
 	void GiveWeaponToPlayer(TSubclassOf<class AWeapon> WeaponClass);
 	AWeapon* AuthSpawnWeapon(TSubclassOf<AWeapon> weaponClass);
-	EWeaponSlots FindGoodSlot() const;
-	AWeapon* AssignWeaponToInventorySlot(AWeapon* Weapon, EWeaponSlots Slot);
-	void EquipWeapon(EWeaponSlots Slot);
-	void MakeCurrentWeaponVisible() const;
+	EInventorySlots FindGoodWeaponSlot() const;
+	AWeapon* AssignWeaponToInventorySlot(AWeapon* Weapon, EInventorySlots Slot);
+	void EquipSlot(EInventorySlots Slot);
+	void MakeEquippedItemVisible() const;
 	void RefreshWeaponAttachments() const;
+
 
 	static FVector2D GetGameViewportSize();
 	static FVector2D CalcLinearLeanVectorUnclipped(const FVector2D& CursorLoc, const FVector2D& ViewportSize);
@@ -321,10 +380,6 @@ private:
 	FVector2D TrackCameraWithAimMouse() const;
 	FVector2D TrackCameraWithAimGamepad() const;
 	void ExperimentalMouseAimTracking(float DT);
-
-	//void SimulateAdsMode(bool IsAdsing);
-	//void DrawAdsLine(const FColor& Color, float LineLength) const;
-
 
 
 	UFUNCTION(Server, Reliable, WithValidation)
@@ -336,23 +391,19 @@ private:
 	UFUNCTION()
 		void OnRep_TintChanged() const;
 
-	//UFUNCTION(Server, Reliable, WithValidation)
-	//	void ServerRPC_AdsPressed();
-
-	//UFUNCTION(Server, Reliable, WithValidation)
-	//	void ServerRPC_AdsReleased();
-
 	UFUNCTION(Server, Reliable, WithValidation)
 		void ServerRPC_TryInteract();
 
 	UFUNCTION(Server, Reliable, WithValidation)
-		void ServerRPC_EquipPrimaryWeapon();
+		void ServerEquipPrimaryWeapon();
 	
 	UFUNCTION(Server, Reliable, WithValidation)
-		void ServerRPC_EquipSecondaryWeapon();
+		void ServerEquipSecondaryWeapon();
 
+
+	void ToggleWeapon();
 	UFUNCTION(Server, Reliable, WithValidation)
-		void ServerRPC_ToggleWeapon();
+		void ServerToggleWeapon();
 
 
 	template<class T>

@@ -5,9 +5,13 @@
 #include "CoreMinimal.h"
 #include "GameFramework/Actor.h"
 #include "WeaponReceiverComponent.h"
+#include "Interfaces/Equippable.h"
 
 #include "Weapon.generated.h"
 
+class AHeroCharacter;
+class UWeaponReceiverComponent;
+class IAffectableInterface;
 class UArrowComponent;
 class USceneComponent;
 class USkeletalMeshComponent;
@@ -20,7 +24,7 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE(FShotFired);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FAmmoWarning);
 
 UCLASS()
-class MEATREALM_API AWeapon : public AActor, public IReceiverComponentDelegate
+class MEATREALM_API AWeapon : public AActor, public IReceiverComponentDelegate, public IEquippable
 {
 	GENERATED_BODY()
 
@@ -84,23 +88,32 @@ private:
 	uint32 HeroControllerId;
 
 
-	
+
 public:
 	AWeapon();
 
 	/// [Server, Local]
-	void Draw();
+	/* IEquippable */
+	void Equip() override;
+	void Unequip() override;
+	float GetEquipDuration() override { return DrawDuration; }
+	void SetHidden(bool bIsHidden) override { SetActorHiddenInGame(bIsHidden); }
+	void EnterInventory() override;
+	void ExitInventory() override;
+	EInventoryCategory GetInventoryCategory() override { return EInventoryCategory::Weapon; }
+	virtual bool ShouldHideWhenUnequipped() override { return false; }
+	void SetDelegate(AHeroCharacter* Delegate) { }
+	/* End IEquippable */
 
-	void Holster();
 	void Input_PullTrigger();
 	void Input_ReleaseTrigger();
 	void Input_Reload();
 	void Input_AdsPressed();
 	void Input_AdsReleased();
+	bool CanGiveAmmo();
 	bool TryGiveAmmo();
 	void SetHeroControllerId(uint32 HeroControllerUid) { this->HeroControllerId = HeroControllerUid; }
 	float GetAdsMovementScale() const { return AdsMovementScale; }
-	float GetDrawDuration() override; 
 	//float GetHolsterDuration() const { return HolsterDuration; }
 
 	/* IReceiverComponentDelegate */
@@ -113,6 +126,7 @@ public:
 	FVector GetBarrelDirection() override;
 	FVector GetBarrelLocation() override;
 	const UArrowComponent* GetMuzzleComponent() const { return MuzzleLocationComp; }
+	float GetDrawDuration() override;
 
 	AActor* GetOwningPawn() override;
 	FString GetWeaponName() override;
@@ -123,14 +137,13 @@ public:
 
 
 protected:
-
 private:
 
 	UFUNCTION(Server, Reliable, WithValidation)
-		void ServerRPC_Draw();
+		void ServerRPC_Equip();
 	
 	UFUNCTION(Server, Reliable, WithValidation)
-		void ServerRPC_Holster();
+		void ServerRPC_Unequip();
 
 	UFUNCTION(Server, Reliable, WithValidation)
 		void ServerRPC_PullTrigger();
