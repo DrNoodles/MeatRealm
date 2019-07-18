@@ -314,7 +314,7 @@ bool UWeaponReceiverComponent::TickReloading(float DT)
 	if (bIsMidReload)
 	{
 		const auto ElapsedReloadTime = (FDateTime::Now() - ReloadStartTime).GetTotalSeconds();
-		WeaponState.ReloadProgress = ElapsedReloadTime / ReloadTime;
+		WeaponState.ReloadProgress = ElapsedReloadTime / GetReloadTime();
 		//auto str = FString::Printf(TEXT("InProgress %f"), WeaponState.ReloadProgress);
 		//LogMsgWithRole(str);
 	}
@@ -339,7 +339,7 @@ bool UWeaponReceiverComponent::TickReloading(float DT)
 	WeaponState.IsAdsing = false;
 
 	bIsBusy = true;
-	GetWorld()->GetTimerManager().SetTimer(BusyTimerHandle, this, &UWeaponReceiverComponent::ReloadEnd, ReloadTime, false);
+	GetWorld()->GetTimerManager().SetTimer(BusyTimerHandle, this, &UWeaponReceiverComponent::ReloadEnd, GetReloadTime(), false);
 
 	return false;
 }
@@ -483,8 +483,8 @@ TArray<FVector> UWeaponReceiverComponent::CalcShotPattern() const
 	TArray<FVector> Shots;
 
 	const float BarrelAngle = Delegate->GetBarrelDirection().HeadingAngle();
-	const float SpreadInRadians = FMath::DegreesToRadians(WeaponState.IsAdsing ? AdsSpread :
-		HipfireSpread);
+	const float SpreadInRadians = FMath::DegreesToRadians(WeaponState.IsAdsing ? GetAdsSpread() :
+		GetHipfireSpread());
 
 	if (bEvenSpread && ProjectilesPerShot > 1)
 	{

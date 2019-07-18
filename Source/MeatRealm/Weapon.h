@@ -84,7 +84,15 @@ protected:
 		FString WeaponName = "NoNameWeapon";
 
 private:
+	UPROPERTY(EditAnywhere)
+		bool IsBuff = false;
 
+	UPROPERTY(EditAnywhere)
+		float DrawDurationBuffMultiplier	= 0.5;
+
+	UPROPERTY(EditAnywhere)
+		float AdsMovementScaleBuffFactor = 0.5;
+	
 	uint32 HeroControllerId;
 
 
@@ -96,7 +104,7 @@ public:
 	/* IEquippable */
 	void Equip() override;
 	void Unequip() override;
-	float GetEquipDuration() override { return DrawDuration; }
+	float GetEquipDuration() override { return IsBuff ? DrawDuration * DrawDurationBuffMultiplier : DrawDuration; }
 	void SetHidden(bool bIsHidden) override { SetActorHiddenInGame(bIsHidden); }
 	void EnterInventory() override;
 	void ExitInventory() override;
@@ -113,7 +121,9 @@ public:
 	bool CanGiveAmmo();
 	bool TryGiveAmmo();
 	void SetHeroControllerId(uint32 HeroControllerUid) { this->HeroControllerId = HeroControllerUid; }
-	float GetAdsMovementScale() const { return AdsMovementScale; }
+	float GetAdsMovementScale() const { return IsBuff
+		? AdsMovementScale + (1 - AdsMovementScale) * AdsMovementScaleBuffFactor
+		: AdsMovementScale; }
 	//float GetHolsterDuration() const { return HolsterDuration; }
 
 	/* IReceiverComponentDelegate */

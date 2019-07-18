@@ -127,7 +127,8 @@ void AHeroCharacter::Restart()
 		if (HasAuthority())
 		{
 			const auto Choice = FMath::RandRange(0, DefaultWeaponClass.Num() - 1);
-			GiveWeaponToPlayer(DefaultWeaponClass[Choice]);
+			auto WeaponClass = DefaultWeaponClass[Choice];
+			GiveWeaponToPlayer(WeaponClass);
 		}
 	}
 }
@@ -457,7 +458,6 @@ void AHeroCharacter::UseItemCancelled() const
 	auto Item = GetCurrentItem();
 	if (Item) Item->Cancel();
 }
-
 
 void AHeroCharacter::OnEquipSmartHeal()
 {
