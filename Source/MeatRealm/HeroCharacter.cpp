@@ -458,7 +458,6 @@ void AHeroCharacter::UseItemCancelled() const
 	if (Item) Item->Cancel();
 }
 
-
 void AHeroCharacter::OnEquipSmartHeal()
 {
 	if (Role < ROLE_Authority)

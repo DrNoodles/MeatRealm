@@ -55,7 +55,6 @@ AWeapon::AWeapon()
 	ReceiverComp = CreateDefaultSubobject<UWeaponReceiverComponent>(TEXT("ReceiverComp"));
 	ReceiverComp->SetDelegate(this);
 	ReceiverComp->SetIsReplicated(true);
-
 }
 
 
@@ -360,7 +359,7 @@ void AWeapon::CancelAnyReload()
 
 float AWeapon::GetDrawDuration()
 {
-	return DrawDuration;
+	return GetEquipDuration();
 }
 /* End IReceiverComponentDelegate */
 

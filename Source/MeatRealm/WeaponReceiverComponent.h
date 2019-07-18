@@ -184,16 +184,29 @@ public:
 	UPROPERTY(EditAnywhere, meta = (EditCondition = "bEvenSpread"))
 		bool bSpreadClumping = true;
 
-
 protected:
 
 	UPROPERTY(BlueprintReadOnly, Replicated)
 		FWeaponState WeaponState {};
 
 	UFUNCTION(BlueprintCallable)
-		float GetReloadTimeRemaining() const { return (1 - WeaponState.ReloadProgress) * ReloadTime; }
+		float GetReloadTimeRemaining() const { return (1 - WeaponState.ReloadProgress) * GetReloadTime(); }
 
 private:
+
+	UPROPERTY(EditAnywhere)
+		bool IsBuff = false;
+
+	UPROPERTY(EditAnywhere)
+		float ReloadTimeBuffFactor = 0.5;
+
+	UPROPERTY(EditAnywhere)
+		float AdsSpreadBuffFactor = 0.7;
+
+	UPROPERTY(EditAnywhere)
+		float HipfireSpreadBuffFactor = 0.7;
+
+
 	UPROPERTY(EditAnywhere)
 		float AdsLineLength = 1500; // cm
 
@@ -250,6 +263,10 @@ private:
 	void DoTransitionAction(const EWeaponModes OldMode, const EWeaponModes NewMode);
 	bool ChangeState(EWeaponCommands Cmd, const FWeaponState& InState);
 	void EquipEnd();
+
+	float GetReloadTime() const { return IsBuff ? ReloadTime * ReloadTimeBuffFactor : ReloadTime; }
+	float GetAdsSpread() const { return  IsBuff ? AdsSpread * AdsSpreadBuffFactor : AdsSpread; }
+	float GetHipfireSpread() const { return IsBuff ? HipfireSpread * HipfireSpreadBuffFactor : HipfireSpread; }
 
 	TArray<FVector> CalcShotPattern() const;
 	bool CanReload() const;
