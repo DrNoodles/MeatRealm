@@ -29,13 +29,17 @@ public:
 		FPickupSpawned OnSpawn;
 	UPROPERTY(BlueprintAssignable, Category = "Event Dispatchers")
 		FPickupSpawned OnTaken;
-	// In Seconds
-	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-		float RespawnDelay = 20;
+
+	UPROPERTY(EditAnywhere)
+		bool bIsSingleUse = false;
 
 protected:
 	UPROPERTY(EditAnywhere)
 		bool bExplicitInteraction = false;
+
+	// In Seconds
+	UPROPERTY(EditAnywhere, meta = (EditCondition = "bIsSingleUse"))
+		float RespawnDelay = 20;
 
 private:
 	UPROPERTY(VisibleAnywhere)
@@ -43,7 +47,7 @@ private:
 	UPROPERTY(VisibleAnywhere)
 		UCapsuleComponent* CollisionComp = nullptr;
 	UPROPERTY(ReplicatedUsing = OnRep_IsAvailableChanged)
-		bool IsAvailable = true;;
+		bool IsAvailable = true;
 	
 	FTimerHandle RespawnTimerHandle;
 
