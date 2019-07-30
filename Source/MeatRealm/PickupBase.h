@@ -38,7 +38,7 @@ protected:
 		bool bExplicitInteraction = false;
 
 	// In Seconds
-	UPROPERTY(EditAnywhere, meta = (EditCondition = "bIsSingleUse"))
+	UPROPERTY(EditAnywhere)//, meta = (EditCondition = "bIsSingleUse"))
 		float RespawnDelay = 20;
 
 private:
