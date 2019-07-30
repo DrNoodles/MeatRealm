@@ -1354,8 +1354,8 @@ void AHeroCharacter::DropGearOnDeath()
 	// Gather all buff weapons to drop
 	auto W1 = GetWeapon(EInventorySlots::Primary);
 	auto W2 = GetWeapon(EInventorySlots::Secondary);
-	if (W1 && W1->IsWeaponBuff() && W1->PickupClass) SpawnMe.Add(W1->PickupClass);
-	if (W2 && W2->IsWeaponBuff() && W2->PickupClass) SpawnMe.Add(W2->PickupClass);
+	if (W1 && /*W1->IsWeaponBuff() && */W1->PickupClass) SpawnMe.Add(W1->PickupClass);
+	if (W2 && /*W2->IsWeaponBuff() && */W2->PickupClass) SpawnMe.Add(W2->PickupClass);
 
 	for (int i = 0; i < SpawnMe.Num(); ++i)
 	{
