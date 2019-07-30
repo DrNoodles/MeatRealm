@@ -1349,20 +1349,29 @@ void AHeroCharacter::DropGearOnDeath()
 {
 	check(HasAuthority());
 
-	// Create a weapon pickups of matching class
+	TArray<TSubclassOf<AWeaponPickupBase>> SpawnMe{};
 
-	const auto W = GetCurrentWeapon();
-	const auto PickupClass = W ? W->PickupClass : nullptr;
-	if (!PickupClass || !GetWorld()) return;
+	// Gather all buff weapons to drop
+	auto W1 = GetWeapon(EInventorySlots::Primary);
+	auto W2 = GetWeapon(EInventorySlots::Secondary);
+	if (W1 /*&& W1->IsWeaponBuff() */&& W1->PickupClass) SpawnMe.Add(W1->PickupClass);
+	if (W2 /*&& W2->IsWeaponBuff() */&& W2->PickupClass) SpawnMe.Add(W2->PickupClass);
 
-	auto Params = FActorSpawnParameters{};
-	Params.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AdjustIfPossibleButAlwaysSpawn;
-	auto Pickup = GetWorld()->SpawnActor<AWeaponPickupBase>(PickupClass, GetActorTransform(), Params);
-	
-	if (!Pickup) return;
+	for (int i = 0; i < SpawnMe.Num(); ++i)
+	{
+		auto Params = FActorSpawnParameters{};
+		Params.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AdjustIfPossibleButAlwaysSpawn;
 
-	Pickup->bIsSingleUse = true;
-	// TODO Configure the pickup with the current weapon stats
+		// Spawn location algorithm: Alternative between in front and behind player location
+		int FacingFactor = i % 2 == 0 ? 1 : -1;
+		auto Loc = GetActorLocation() + GetActorForwardVector() * 30 * FacingFactor;
+
+		auto Pickup = GetWorld()->SpawnActor<AWeaponPickupBase>(SpawnMe[i], Loc, FRotator{}, Params);
+		if (Pickup)
+		{
+			Pickup->bIsSingleUse = true;
+		}
+	}
 }
 
 

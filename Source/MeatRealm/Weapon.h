@@ -148,6 +148,9 @@ public:
 	bool IsEquipping() const { return ReceiverComp->IsEquipping(); }
 	bool IsReloading() const { return ReceiverComp->IsReloading(); }
 	void CancelAnyReload();
+
+	bool IsWeaponBuff() const { return IsBuff; }
+
 	/* End IReceiverComponentDelegate */
 
 
