@@ -30,6 +30,11 @@ class MEATREALM_API AWeapon : public AActor, public IReceiverComponentDelegate, 
 
 public:
 
+	// Associated pickup class. Used to drop this weapon.
+	UPROPERTY(EditDefaultsOnly, Category = Weapon)
+		TSubclassOf<class AWeaponPickupBase> PickupClass;
+
+
 protected:
 
 	/// Components

@@ -1343,7 +1343,27 @@ void AHeroCharacter::NotifyItemIsExpended(AItemBase* Item)
 }
 
 
+// Inventory - Dropping
 
+void AHeroCharacter::DropGearOnDeath()
+{
+	check(HasAuthority());
+
+	// Create a weapon pickups of matching class
+
+	const auto W = GetCurrentWeapon();
+	const auto PickupClass = W ? W->PickupClass : nullptr;
+	if (!PickupClass || !GetWorld()) return;
+
+	auto Params = FActorSpawnParameters{};
+	Params.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AdjustIfPossibleButAlwaysSpawn;
+	auto Pickup = GetWorld()->SpawnActor<AWeaponPickupBase>(PickupClass, GetActorTransform(), Params);
+	
+	if (!Pickup) return;
+
+	Pickup->bIsSingleUse = true;
+	// TODO Configure the pickup with the current weapon stats
+}
 
 
 // Camera tracks aim

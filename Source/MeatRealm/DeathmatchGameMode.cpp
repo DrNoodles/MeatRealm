@@ -195,7 +195,11 @@ void ADeathmatchGameMode::OnPlayerTakeDamage(FMRHitResult Hit)
 			ReceivingController->GetPlayerState<AHeroState>()->Deaths++;
 
 			AHeroCharacter* DeadChar = ReceivingController->GetHeroCharacter();
-			if (DeadChar) DeadChar->Destroy();
+			if (DeadChar)
+			{
+				DeadChar->DropGearOnDeath();
+				DeadChar->Destroy();
+			}
 
 			RestartPlayer(ReceivingController);
 		}

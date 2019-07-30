@@ -37,6 +37,7 @@ public:
 	void NotifyItemIsExpended(AItemBase* Item);
 
 	float GetHealingMovementSpeed() const { return HealingMovementSpeed; }
+	void DropGearOnDeath();
 
 	UPROPERTY(EditAnywhere, Category = Camera)
 		bool bLeanCameraWithAim = true;
