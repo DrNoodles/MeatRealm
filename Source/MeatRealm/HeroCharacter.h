@@ -38,6 +38,7 @@ public:
 
 	float GetHealingMovementSpeed() const { return HealingMovementSpeed; }
 	void DropGearOnDeath();
+	void SpawnWeaponPickups(TArray<AWeapon*> & Weapons) const;
 
 	UPROPERTY(EditAnywhere, Category = Camera)
 		bool bLeanCameraWithAim = true;
