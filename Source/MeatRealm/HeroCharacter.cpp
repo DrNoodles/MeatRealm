@@ -136,23 +136,23 @@ void AHeroCharacter::Restart()
 void AHeroCharacter::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
 {
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
-	DOREPLIFETIME(AHeroCharacter, CurrentInventorySlot);
-	DOREPLIFETIME(AHeroCharacter, PrimaryWeaponSlot);
-	DOREPLIFETIME(AHeroCharacter, SecondaryWeaponSlot);
-	DOREPLIFETIME(AHeroCharacter, HealthSlot);
-	DOREPLIFETIME(AHeroCharacter, ArmourSlot);
-	DOREPLIFETIME(AHeroCharacter, Health);
-	DOREPLIFETIME(AHeroCharacter, Armour);
-	DOREPLIFETIME(AHeroCharacter, TeamTint);
-	//	DOREPLIFETIME(AHeroCharacter, bIsAdsing);
 
-	// everyone except local owner: flag change is locally instigated
+	// Everyone!
+	DOREPLIFETIME(AHeroCharacter, TeamTint);
+
+	// Everyone except local owner: flag change is locally instigated
 	DOREPLIFETIME_CONDITION(AHeroCharacter, bIsRunning, COND_SkipOwner);
 	DOREPLIFETIME_CONDITION(AHeroCharacter, bIsTargeting, COND_SkipOwner);
 
 	// Just the owner
+	DOREPLIFETIME_CONDITION(AHeroCharacter, Armour, COND_OwnerOnly);
 	DOREPLIFETIME_CONDITION(AHeroCharacter, LastInventorySlot, COND_OwnerOnly);
-
+	DOREPLIFETIME_CONDITION(AHeroCharacter, CurrentInventorySlot, COND_OwnerOnly);
+	DOREPLIFETIME_CONDITION(AHeroCharacter, PrimaryWeaponSlot, COND_OwnerOnly);
+	DOREPLIFETIME_CONDITION(AHeroCharacter, SecondaryWeaponSlot, COND_OwnerOnly);
+	DOREPLIFETIME_CONDITION(AHeroCharacter, HealthSlot, COND_OwnerOnly);
+	DOREPLIFETIME_CONDITION(AHeroCharacter, ArmourSlot, COND_OwnerOnly);
+	DOREPLIFETIME_CONDITION(AHeroCharacter, Health, COND_OwnerOnly);
 }
 
 void AHeroCharacter::ScanForWeaponPickups(float DeltaSeconds)
