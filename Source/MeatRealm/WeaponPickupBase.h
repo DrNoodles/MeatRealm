@@ -28,10 +28,6 @@ protected:
 	bool TryApplyAffect(IAffectableInterface* const Affectable) override;
 
 private:
-	//UPROPERTY(EditDefaultsOnly, Category = Pickup)
-	//	TSubclassOf<class AWeapon> WeaponClass;
-
-	// Projectile class to spawn.
 	UPROPERTY(EditDefaultsOnly, Category = Pickup)
 		TArray<TSubclassOf<class AWeapon>> WeaponClasses;
 };
