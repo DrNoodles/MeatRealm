@@ -31,12 +31,12 @@ void UWeaponReceiverComponent::BeginPlay()
 
 void UWeaponReceiverComponent::DrawWeapon()
 {
-	LogMsgWithRole(FString::Printf(TEXT("InputState.DrawRequested = true")));
+	//LogMsgWithRole(FString::Printf(TEXT("InputState.DrawRequested = true")));
 	InputState.DrawRequested = true;
 }
 void UWeaponReceiverComponent::HolsterWeapon()
 {
-	LogMsgWithRole(FString::Printf(TEXT("InputState.HolsterRequested = true")));
+	//LogMsgWithRole(FString::Printf(TEXT("InputState.HolsterRequested = true")));
 	InputState.HolsterRequested = true;
 }
 void UWeaponReceiverComponent::PullTrigger()
@@ -161,7 +161,7 @@ bool UWeaponReceiverComponent::TickIdle(float DT)
 
 	if (InputState.HolsterRequested)
 	{
-		LogMsgWithRole("EWeaponModes::TickReady - Processing HolsterRequested");
+		//LogMsgWithRole("EWeaponModes::TickReady - Processing HolsterRequested");
 		InputState.HolsterRequested = false;
 		return ChangeState(EWeaponCommands::UnEquip, WeaponState);
 	}
@@ -172,7 +172,7 @@ bool UWeaponReceiverComponent::TickIdle(float DT)
 	// Ready > Firing
 	if (InputState.FireRequested)
 	{
-		LogMsgWithRole("EWeaponModes::TickReady - Processing FirePressed");
+		//LogMsgWithRole("EWeaponModes::TickReady - Processing FirePressed");
 		return ChangeState(EWeaponCommands::FireStart, WeaponState);
 	}
 
@@ -188,7 +188,7 @@ bool UWeaponReceiverComponent::TickIdle(float DT)
 	// Ready > Reloading
 	if (InputState.ReloadRequested)
 	{
-		LogMsgWithRole("EWeaponModes::TickReady - Processing ReloadRequested");
+		//LogMsgWithRole("EWeaponModes::TickReady - Processing ReloadRequested");
 		// Only process for one frame as we dont have a release
 
 		InputState.ReloadRequested = false;
@@ -248,7 +248,7 @@ bool UWeaponReceiverComponent::TickFiring(float DT)
 	}
 
 
-	LogMsgWithRole("TickFiring: BANG!");
+	//LogMsgWithRole("TickFiring: BANG!");
 
 
 	// Subtract some ammo
@@ -319,7 +319,7 @@ bool UWeaponReceiverComponent::TickFiring(float DT)
 }
 void UWeaponReceiverComponent::FireEnd()
 {
-	LogMsgWithRole("FireEnd");
+	//LogMsgWithRole("FireEnd");
 	bIsBusy = false;
 	GetWorld()->GetTimerManager().ClearTimer(BusyTimerHandle);
 }
@@ -375,11 +375,11 @@ void UWeaponReceiverComponent::ReloadEnd()
 {
 	if (WeaponState.Mode != EWeaponModes::Reloading)
 	{
-		LogMsgWithRole("ReloadEnd() - early out - this shouldn't have run!!");
+		//LogMsgWithRole("ReloadEnd() - early out - this shouldn't have run!!");
 		return;//HACK HACK HACK. I can't stop this fucking timer for some reason...
 	}
 
-	LogMsgWithRole("ReloadEnd()");
+	//LogMsgWithRole("ReloadEnd()");
 	bIsMidReload = false;
 	WeaponState.ReloadProgress = 100;
 
@@ -442,7 +442,7 @@ bool UWeaponReceiverComponent::ChangeState(EWeaponCommands Cmd, const FWeaponSta
 }
 void UWeaponReceiverComponent::EquipEnd()
 {
-	LogMsgWithRole("EquipEnd()");
+	//LogMsgWithRole("EquipEnd()");
 	ChangeState(EWeaponCommands::EquipEnd, WeaponState);
 }
 void UWeaponReceiverComponent::DoTransitionAction(const EWeaponModes OldMode, const EWeaponModes NewMode, FWeaponState& NewState)
@@ -450,7 +450,7 @@ void UWeaponReceiverComponent::DoTransitionAction(const EWeaponModes OldMode, co
 	// Any > Equipping
 	if (NewMode == EWeaponModes::Equipping)
 	{
-		LogMsgWithRole("NewMode == Equipping");
+		//LogMsgWithRole("NewMode == Equipping");
 
 		// Stop any actions - should never be true.. TODO Convert these to asserts to make sure we've good elsewhere
 		bIsBusy = false;
@@ -472,7 +472,7 @@ void UWeaponReceiverComponent::DoTransitionAction(const EWeaponModes OldMode, co
 	// Any > UnEquipped
 	if (NewMode == EWeaponModes::UnEquipped)
 	{
-		LogMsgWithRole("NewMode == UnEquipped");
+		//LogMsgWithRole("NewMode == UnEquipped");
 
 		// NEW HERE
 
@@ -492,6 +492,8 @@ void UWeaponReceiverComponent::DoTransitionAction(const EWeaponModes OldMode, co
 
 	if (OldMode == EWeaponModes::Firing)
 	{
+		//LogMsgWithRole("OldMode == Firing");
+
 		// Compute the time between shots if we've had a burst of at least 3
 		auto Num = ShotTimes.Num();
 
