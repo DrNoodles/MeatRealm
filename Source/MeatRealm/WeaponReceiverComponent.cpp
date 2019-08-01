@@ -42,12 +42,12 @@ void UWeaponReceiverComponent::HolsterWeapon()
 void UWeaponReceiverComponent::PullTrigger()
 {
 	InputState.FireRequested = true;
-	WeaponState.HasFired = false;
+	WeaponState.BurstCount = 0;
 }
 void UWeaponReceiverComponent::ReleaseTrigger()
 {
 	InputState.FireRequested = false;
-	WeaponState.HasFired = false;
+	WeaponState.BurstCount = 0;
 }
 void UWeaponReceiverComponent::Reload()
 {
@@ -219,7 +219,7 @@ bool UWeaponReceiverComponent::TickFiring(float DT)
 
 
 	if (bIsBusy) return false;
-	const auto bReceiverCanCycle = bFullAuto || !WeaponState.HasFired;
+	const auto bReceiverCanCycle = bFullAuto || WeaponState.BurstCount == 0;
 
 
 	// Process State Transitions
@@ -264,7 +264,8 @@ bool UWeaponReceiverComponent::TickFiring(float DT)
 	{
 		ShotTimes.Add(GetWorld()->GetTimeSeconds());
 
-		WeaponState.HasFired = true;
+		WeaponState.BurstCount++;
+
 		auto ShotPattern = CalcShotPattern();
 		for (auto Direction : ShotPattern)
 		{
@@ -437,7 +438,7 @@ void UWeaponReceiverComponent::DoTransitionAction(const EWeaponModes OldMode, co
 		// Forget all unimportant state
 		WeaponState.ReloadProgress = 0;
 		WeaponState.IsAdsing = false;
-		WeaponState.HasFired = false;
+		WeaponState.BurstCount = 0;
 
 
 		GetWorld()->GetTimerManager().SetTimer(BusyTimerHandle, this, &UWeaponReceiverComponent::EquipEnd, Delegate->GetDrawDuration(), false);
@@ -459,7 +460,7 @@ void UWeaponReceiverComponent::DoTransitionAction(const EWeaponModes OldMode, co
 		// Leave Reload alone! We might want to resume it
 		WeaponState.ReloadProgress = 0;
 		WeaponState.IsAdsing = false;
-		WeaponState.HasFired = false;
+		WeaponState.BurstCount = 0;
 
 		//LogMsgWithRole(WeaponState.ToString());
 	}

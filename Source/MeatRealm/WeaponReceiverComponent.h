@@ -43,7 +43,7 @@ public:
 		bool IsAdsing = false;
 
 	UPROPERTY(BlueprintReadOnly)
-		bool HasFired = false; // For Firing state
+		int BurstCount = 0; // For Firing state
 
 	FWeaponState Clone() const
 	{
@@ -53,7 +53,7 @@ public:
 		Clone.AmmoInPool = this->AmmoInPool;
 		Clone.ReloadProgress = this->ReloadProgress;
 		Clone.IsAdsing = this->IsAdsing;
-		Clone.HasFired = this->HasFired;
+		Clone.BurstCount = this->BurstCount;
 		return Clone;
 	}
 
