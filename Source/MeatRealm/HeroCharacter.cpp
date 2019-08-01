@@ -442,19 +442,19 @@ void AHeroCharacter::SetupPlayerInputComponent(class UInputComponent* PlayerInpu
 
 void AHeroCharacter::UseItemPressed() const
 {
-	LogMsgWithRole("AHeroCharacter::UseItemPressed");
+	//LogMsgWithRole("AHeroCharacter::UseItemPressed");
 	auto Item = GetCurrentItem();
 	if (Item) Item->UsePressed();
 }
 void AHeroCharacter::UseItemReleased() const
 {
-	LogMsgWithRole("AHeroCharacter::UseItemReleased");
+	//LogMsgWithRole("AHeroCharacter::UseItemReleased");
 	auto Item = GetCurrentItem();
 	if (Item) Item->UseReleased();
 }
 void AHeroCharacter::UseItemCancelled() const
 {
-	LogMsgWithRole("AHeroCharacter::UseItemCancelled");
+	//LogMsgWithRole("AHeroCharacter::UseItemCancelled");
 	auto Item = GetCurrentItem();
 	if (Item) Item->Cancel();
 }
@@ -893,7 +893,7 @@ void AHeroCharacter::Input_Reload() const
 // TODO Make this handle both client/server requests to fire - like ads pressed etc.
 void AHeroCharacter::StartWeaponFire()
 {
-	LogMsgWithRole("AHeroCharacter::StartWeaponFire");
+	//LogMsgWithRole("AHeroCharacter::StartWeaponFire");
 	if (!bWantsToFire)
 	{
 		bWantsToFire = true;
@@ -926,7 +926,7 @@ void AHeroCharacter::StartWeaponFire()
 
 void AHeroCharacter::StopWeaponFire()
 {
-	LogMsgWithRole("AHeroCharacter::StopWeaponFire");
+	//LogMsgWithRole("AHeroCharacter::StopWeaponFire");
 
 	if (bWantsToFire)
 	{
@@ -1094,7 +1094,7 @@ void AHeroCharacter::GiveItemToPlayer(TSubclassOf<AItemBase> ItemClass)
 	// Put it in our hands! TODO - Or not?
 	//EquipSlot(Slot);
 
-	LogMsgWithRole("AHeroCharacter::GiveItemToPlayer2");
+	//LogMsgWithRole("AHeroCharacter::GiveItemToPlayer2");
 }
 
 AItemBase* AHeroCharacter::GetFirstHealthItemOrNull() const
@@ -1336,7 +1336,7 @@ void AHeroCharacter::RefreshWeaponAttachments() const
 
 void AHeroCharacter::NotifyItemIsExpended(AItemBase* Item)
 {
-	LogMsgWithRole("AHeroCharacter::NotifyEquippableIsExpended()");
+	//LogMsgWithRole("AHeroCharacter::NotifyEquippableIsExpended()");
 	check(HasAuthority())
 
 	auto WasRemoved = RemoveEquippableFromInventory(Item);

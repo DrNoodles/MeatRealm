@@ -43,19 +43,19 @@ public:
 		bool IsAdsing = false;
 
 	UPROPERTY(BlueprintReadOnly)
-		bool HasFired = false; // For Firing state
+		int BurstCount = 0; // For Firing state
 
-	FWeaponState Clone() const
-	{
-		FWeaponState Clone;
-		Clone.Mode = this->Mode;
-		Clone.AmmoInClip = this->AmmoInClip;
-		Clone.AmmoInPool = this->AmmoInPool;
-		Clone.ReloadProgress = this->ReloadProgress;
-		Clone.IsAdsing = this->IsAdsing;
-		Clone.HasFired = this->HasFired;
-		return Clone;
-	}
+	//FWeaponState Clone() const
+	//{
+	//	FWeaponState Clone;
+	//	Clone.Mode = this->Mode;
+	//	Clone.AmmoInClip = this->AmmoInClip;
+	//	Clone.AmmoInPool = this->AmmoInPool;
+	//	Clone.ReloadProgress = this->ReloadProgress;
+	//	Clone.IsAdsing = this->IsAdsing;
+	//	Clone.BurstCount = this->BurstCount;
+	//	return Clone;
+	//}
 
 	FString ToString() const
 	{
@@ -136,7 +136,6 @@ class MEATREALM_API UWeaponReceiverComponent : public UActorComponent
 	GENERATED_BODY()
 
 public:
-
 	// Configure the gun
 
 	UPROPERTY(EditAnywhere)
@@ -228,6 +227,8 @@ private:
 	bool bIsBusy;
 
 
+	TArray<float> ShotTimes{};
+
 
 public:	
 	UWeaponReceiverComponent();
@@ -260,8 +261,8 @@ private:
 	void FireEnd();
 	bool TickReloading(float DT);
 	void ReloadEnd();
-	void DoTransitionAction(const EWeaponModes OldMode, const EWeaponModes NewMode);
-	bool ChangeState(EWeaponCommands Cmd, const FWeaponState& InState);
+	void DoTransitionAction(const EWeaponModes OldMode, const EWeaponModes NewMode, FWeaponState& NewState);
+	bool ChangeState(EWeaponCommands Cmd, FWeaponState& WeapState);
 	void EquipEnd();
 
 	float GetReloadTime() const { return IsBuff ? ReloadTime * ReloadTimeBuffFactor : ReloadTime; }
