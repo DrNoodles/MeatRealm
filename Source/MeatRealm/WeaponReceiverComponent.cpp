@@ -261,11 +261,23 @@ bool UWeaponReceiverComponent::TickFiring(float DT)
 
 
 	// Fire the shot(s)!
+	auto ShotRate = 1.f / ShotsPerSecond;
+	float LastShotRateError = 0.f;
 	{
-		ShotTimes.Add(GetWorld()->GetTimeSeconds());
 
+		// Record time of shot and compute how much slack time till the next shot
+		float Now = GetWorld()->TimeSeconds;
+		if (bFullAuto && ShotTimes.Num() > 0)
+		{
+			float TimeSinceLastShot = Now - ShotTimes.Last();
+			LastShotRateError = TimeSinceLastShot - ShotRate;
+		}
+
+		// Store shot timing/count
+		ShotTimes.Add(Now);
 		WeaponState.BurstCount++;
 
+		// Shoot the damn thing!
 		auto ShotPattern = CalcShotPattern();
 		for (auto Direction : ShotPattern)
 		{
@@ -277,7 +289,10 @@ bool UWeaponReceiverComponent::TickFiring(float DT)
 	// Start the busy timer
 	{
 		bIsBusy = true;
-		GetWorld()->GetTimerManager().SetTimer(BusyTimerHandle, this, &UWeaponReceiverComponent::FireEnd, 1.f / ShotsPerSecond, false);
+
+		float TimeTillNextShot = ShotRate - LastShotRateError;
+
+		GetWorld()->GetTimerManager().SetTimer(BusyTimerHandle, this, &UWeaponReceiverComponent::FireEnd, TimeTillNextShot, false);
 	}
 
 
@@ -474,9 +489,11 @@ void UWeaponReceiverComponent::DoTransitionAction(const EWeaponModes OldMode, co
 		auto TotalDiff = 0.f;
 		int Count = 0;
 
-		if (bFullAuto && Num >= 3)
+		int Skip = 4;
+
+		if (bFullAuto && Num > Skip+1)
 		{
-			for (int i = 1; i < Num-1; ++i)
+			for (int i = Skip+1; i < Num; ++i)
 			{
 				auto First = ShotTimes[i-1];
 				auto Second = ShotTimes[i];
@@ -492,7 +509,17 @@ void UWeaponReceiverComponent::DoTransitionAction(const EWeaponModes OldMode, co
 			float AvgDiff = Avg - Expected;
 			float DiffPercentage = Avg/Expected;
 
-			LogMsgWithRole(FString::Printf(TEXT("Avg:%f, Expected:%f, AvgDiff:%f %.2f%%"), Avg, Expected, AvgDiff, DiffPercentage));
+			LogMsgWithRole(FString::Printf(TEXT("Avg:%f, Expected:%f, AvgDiff:%f %.3f%%"), Avg, Expected, AvgDiff, DiffPercentage));
+
+			if (DiffPercentage > 1.02)
+			{
+				UE_LOG(LogTemp, Error, TEXT("Gun fire rate error is %.3f%%. Time before shot:"), DiffPercentage);
+				for (int j = 1; j < ShotTimes.Num(); ++j)
+				{
+					auto Diff = ShotTimes[j] - ShotTimes[j - 1];
+					UE_LOG(LogTemp, Error, TEXT("   Shot%d: %f"), j+1, Diff);
+				}
+			}
 		}
 
 		ShotTimes.Empty();
