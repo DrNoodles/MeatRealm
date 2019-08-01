@@ -136,7 +136,6 @@ class MEATREALM_API UWeaponReceiverComponent : public UActorComponent
 	GENERATED_BODY()
 
 public:
-
 	// Configure the gun
 
 	UPROPERTY(EditAnywhere)
@@ -227,6 +226,7 @@ private:
 	FTimerHandle BusyTimerHandle;
 	bool bIsBusy;
 
+	TArray<float> ShotTimes{};
 
 
 public:	

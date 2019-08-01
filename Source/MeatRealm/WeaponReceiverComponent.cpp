@@ -262,6 +262,8 @@ bool UWeaponReceiverComponent::TickFiring(float DT)
 
 	// Fire the shot(s)!
 	{
+		ShotTimes.Add(GetWorld()->GetTimeSeconds());
+
 		WeaponState.HasFired = true;
 		auto ShotPattern = CalcShotPattern();
 		for (auto Direction : ShotPattern)
@@ -460,6 +462,39 @@ void UWeaponReceiverComponent::DoTransitionAction(const EWeaponModes OldMode, co
 		WeaponState.HasFired = false;
 
 		//LogMsgWithRole(WeaponState.ToString());
+	}
+
+
+	if (OldMode == EWeaponModes::Firing)
+	{
+		// Compute the time between shots if we've had a burst of at least 3
+		auto Num = ShotTimes.Num();
+
+		auto TotalDiff = 0.f;
+		int Count = 0;
+
+		if (bFullAuto && Num >= 3)
+		{
+			for (int i = 1; i < Num-1; ++i)
+			{
+				auto First = ShotTimes[i-1];
+				auto Second = ShotTimes[i];
+				auto Diff = Second - First;
+				TotalDiff += Diff;
+
+				++Count;
+			}
+
+			// Report
+			float Avg = TotalDiff / Count;
+			float Expected = 1.f / ShotsPerSecond;
+			float AvgDiff = Avg - Expected;
+			float DiffPercentage = Avg/Expected;
+
+			LogMsgWithRole(FString::Printf(TEXT("Avg:%f, Expected:%f, AvgDiff:%f %.2f%%"), Avg, Expected, AvgDiff, DiffPercentage));
+		}
+
+		ShotTimes.Empty();
 	}
 }
 
