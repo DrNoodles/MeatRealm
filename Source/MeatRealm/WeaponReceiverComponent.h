@@ -226,6 +226,7 @@ private:
 	FTimerHandle BusyTimerHandle;
 	bool bIsBusy;
 
+
 	TArray<float> ShotTimes{};
 
 
@@ -260,7 +261,7 @@ private:
 	void FireEnd();
 	bool TickReloading(float DT);
 	void ReloadEnd();
-	void DoTransitionAction(const EWeaponModes OldMode, const EWeaponModes NewMode);
+	void DoTransitionAction(const EWeaponModes OldMode, const EWeaponModes NewMode, FWeaponState& NewState);
 	bool ChangeState(EWeaponCommands Cmd, const FWeaponState& InState);
 	void EquipEnd();
 

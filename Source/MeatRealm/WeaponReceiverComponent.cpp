@@ -262,15 +262,23 @@ bool UWeaponReceiverComponent::TickFiring(float DT)
 
 	// Fire the shot(s)!
 	auto ShotRate = 1.f / ShotsPerSecond;
-	float LastShotRateError = 0.f;
+
+
+	float ShotRateError = 0;
 	{
 
 		// Record time of shot and compute how much slack time till the next shot
 		float Now = GetWorld()->TimeSeconds;
+
 		if (bFullAuto && ShotTimes.Num() > 0)
 		{
-			float TimeSinceLastShot = Now - ShotTimes.Last();
-			LastShotRateError = TimeSinceLastShot - ShotRate;
+			float TimeSinceFirstShot = Now - ShotTimes[0];
+			float ExpectedTimeSinceFirstShot = ShotRate * (WeaponState.BurstCount);
+			float TotalError = TimeSinceFirstShot - ExpectedTimeSinceFirstShot;
+
+			UE_LOG(LogTemp, Warning, TEXT("TimeSinceFirstShot:%f, ExpectedTimeSinceFirstShot:%f, Error:%f"), TimeSinceFirstShot, ExpectedTimeSinceFirstShot, TotalError);
+
+			ShotRateError = TotalError;
 		}
 
 		// Store shot timing/count
@@ -290,7 +298,8 @@ bool UWeaponReceiverComponent::TickFiring(float DT)
 	{
 		bIsBusy = true;
 
-		float TimeTillNextShot = ShotRate - LastShotRateError;
+		float TimeTillNextShot = FMath::Max<float>(ShotRate - ShotRateError, SMALL_NUMBER);
+		TimeTillNextShot -= 1/60.f; // TODO Hack! Generally the shots are delayed by about 1 tick @ 60Hz from the requested time. 
 
 		GetWorld()->GetTimerManager().SetTimer(BusyTimerHandle, this, &UWeaponReceiverComponent::FireEnd, TimeTillNextShot, false);
 	}
@@ -424,7 +433,7 @@ bool UWeaponReceiverComponent::ChangeState(EWeaponCommands Cmd, const FWeaponSta
 	const bool bWeChangedStates = InState.Mode != OutState.Mode;
 	if (bWeChangedStates)
 	{
-		DoTransitionAction(InState.Mode, OutState.Mode);
+		DoTransitionAction(InState.Mode, OutState.Mode, OutState);
 	}
 
 	WeaponState = OutState;
@@ -436,7 +445,7 @@ void UWeaponReceiverComponent::EquipEnd()
 	LogMsgWithRole("EquipEnd()");
 	ChangeState(EWeaponCommands::EquipEnd, WeaponState);
 }
-void UWeaponReceiverComponent::DoTransitionAction(const EWeaponModes OldMode, const EWeaponModes NewMode)
+void UWeaponReceiverComponent::DoTransitionAction(const EWeaponModes OldMode, const EWeaponModes NewMode, FWeaponState& NewState)
 {
 	// Any > Equipping
 	if (NewMode == EWeaponModes::Equipping)
@@ -451,9 +460,9 @@ void UWeaponReceiverComponent::DoTransitionAction(const EWeaponModes OldMode, co
 		InputState.Reset();
 
 		// Forget all unimportant state
-		WeaponState.ReloadProgress = 0;
-		WeaponState.IsAdsing = false;
-		WeaponState.BurstCount = 0;
+		NewState.ReloadProgress = 0;
+		NewState.IsAdsing = false;
+		NewState.BurstCount = 0;
 
 
 		GetWorld()->GetTimerManager().SetTimer(BusyTimerHandle, this, &UWeaponReceiverComponent::EquipEnd, Delegate->GetDrawDuration(), false);
@@ -473,9 +482,9 @@ void UWeaponReceiverComponent::DoTransitionAction(const EWeaponModes OldMode, co
 		InputState.Reset();
 
 		// Leave Reload alone! We might want to resume it
-		WeaponState.ReloadProgress = 0;
-		WeaponState.IsAdsing = false;
-		WeaponState.BurstCount = 0;
+		NewState.ReloadProgress = 0;
+		NewState.IsAdsing = false;
+		NewState.BurstCount = 0;
 
 		//LogMsgWithRole(WeaponState.ToString());
 	}
@@ -507,11 +516,11 @@ void UWeaponReceiverComponent::DoTransitionAction(const EWeaponModes OldMode, co
 			float Avg = TotalDiff / Count;
 			float Expected = 1.f / ShotsPerSecond;
 			float AvgDiff = Avg - Expected;
-			float DiffPercentage = Avg/Expected;
+			float DiffPercentage = (Avg / Expected - 1) * 100;
 
 			LogMsgWithRole(FString::Printf(TEXT("Avg:%f, Expected:%f, AvgDiff:%f %.3f%%"), Avg, Expected, AvgDiff, DiffPercentage));
 
-			if (DiffPercentage > 1.02)
+			if (FMath::Abs(DiffPercentage) > 1) // error tolerance
 			{
 				UE_LOG(LogTemp, Error, TEXT("Gun fire rate error is %.3f%%. Time before shot:"), DiffPercentage);
 				for (int j = 1; j < ShotTimes.Num(); ++j)
@@ -523,6 +532,7 @@ void UWeaponReceiverComponent::DoTransitionAction(const EWeaponModes OldMode, co
 		}
 
 		ShotTimes.Empty();
+		NewState.BurstCount = 0;
 	}
 }
 
