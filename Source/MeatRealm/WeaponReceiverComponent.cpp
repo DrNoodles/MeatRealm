@@ -42,12 +42,17 @@ void UWeaponReceiverComponent::HolsterWeapon()
 void UWeaponReceiverComponent::PullTrigger()
 {
 	InputState.FireRequested = true;
+
 	WeaponState.BurstCount = 0;
+	ShotTimes.Empty();
+
 }
 void UWeaponReceiverComponent::ReleaseTrigger()
 {
 	InputState.FireRequested = false;
+
 	WeaponState.BurstCount = 0;
+	ShotTimes.Empty();
 }
 void UWeaponReceiverComponent::Reload()
 {
@@ -273,10 +278,10 @@ bool UWeaponReceiverComponent::TickFiring(float DT)
 		if (bFullAuto && ShotTimes.Num() > 0)
 		{
 			float TimeSinceFirstShot = Now - ShotTimes[0];
-			float ExpectedTimeSinceFirstShot = ShotRate * (WeaponState.BurstCount);
+			float ExpectedTimeSinceFirstShot = ShotRate * WeaponState.BurstCount;
 			float TotalError = TimeSinceFirstShot - ExpectedTimeSinceFirstShot;
 
-			UE_LOG(LogTemp, Warning, TEXT("TimeSinceFirstShot:%f, ExpectedTimeSinceFirstShot:%f, Error:%f"), TimeSinceFirstShot, ExpectedTimeSinceFirstShot, TotalError);
+			//UE_LOG(LogTemp, Warning, TEXT("TimeSinceFirstShot:%f, ExpectedTimeSinceFirstShot:%f, Err:%f"), TimeSinceFirstShot, ExpectedTimeSinceFirstShot, TotalError);
 
 			ShotRateError = TotalError;
 		}
@@ -395,48 +400,50 @@ void UWeaponReceiverComponent::ReloadEnd()
 	ChangeState(EWeaponCommands::ReloadEnd, WeaponState);
 }
 
-bool UWeaponReceiverComponent::ChangeState(EWeaponCommands Cmd, const FWeaponState& InState)
+bool UWeaponReceiverComponent::ChangeState(EWeaponCommands Cmd, FWeaponState& WeapState)
 {
-	FWeaponState OutState = InState.Clone();
+	//FWeaponState OutState = InState;
+
+	const auto OldMode = WeapState.Mode;
 
 	if (Cmd == EWeaponCommands::FireStart) {
-		OutState.Mode = EWeaponModes::Firing;
+		WeapState.Mode = EWeaponModes::Firing;
 	}
 
 	if (Cmd == EWeaponCommands::FireEnd) {
-		OutState.Mode = EWeaponModes::Idle;
+		WeapState.Mode = EWeaponModes::Idle;
 	}
 
 	if (Cmd == EWeaponCommands::ReloadStart) {
-		OutState.Mode = EWeaponModes::Reloading;
+		WeapState.Mode = EWeaponModes::Reloading;
 	}
 
 	if (Cmd == EWeaponCommands::ReloadEnd) {
-		OutState.Mode = EWeaponModes::Idle;
+		WeapState.Mode = EWeaponModes::Idle;
 	}
 
 	if (Cmd == EWeaponCommands::UnEquip) {
-		OutState.Mode = EWeaponModes::UnEquipped;
+		WeapState.Mode = EWeaponModes::UnEquipped;
 	}
 
 	if (Cmd == EWeaponCommands::EquipStart) {
-		OutState.Mode = EWeaponModes::Equipping;
+		WeapState.Mode = EWeaponModes::Equipping;
 	}
 
 	if (Cmd == EWeaponCommands::EquipEnd) {
-		OutState.Mode = EWeaponModes::Idle;
+		WeapState.Mode = EWeaponModes::Idle;
 	}
 
 	LogMsgWithRole(FString::Printf(TEXT("WeapReceiver::ChangeState(%s > %s > %s)"),
-		*EWeaponModesStr(InState.Mode), *EWeaponCommandsStr(Cmd), *EWeaponModesStr(OutState.Mode)));
+		*EWeaponModesStr(OldMode), *EWeaponCommandsStr(Cmd), *EWeaponModesStr(WeapState.Mode)));
 
-	const bool bWeChangedStates = InState.Mode != OutState.Mode;
+	const bool bWeChangedStates = OldMode != WeapState.Mode;
 	if (bWeChangedStates)
 	{
-		DoTransitionAction(InState.Mode, OutState.Mode, OutState);
+		DoTransitionAction(OldMode, WeapState.Mode, WeapState);
 	}
 
-	WeaponState = OutState;
+	//WeaponState = OutState;
 
 	return bWeChangedStates;
 }
@@ -462,7 +469,9 @@ void UWeaponReceiverComponent::DoTransitionAction(const EWeaponModes OldMode, co
 		// Forget all unimportant state
 		NewState.ReloadProgress = 0;
 		NewState.IsAdsing = false;
+		
 		NewState.BurstCount = 0;
+		ShotTimes.Empty();
 
 
 		GetWorld()->GetTimerManager().SetTimer(BusyTimerHandle, this, &UWeaponReceiverComponent::EquipEnd, Delegate->GetDrawDuration(), false);
@@ -485,6 +494,7 @@ void UWeaponReceiverComponent::DoTransitionAction(const EWeaponModes OldMode, co
 		NewState.ReloadProgress = 0;
 		NewState.IsAdsing = false;
 		NewState.BurstCount = 0;
+		ShotTimes.Empty();
 
 		//LogMsgWithRole(WeaponState.ToString());
 	}
@@ -494,40 +504,41 @@ void UWeaponReceiverComponent::DoTransitionAction(const EWeaponModes OldMode, co
 	{
 		//LogMsgWithRole("OldMode == Firing");
 
-		// Compute the time between shots if we've had a burst of at least 3
-		auto Num = ShotTimes.Num();
 
+		// Track the fire rate error and report as error if it's above a tolerance
+
+		// Compute the time between shots if we've had a burst of at least 3
+		const auto Num = ShotTimes.Num();
 		auto TotalDiff = 0.f;
 		int Count = 0;
-
-		int Skip = 4;
+		const int Skip = 1;
 
 		if (bFullAuto && Num > Skip+1)
 		{
 			for (int i = Skip+1; i < Num; ++i)
 			{
-				auto First = ShotTimes[i-1];
-				auto Second = ShotTimes[i];
-				auto Diff = Second - First;
+				const auto First = ShotTimes[i-1];
+				const auto Second = ShotTimes[i];
+				const auto Diff = Second - First;
 				TotalDiff += Diff;
-
 				++Count;
 			}
 
 			// Report
-			float Avg = TotalDiff / Count;
-			float Expected = 1.f / ShotsPerSecond;
-			float AvgDiff = Avg - Expected;
-			float DiffPercentage = (Avg / Expected - 1) * 100;
+			const float Avg = TotalDiff / Count;
+			const float Expected = 1.f / ShotsPerSecond;
+			const float AvgDiff = Avg - Expected;
+			const float DiffPercentage = (Avg / Expected - 1) * 100;
 
-			LogMsgWithRole(FString::Printf(TEXT("Avg:%f, Expected:%f, AvgDiff:%f %.3f%%"), Avg, Expected, AvgDiff, DiffPercentage));
+			//LogMsgWithRole(FString::Printf(TEXT("Avg:%f, Expected:%f, AvgDiff:%f %.3f%%"), Avg, Expected, AvgDiff, DiffPercentage));
 
-			if (FMath::Abs(DiffPercentage) > 1) // error tolerance
+			const float ErrorTolerance = 1.5;
+			if (FMath::Abs(DiffPercentage) > ErrorTolerance) // error tolerance
 			{
 				UE_LOG(LogTemp, Error, TEXT("Gun fire rate error is %.3f%%. Time before shot:"), DiffPercentage);
 				for (int j = 1; j < ShotTimes.Num(); ++j)
 				{
-					auto Diff = ShotTimes[j] - ShotTimes[j - 1];
+					const auto Diff = ShotTimes[j] - ShotTimes[j - 1];
 					UE_LOG(LogTemp, Error, TEXT("   Shot%d: %f"), j+1, Diff);
 				}
 			}

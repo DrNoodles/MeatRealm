@@ -45,17 +45,17 @@ public:
 	UPROPERTY(BlueprintReadOnly)
 		int BurstCount = 0; // For Firing state
 
-	FWeaponState Clone() const
-	{
-		FWeaponState Clone;
-		Clone.Mode = this->Mode;
-		Clone.AmmoInClip = this->AmmoInClip;
-		Clone.AmmoInPool = this->AmmoInPool;
-		Clone.ReloadProgress = this->ReloadProgress;
-		Clone.IsAdsing = this->IsAdsing;
-		Clone.BurstCount = this->BurstCount;
-		return Clone;
-	}
+	//FWeaponState Clone() const
+	//{
+	//	FWeaponState Clone;
+	//	Clone.Mode = this->Mode;
+	//	Clone.AmmoInClip = this->AmmoInClip;
+	//	Clone.AmmoInPool = this->AmmoInPool;
+	//	Clone.ReloadProgress = this->ReloadProgress;
+	//	Clone.IsAdsing = this->IsAdsing;
+	//	Clone.BurstCount = this->BurstCount;
+	//	return Clone;
+	//}
 
 	FString ToString() const
 	{
@@ -262,7 +262,7 @@ private:
 	bool TickReloading(float DT);
 	void ReloadEnd();
 	void DoTransitionAction(const EWeaponModes OldMode, const EWeaponModes NewMode, FWeaponState& NewState);
-	bool ChangeState(EWeaponCommands Cmd, const FWeaponState& InState);
+	bool ChangeState(EWeaponCommands Cmd, FWeaponState& WeapState);
 	void EquipEnd();
 
 	float GetReloadTime() const { return IsBuff ? ReloadTime * ReloadTimeBuffFactor : ReloadTime; }

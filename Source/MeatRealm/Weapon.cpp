@@ -223,7 +223,7 @@ void AWeapon::MultiRPC_NotifyOnShotFired_Implementation()
 
 void AWeapon::ClientRPC_NotifyOnAmmoWarning_Implementation()
 {
-	LogMsgWithRole("AWeapon::ClientRPC_NotifyOnAmmoWarning_Implementation()");
+	//LogMsgWithRole("AWeapon::ClientRPC_NotifyOnAmmoWarning_Implementation()");
 	if (OnAmmoWarning.IsBound()) OnAmmoWarning.Broadcast();
 }
 
@@ -235,7 +235,7 @@ void AWeapon::ShotFired()
 }
 void AWeapon::AmmoInClipChanged(int AmmoInClip)
 {
-	LogMsgWithRole(FString::Printf(TEXT("AWeapon::AmmoInClipChanged(%d)"), AmmoInClip));
+	//LogMsgWithRole(FString::Printf(TEXT("AWeapon::AmmoInClipChanged(%d)"), AmmoInClip));
 
 	if (AmmoInClip == 0)
 	{
@@ -244,7 +244,7 @@ void AWeapon::AmmoInClipChanged(int AmmoInClip)
 }
 void AWeapon::AmmoInPoolChanged(int AmmoInPool)
 {
-	LogMsgWithRole(FString::Printf(TEXT("AWeapon::AmmoInPoolChanged(%d)"), AmmoInPool));
+	//LogMsgWithRole(FString::Printf(TEXT("AWeapon::AmmoInPoolChanged(%d)"), AmmoInPool));
 	if (AmmoInPool == 0)
 	{
 		ClientRPC_NotifyOnAmmoWarning();
@@ -253,7 +253,7 @@ void AWeapon::AmmoInPoolChanged(int AmmoInPool)
 void AWeapon::InReloadingChanged(bool IsReloading)
 {
 	//FString Str{ IsReloading ? "True" : "False" };
-	LogMsgWithRole(FString::Printf(TEXT("AWeapon::InReloadingChanged(%s)"), *FString{ IsReloading ? "True" : "False" }));
+	//LogMsgWithRole(FString::Printf(TEXT("AWeapon::InReloadingChanged(%s)"), *FString{ IsReloading ? "True" : "False" }));
 
 	// Use for client side effects only 
 	if (HasAuthority()) return;
@@ -269,7 +269,7 @@ void AWeapon::InReloadingChanged(bool IsReloading)
 }
 void AWeapon::OnReloadProgressChanged(float ReloadProgress)
 {
-	LogMsgWithRole(FString::Printf(TEXT("AWeapon::OnReloadProgressChanged(%f)"), ReloadProgress));
+	//LogMsgWithRole(FString::Printf(TEXT("AWeapon::OnReloadProgressChanged(%f)"), ReloadProgress));
 }
 bool AWeapon::SpawnAProjectile(const FVector& Direction)
 {
