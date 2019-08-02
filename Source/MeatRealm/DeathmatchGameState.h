@@ -11,6 +11,7 @@
 class UScoreboardEntryData;
 class UKillfeedEntryData;
 
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FIncomingSuper, float, Time, FString, Location);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FKillfeedChanged);
 
 UCLASS()
@@ -25,9 +26,16 @@ public:
 	UFUNCTION(BlueprintCallable)
 		TArray<UScoreboardEntryData*> GetScoreboard();
 
+	UFUNCTION(Client, Reliable)
+	void ClientNotifyIncomingSuper(float PowerUpAnnouncementLeadTime, const FString& LocationMsg);
+	
+	void NotifyIncomingSuper(float PowerUpAnnouncementLeadTime, const FString& LocationMsg);
+
 	UPROPERTY(BlueprintAssignable, Category = "Event Dispatchers")
 		FKillfeedChanged OnKillfeedChanged;
 
+	UPROPERTY(BlueprintAssignable, Category = "Event Dispatchers")
+		FIncomingSuper OnIncomingSuper;
 
 	void StartARemoveTimer();
 	void FinishOldestTimer();

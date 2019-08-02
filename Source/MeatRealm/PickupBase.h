@@ -33,6 +33,9 @@ public:
 	UPROPERTY(EditAnywhere)
 		bool bIsSingleUse = false;
 
+	UPROPERTY(EditAnywhere)
+		float InitialDelay = 0;
+
 protected:
 	UPROPERTY(EditAnywhere)
 		bool bExplicitInteraction = false;
@@ -66,6 +69,7 @@ public:
 		return  bExplicitInteraction && IsAvailable;
 	}
 	bool AuthTryInteract(IAffectableInterface* const Affectable);
+	FString GetPickupName() const { return NiceName; }
 
 protected:
 
@@ -74,6 +78,9 @@ protected:
 	{
 		unimplemented(); return false;
 	}
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly)
+		FString NiceName = "";
 
 private:
 	UFUNCTION()

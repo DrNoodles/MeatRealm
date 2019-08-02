@@ -94,12 +94,15 @@ void ADeathmatchGameMode::SetPlayerDefaults(APawn* PlayerPawn)
 	HChar->SetTint(PlayerTints[TintNumber]);
 }
 
-void ADeathmatchGameMode::SpawnAChest() const
+void ADeathmatchGameMode::AnnounceChestSpawn()
 {
 	UWorld* World = GetWorld();
 	if (!World) return;
 
 
+	// Record bounds of all points
+	float MinX = 0, MinY = 0, MaxX = 0, MaxY = 0;
+	
 	TArray<APickupSpawnLocation*> Spawns{};
 	for (TActorIterator<APickupSpawnLocation> It(World); It; ++It)
 	{
@@ -113,22 +116,74 @@ void ADeathmatchGameMode::SpawnAChest() const
 			}
 
 			Spawns.Emplace(TP);
+
+			// Find bounds of all points
+			auto L = TP->GetActorLocation();
+			if (L.X < MinX) MinX = L.X;
+			if (L.X > MaxX) MaxX = L.X;
+			if (L.Y < MinY) MinY = L.Y;
+			if (L.Y > MaxX) MaxY = L.Y;
 		}
 	}
 
-
 	UE_LOG(LogTemp, Warning, TEXT("Weapon Pickups Found: %d"), Spawns.Num());
 
+	if (Spawns.Num() == 0)
+		return;
 
-	if (Spawns.Num() > 0)
+	const auto Choice = FMath::RandRange(0, Spawns.Num() - 1);
+	NextChestSpawnLocation = Spawns[Choice];
+
+
+
+
+	auto ActorLocation = NextChestSpawnLocation->GetActorLocation();
+
+	UE_LOG(LogTemp, Warning, TEXT("x:%f X:%f y:%f Y:%f Loc: %s"), MinX, MaxX, MinY, MaxY, *ActorLocation.ToString());
+
+	// Find which map section the item is spawning
+	FString LeftRightStr = (ActorLocation.Y < (MaxY + MinY) / 2) ? "Left" : "Right";
+	FString TopBottomStr = (ActorLocation.X < (MaxX + MinX) / 2) ? "Bottom" : "Top";
+	FString LocationMsg = FString::Printf(TEXT("%s %s"), *TopBottomStr, *LeftRightStr);
+
+
+	//FString LocationMsg = FString::Printf(TEXT("INCOMING SUPER - %s %s - %f SECONDS"), *TopBottomStr, *LeftRightStr, PowerUpAnnouncementLeadTime);
+
+
+
+	// Notify incoming chest! Use delegate so the hud can bind onto it
+	auto* const GS = GetGameState<ADeathmatchGameState>();
+	if (GS)
 	{
-		FActorSpawnParameters Params{};
-		Params.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AdjustIfPossibleButAlwaysSpawn;
-
-		const auto Choice = FMath::RandRange(0, Spawns.Num() - 1);
-		APickupSpawnLocation* SpawnPoint = Spawns[Choice];
-		auto* Pickup = GetWorld()->SpawnActorAbsolute<APickupBase>(SpawnPoint->PickupClass, SpawnPoint->GetActorTransform(), Params);
+		GS->NotifyIncomingSuper(PowerUpAnnouncementLeadTime, LocationMsg);
 	}
+
+	//if (GEngine)
+	//{
+	//
+
+	//	GEngine->AddOnScreenDebugMessage(INDEX_NONE, 5, FColor::White, LocationMsg, true, FVector2D{ 2,2 });
+	//}
+
+
+	GetWorldTimerManager().SetTimer(ChestSpawnTimerHandle, this, &ADeathmatchGameMode::SpawnChest, PowerUpAnnouncementLeadTime);
+}
+
+void ADeathmatchGameMode::SpawnChest()
+{
+	if (!NextChestSpawnLocation) 
+		return;
+
+	FActorSpawnParameters Params{};
+	Params.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AdjustIfPossibleButAlwaysSpawn;
+
+	
+	auto* Pickup = GetWorld()->SpawnActorAbsolute<APickupBase>(NextChestSpawnLocation->PickupClass, NextChestSpawnLocation->GetActorTransform(), Params);
+
+	//// TODO Defer spawn to properly set this initial delay
+	//Pickup->InitialDelay = PowerUpAnnouncementLeadTime;
+
+	GetWorldTimerManager().ClearTimer(ChestSpawnTimerHandle);
 }
 
 AActor* ADeathmatchGameMode::FindFurthestPlayerStart(AController* Controller)
@@ -286,14 +341,14 @@ void ADeathmatchGameMode::HandleMatchHasStarted()
 	UE_LOG(LogTemp, Warning, TEXT("ADeathmatchGameMode::HandleMatchHasStarted()"));
 
 
-	GetWorldTimerManager().SetTimer(ChestSpawnTimerHandle, this, &ADeathmatchGameMode::SpawnAChest, PowerUpSpawnRate, true, PowerUpInitialDelay);
+	GetWorldTimerManager().SetTimer(ChestAnnouncementTimerHandle, this, &ADeathmatchGameMode::AnnounceChestSpawn, PowerUpSpawnRate, true, PowerUpInitialDelay);
 }
 
 void ADeathmatchGameMode::HandleMatchHasEnded()
 {
 	Super::HandleMatchHasEnded();
 
-	/*if (GetWorld()) */GetWorld()->GetTimerManager().ClearTimer(ChestSpawnTimerHandle);
+	/*if (GetWorld()) */GetWorld()->GetTimerManager().ClearTimer(ChestAnnouncementTimerHandle);
 
 	// TODO Disable shooting
 	// TODO Show scoreboards on clients

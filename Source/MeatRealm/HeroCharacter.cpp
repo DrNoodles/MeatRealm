@@ -215,7 +215,7 @@ void AHeroCharacter::ScanForWeaponPickups(float DeltaSeconds)
 		}
 		if (World)
 		{
-			auto Str = FString::Printf(TEXT("Grab (%s)"), *ActionText);
+			auto Str = FString::Printf(TEXT("Grab %s (%s)"), *Pickup->GetPickupName(), *ActionText);
 			const auto YOffset = -5.f * Str.Len();
 
 			DrawDebugString(World, FVector{ 50, YOffset, 100 },	Str, Pickup, FColor::White, DeltaSeconds * 0.5);

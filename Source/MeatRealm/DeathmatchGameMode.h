@@ -4,6 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/GameMode.h"
+#include "PickupSpawnLocation.h"
 
 #include "DeathmatchGameMode.generated.h"
 
@@ -32,7 +33,8 @@ public:
 	virtual void SetPlayerDefaults(APawn* PlayerPawn) override;
 	virtual void RestartPlayer(AController* NewPlayer) override;
 
-	void SpawnAChest() const;
+	void AnnounceChestSpawn();
+	void SpawnChest();
 
 	void PostLogin(APlayerController* NewPlayer) override;
 	void Logout(AController* Exiting) override;
@@ -40,10 +42,15 @@ public:
 	AActor* FindFurthestPlayerStart(AController* Controller);
 	void OnPlayerTakeDamage(FMRHitResult Hit);
 
-
 private:
+
+	// Time before initial announcement
 	UPROPERTY(EditAnywhere)
 		float PowerUpInitialDelay = 30;
+
+	// Time after announcement till the item spawns
+	UPROPERTY(EditAnywhere)
+		float PowerUpAnnouncementLeadTime = 15;
 
 	UPROPERTY(EditAnywhere)
 		float PowerUpSpawnRate = 120;
@@ -53,7 +60,9 @@ private:
 	TArray<FColor> PlayerTints;
 	int TintCount = 0;
 
+	FTimerHandle ChestAnnouncementTimerHandle;
 	FTimerHandle ChestSpawnTimerHandle;
+	APickupSpawnLocation* NextChestSpawnLocation = nullptr;
 
 	//bool HasMetGameEndConditions() const;
 	void AddKillfeedEntry(AHeroController* const Killer, AHeroController* const Dead);
