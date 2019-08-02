@@ -89,7 +89,7 @@ void APickupBase::PickupItem()
 		// Destroy the pickup after a delay to allow client effects/sounds to finish
 
 		FTimerHandle ThrowAwayHandle;
-		const float DestroyDelay = 3;
+		const float DestroyDelay = 0.5;
 
 		GetWorld()->GetTimerManager().SetTimer(
 			ThrowAwayHandle, [&] { Destroy(); }, DestroyDelay, false, -1);
