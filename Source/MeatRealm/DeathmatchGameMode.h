@@ -25,13 +25,14 @@ public:
 	// Game Lifecycle
 	virtual bool ReadyToStartMatch_Implementation() override;
 	virtual bool ReadyToEndMatch_Implementation() override;
+	virtual void HandleMatchHasStarted() override;
 	virtual void HandleMatchHasEnded() override;
 	void OnRestartGame();
-
 
 	virtual void SetPlayerDefaults(APawn* PlayerPawn) override;
 	virtual void RestartPlayer(AController* NewPlayer) override;
 
+	void IterateAllChests();
 
 	void PostLogin(APlayerController* NewPlayer) override;
 	void Logout(AController* Exiting) override;

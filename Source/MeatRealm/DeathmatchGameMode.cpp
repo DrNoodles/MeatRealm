@@ -12,6 +12,7 @@
 #include "Structs/DmgHitResult.h"
 #include "TimerManager.h"
 #include "Engine/Engine.h"
+#include "Engine/TargetPoint.h"
 
 ADeathmatchGameMode::ADeathmatchGameMode()
 {
@@ -90,6 +91,33 @@ void ADeathmatchGameMode::SetPlayerDefaults(APawn* PlayerPawn)
 	}
 
 	HChar->SetTint(PlayerTints[TintNumber]);
+}
+
+void ADeathmatchGameMode::IterateAllChests()
+{
+	UWorld* World = GetWorld();
+	if (!World) return;
+
+	int Count = 0;
+	for (TActorIterator<ATargetPoint> It(World); It; ++It)
+	{
+		ATargetPoint* TP = *It;
+		for (auto Tag : TP->Tags)
+		{
+			UE_LOG(LogTemp, Warning, TEXT("Tag: %s"), *Tag.ToString());
+
+		}
+
+		if (TP->ActorHasTag(FName("ChestSpawnLocation")))
+		{
+			Count++;
+
+			// TODO Spawn chest
+		}
+
+	}
+
+	UE_LOG(LogTemp, Warning, TEXT("Weapon Pickups Found: %d"), Count);
 }
 
 AActor* ADeathmatchGameMode::FindFurthestPlayerStart(AController* Controller)
@@ -240,8 +268,20 @@ bool ADeathmatchGameMode::ReadyToEndMatch_Implementation()
 	return bFragLimitReached;
 }
 
+void ADeathmatchGameMode::HandleMatchHasStarted()
+{
+	Super::HandleMatchHasStarted();
+
+	UE_LOG(LogTemp, Warning, TEXT("ADeathmatchGameMode::HandleMatchHasStarted()"));
+
+	IterateAllChests();
+}
+
 void ADeathmatchGameMode::HandleMatchHasEnded()
 {
+	Super::HandleMatchHasEnded();
+
+
 	// TODO Disable shooting
 	// TODO Show scoreboards on clients
 
