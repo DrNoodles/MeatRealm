@@ -105,6 +105,16 @@ bool AWeapon::ServerRPC_Unequip_Validate()
 	return true;
 }
 
+void AWeapon::OverrideAmmoGiven(int AmmoInClip, int AmmoInPool) const
+{
+	check(HasAuthority());
+
+	ReceiverComp->ClipSizeGiven = AmmoInClip;
+	ReceiverComp->AmmoPoolGiven = AmmoInPool;
+
+	//LogMsgWithRole(FString::Printf(TEXT("OverrideAmmoGiven - Clip:%d Pool:%d"), AmmoInClip, AmmoInPool));
+}
+
 void AWeapon::Input_PullTrigger()
 {
 	if (!HasAuthority())
@@ -363,7 +373,7 @@ float AWeapon::GetDrawDuration()
 }
 /* End IReceiverComponentDelegate */
 
-void AWeapon::LogMsgWithRole(FString message)
+void AWeapon::LogMsgWithRole(FString message) const
 {
 	FString m = GetRoleText() + ": " + message;
 	UE_LOG(LogTemp, Warning, TEXT("%s"), *m);
@@ -384,7 +394,7 @@ FString GetEnumText(ENetRole role)
 		return "ERROR";
 	}
 }
-FString AWeapon::GetRoleText()
+FString AWeapon::GetRoleText() const
 {
 	return GetEnumText(Role) + " " + GetEnumText(GetRemoteRole());
 }

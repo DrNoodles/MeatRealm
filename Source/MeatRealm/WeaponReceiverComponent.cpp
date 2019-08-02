@@ -21,9 +21,15 @@ void UWeaponReceiverComponent::BeginPlay()
 {
 	Super::BeginPlay();
 
-	WeaponState.AmmoInClip = ClipSizeGiven;
-	WeaponState.AmmoInPool = AmmoPoolGiven;
+	if (HasAuthority())
+	{
+		WeaponState.AmmoInClip = ClipSizeGiven;
+		WeaponState.AmmoInPool = AmmoPoolGiven;
+
+		//LogMsgWithRole(FString::Printf(TEXT("BeginPlay - Clip:%d Pool:%d"), WeaponState.AmmoInClip, WeaponState.AmmoInPool));
+	}
 }
+	
 
 
 

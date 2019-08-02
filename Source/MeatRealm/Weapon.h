@@ -118,6 +118,8 @@ public:
 	void SetDelegate(AHeroCharacter* Delegate) { }
 	/* End IEquippable */
 
+	void OverrideAmmoGiven(int AmmoInClip, int AmmoInPool) const;
+
 	void Input_PullTrigger();
 	void Input_ReleaseTrigger();
 	void Input_Reload();
@@ -178,9 +180,6 @@ private:
 	UFUNCTION(Server, Reliable, WithValidation)
 		void ServerRPC_AdsReleased();
 
-
-
-
 	UFUNCTION(NetMulticast, Reliable)
 		void MultiRPC_NotifyOnShotFired();
 
@@ -189,8 +188,8 @@ private:
 
 	void BeginPlay() override;
 
-	void LogMsgWithRole(FString message);
-	FString GetRoleText();
+	void LogMsgWithRole(FString message) const;
+	FString GetRoleText() const;
 
 
 };
