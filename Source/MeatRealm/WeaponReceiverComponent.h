@@ -183,6 +183,9 @@ public:
 	UPROPERTY(EditAnywhere, meta = (EditCondition = "bEvenSpread"))
 		bool bSpreadClumping = true;
 
+	UPROPERTY(EditAnywhere, BlueprintReadOnly)
+		bool CanReceiveAmmo = true;
+
 protected:
 
 	UPROPERTY(BlueprintReadOnly, Replicated)

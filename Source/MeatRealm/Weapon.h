@@ -164,6 +164,7 @@ public:
 
 	int GetAmmoInClip() const { return ReceiverComp->GetState().AmmoInClip; }
 	int GetAmmoInPool() const { return ReceiverComp->GetState().AmmoInPool; }
+	bool HasAmmo() const { return ReceiverComp->GetState().AmmoInClip + ReceiverComp->GetState().AmmoInPool > 0; }
 
 	/* End IReceiverComponentDelegate */
 

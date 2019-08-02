@@ -76,7 +76,7 @@ void UWeaponReceiverComponent::AdsReleased()
 }
 bool UWeaponReceiverComponent::CanGiveAmmo()
 {
-	return WeaponState.AmmoInPool < AmmoPoolSize;
+	return CanReceiveAmmo && WeaponState.AmmoInPool < AmmoPoolSize;
 }
 bool UWeaponReceiverComponent::TryGiveAmmo()
 {

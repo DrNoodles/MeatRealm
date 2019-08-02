@@ -1375,7 +1375,7 @@ void AHeroCharacter::SpawnWeaponPickups(TArray<AWeapon*> & Weapons) const
 	
 	for (auto W : Weapons)
 	{
-		if (W && W->PickupClass)
+		if (W && W->PickupClass && W->HasAmmo())
 		{
 			// Spawn location algorithm: Alternative between in front and behind player location
 			const int FacingFactor = Count % 2 == 0 ? 1 : -1;
@@ -1389,6 +1389,7 @@ void AHeroCharacter::SpawnWeaponPickups(TArray<AWeapon*> & Weapons) const
 			{
 				WeaponPickup->SetWeaponConfig(FWeaponConfig{ W->GetAmmoInClip(), W->GetAmmoInPool() });
 				WeaponPickup->bIsSingleUse = true;
+				WeaponPickup->SetLifeSpan(60);
 			
 				Count++;
 			}
