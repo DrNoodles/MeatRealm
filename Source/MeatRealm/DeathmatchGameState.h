@@ -26,7 +26,7 @@ public:
 	UFUNCTION(BlueprintCallable)
 		TArray<UScoreboardEntryData*> GetScoreboard();
 
-	UFUNCTION(Client, Reliable)
+	UFUNCTION(NetMulticast, Reliable)
 	void ClientNotifyIncomingSuper(float PowerUpAnnouncementLeadTime, const FString& LocationMsg);
 	
 	void NotifyIncomingSuper(float PowerUpAnnouncementLeadTime, const FString& LocationMsg);

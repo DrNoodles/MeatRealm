@@ -77,18 +77,26 @@ TArray<UScoreboardEntryData*> ADeathmatchGameState::GetScoreboard()
 	return std::move(Scoreboard);
 }
 
-void ADeathmatchGameState::ClientNotifyIncomingSuper_Implementation(float PowerUpAnnouncementLeadTime, const FString& LocationMsg)
+void ADeathmatchGameState::ClientNotifyIncomingSuper_Implementation(float PowerUpAnnouncementLeadTime,
+	const FString& LocationMsg)
 {
-	LogMsgWithRole("ADeathmatchGameState::ClientNotifyIncomingSuper_Implementation");
 	OnIncomingSuper.Broadcast(PowerUpAnnouncementLeadTime, LocationMsg);
 }
+
+
+//
+//void ADeathmatchGameState::ClientNotifyIncomingSuper_Implementation(float PowerUpAnnouncementLeadTime, const FString& LocationMsg)
+//{
+//	LogMsgWithRole("ADeathmatchGameState::ClientNotifyIncomingSuper_Implementation");
+//	OnIncomingSuper.Broadcast(PowerUpAnnouncementLeadTime, LocationMsg);
+//}
 
 void ADeathmatchGameState::NotifyIncomingSuper(float PowerUpAnnouncementLeadTime, const FString& LocationMsg)
 {
 	LogMsgWithRole("ADeathmatchGameState::NotifyIncomingSuper");
 
 	ClientNotifyIncomingSuper(PowerUpAnnouncementLeadTime, LocationMsg);
-	OnIncomingSuper.Broadcast(PowerUpAnnouncementLeadTime, LocationMsg);
+//	OnIncomingSuper.Broadcast(PowerUpAnnouncementLeadTime, LocationMsg);
 
 }
 
