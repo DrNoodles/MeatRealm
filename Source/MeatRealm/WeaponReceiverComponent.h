@@ -246,6 +246,7 @@ public:
 	void CancelAnyReload();
 	bool IsReloading() const { return WeaponState.Mode == EWeaponModes::Reloading; }
 
+	FWeaponState GetState() const { return WeaponState; }
 protected:
 
 private:

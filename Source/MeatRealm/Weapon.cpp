@@ -57,6 +57,16 @@ AWeapon::AWeapon()
 	ReceiverComp->SetIsReplicated(true);
 }
 
+void AWeapon::ConfigWeapon(FWeaponConfig& Config) const
+{
+	check(HasAuthority());
+
+	if (Config.AmmoInClip > -1) ReceiverComp->ClipSizeGiven = Config.AmmoInClip;
+	if (Config.AmmoInPool > -1) ReceiverComp->AmmoPoolGiven = Config.AmmoInPool;
+
+	//LogMsgWithRole(FString::Printf(TEXT("OverrideAmmoGiven - Clip:%d Pool:%d"), Config.AmmoInClip, Config.AmmoInPool));
+}
+
 
 // INPUT //////////////////////
 
@@ -103,16 +113,6 @@ void AWeapon::ServerRPC_Unequip_Implementation()
 bool AWeapon::ServerRPC_Unequip_Validate()
 {
 	return true;
-}
-
-void AWeapon::OverrideAmmoGiven(int AmmoInClip, int AmmoInPool) const
-{
-	check(HasAuthority());
-
-	ReceiverComp->ClipSizeGiven = AmmoInClip;
-	ReceiverComp->AmmoPoolGiven = AmmoInPool;
-
-	//LogMsgWithRole(FString::Printf(TEXT("OverrideAmmoGiven - Clip:%d Pool:%d"), AmmoInClip, AmmoInPool));
 }
 
 void AWeapon::Input_PullTrigger()

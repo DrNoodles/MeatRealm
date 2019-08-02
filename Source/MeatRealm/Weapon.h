@@ -23,6 +23,15 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE(FReloadEnded);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FShotFired);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FAmmoWarning);
 
+USTRUCT()
+struct FWeaponConfig
+{
+	GENERATED_BODY()
+
+	int AmmoInClip = -1;
+	int AmmoInPool = -1;
+};
+
 UCLASS()
 class MEATREALM_API AWeapon : public AActor, public IReceiverComponentDelegate, public IEquippable
 {
@@ -118,7 +127,7 @@ public:
 	void SetDelegate(AHeroCharacter* Delegate) { }
 	/* End IEquippable */
 
-	void OverrideAmmoGiven(int AmmoInClip, int AmmoInPool) const;
+	void ConfigWeapon(FWeaponConfig& Config) const;
 
 	void Input_PullTrigger();
 	void Input_ReleaseTrigger();
@@ -152,6 +161,9 @@ public:
 	void CancelAnyReload();
 
 	bool IsWeaponBuff() const { return IsBuff; }
+
+	int GetAmmoInClip() const { return ReceiverComp->GetState().AmmoInClip; }
+	int GetAmmoInPool() const { return ReceiverComp->GetState().AmmoInPool; }
 
 	/* End IReceiverComponentDelegate */
 

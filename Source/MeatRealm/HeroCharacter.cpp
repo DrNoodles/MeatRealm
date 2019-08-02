@@ -127,8 +127,10 @@ void AHeroCharacter::Restart()
 		if (HasAuthority())
 		{
 			const auto Choice = FMath::RandRange(0, DefaultWeaponClass.Num() - 1);
-			auto WeaponClass = DefaultWeaponClass[Choice];
-			GiveWeaponToPlayer(WeaponClass);
+			const auto WeaponClass = DefaultWeaponClass[Choice];
+			auto Config = FWeaponConfig{};
+
+			GiveWeaponToPlayer(WeaponClass, Config);
 		}
 	}
 }
@@ -1106,9 +1108,9 @@ AItemBase* AHeroCharacter::GetFirstArmourItemOrNull() const
 	return ArmourSlot.Num() > 0 ? ArmourSlot[0] : nullptr;
 }
 
-void AHeroCharacter::GiveWeaponToPlayer(TSubclassOf<class AWeapon> WeaponClass)
+void AHeroCharacter::GiveWeaponToPlayer(TSubclassOf<class AWeapon> WeaponClass, FWeaponConfig& Config)
 {
-	const auto Weapon = AuthSpawnWeapon(WeaponClass);
+	const auto Weapon = AuthSpawnWeapon(WeaponClass, Config);
 	const auto Slot = FindGoodWeaponSlot();
 	const auto RemovedWeapon = AssignWeaponToInventorySlot(Weapon, Slot);
 
@@ -1127,7 +1129,7 @@ void AHeroCharacter::GiveWeaponToPlayer(TSubclassOf<class AWeapon> WeaponClass)
 
 	EquipSlot(Slot);
 }
-AWeapon* AHeroCharacter::AuthSpawnWeapon(TSubclassOf<AWeapon> weaponClass)
+AWeapon* AHeroCharacter::AuthSpawnWeapon(TSubclassOf<AWeapon> weaponClass, FWeaponConfig& Config)
 {
 	//LogMsgWithRole("AHeroCharacter::ServerRPC_SpawnWeapon");
 	check(HasAuthority())
@@ -1144,6 +1146,7 @@ AWeapon* AHeroCharacter::AuthSpawnWeapon(TSubclassOf<AWeapon> weaponClass)
 		this,
 		ESpawnActorCollisionHandlingMethod::AlwaysSpawn);
 
+	Weapon->ConfigWeapon(Config);
 	Weapon->SetHeroControllerId(GetHeroController()->PlayerState->PlayerId);
 
 	UGameplayStatics::FinishSpawningActor(Weapon, TF);
@@ -1350,7 +1353,7 @@ void AHeroCharacter::NotifyItemIsExpended(AItemBase* Item)
 
 // Inventory - Dropping
 
-void AHeroCharacter::DropGearOnDeath()
+void AHeroCharacter::DropGearOnDeath() const
 {
 	check(HasAuthority());
 
@@ -1367,26 +1370,28 @@ void AHeroCharacter::DropGearOnDeath()
 void AHeroCharacter::SpawnWeaponPickups(TArray<AWeapon*> & Weapons) const
 {
 	// Gather the Pickup Class types to spawn
-	TArray<TSubclassOf<AWeaponPickupBase>> PickupClassesToSpawn{};
+	TArray<TTuple<TSubclassOf<AWeaponPickupBase>, FWeaponConfig>> PickupClassesToSpawn{};
+	int Count = 0;
+	
 	for (auto W : Weapons)
 	{
-		if (W && W->PickupClass) PickupClassesToSpawn.Add(W->PickupClass);
-	}
-
-	// Spawn the Pickups
-	for (int i = 0; i < PickupClassesToSpawn.Num(); ++i)
-	{
-		auto Params = FActorSpawnParameters{};
-		Params.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AdjustIfPossibleButAlwaysSpawn;
-
-		// Spawn location algorithm: Alternative between in front and behind player location
-		int FacingFactor = i % 2 == 0 ? 1 : -1;
-		auto Loc = GetActorLocation() + GetActorForwardVector() * 30 * FacingFactor;
-
-		auto Pickup = GetWorld()->SpawnActor<AWeaponPickupBase>(PickupClassesToSpawn[i], Loc, FRotator{}, Params);
-		if (Pickup)
+		if (W && W->PickupClass)
 		{
-			Pickup->bIsSingleUse = true;
+			// Spawn location algorithm: Alternative between in front and behind player location
+			const int FacingFactor = Count % 2 == 0 ? 1 : -1;
+			auto Loc = GetActorLocation() + GetActorForwardVector() * 30 * FacingFactor;
+
+			auto Params = FActorSpawnParameters{};
+			Params.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AdjustIfPossibleButAlwaysSpawn;
+
+			auto WeaponPickup = GetWorld()->SpawnActor<AWeaponPickupBase>(W->PickupClass, Loc, FRotator{}, Params);
+			if (WeaponPickup)
+			{
+				WeaponPickup->SetWeaponConfig(FWeaponConfig{ W->GetAmmoInClip(), W->GetAmmoInPool() });
+				WeaponPickup->bIsSingleUse = true;
+			
+				Count++;
+			}
 		}
 	}
 }
@@ -1694,7 +1699,7 @@ bool AHeroCharacter::AuthTryGiveArmour(float Delta)
 	return true;
 }
 
-bool AHeroCharacter::AuthTryGiveWeapon(const TSubclassOf<AWeapon>& Class)
+bool AHeroCharacter::AuthTryGiveWeapon(const TSubclassOf<AWeapon>& Class, FWeaponConfig& Config)
 {
 	check(HasAuthority());
 	check(Class != nullptr);
@@ -1704,7 +1709,7 @@ bool AHeroCharacter::AuthTryGiveWeapon(const TSubclassOf<AWeapon>& Class)
 	float OutDelay;
 	if (!CanGiveWeapon(Class, OUT OutDelay)) return false;
 
-	GiveWeaponToPlayer(Class);
+	GiveWeaponToPlayer(Class, Config);
 	return true;
 }
 
