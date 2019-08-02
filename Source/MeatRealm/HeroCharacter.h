@@ -37,7 +37,7 @@ public:
 	void NotifyItemIsExpended(AItemBase* Item);
 
 	float GetHealingMovementSpeed() const { return HealingMovementSpeed; }
-	void DropGearOnDeath();
+	void DropGearOnDeath() const;
 	void SpawnWeaponPickups(TArray<AWeapon*> & Weapons) const;
 
 	UPROPERTY(EditAnywhere, Category = Camera)
@@ -243,7 +243,7 @@ public:
 	UFUNCTION()
 	bool AuthTryGiveAmmo() override;
 	UFUNCTION()
-	bool AuthTryGiveWeapon(const TSubclassOf<AWeapon>& Class) override;
+	bool AuthTryGiveWeapon(const TSubclassOf<AWeapon>& Class, FWeaponConfig& Config) override;
 	UFUNCTION()
 	bool CanGiveWeapon(const TSubclassOf<AWeapon>& Class, float& OutDelay) override;
 	
@@ -367,8 +367,8 @@ private:
 	AItemBase* GetFirstArmourItemOrNull() const;
 	
 	void GiveItemToPlayer(TSubclassOf<class AItemBase> ItemClass);
-	void GiveWeaponToPlayer(TSubclassOf<class AWeapon> WeaponClass);
-	AWeapon* AuthSpawnWeapon(TSubclassOf<AWeapon> weaponClass);
+	void GiveWeaponToPlayer(TSubclassOf<class AWeapon> WeaponClass, FWeaponConfig& Config);
+	AWeapon* AuthSpawnWeapon(TSubclassOf<AWeapon> weaponClass, FWeaponConfig& Config);
 	EInventorySlots FindGoodWeaponSlot() const;
 	AWeapon* AssignWeaponToInventorySlot(AWeapon* Weapon, EInventorySlots Slot);
 	void EquipSlot(EInventorySlots Slot);

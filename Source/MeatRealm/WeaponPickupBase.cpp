@@ -20,6 +20,11 @@ bool AWeaponPickupBase::CanInteract(IAffectableInterface* const Affectable, floa
 	return bCanInteract;
 }
 
+void AWeaponPickupBase::SetWeaponConfig(FWeaponConfig NewWeaponConfig)
+{
+	WeaponConfig = NewWeaponConfig;
+}
+
 bool AWeaponPickupBase::TryApplyAffect(IAffectableInterface* const Affectable)
 {
 	if (WeaponClasses.Num() == 0)
@@ -29,5 +34,5 @@ bool AWeaponPickupBase::TryApplyAffect(IAffectableInterface* const Affectable)
 	}
 
 	const auto Choice = FMath::RandRange(0, WeaponClasses.Num() - 1);
-	return Affectable->AuthTryGiveWeapon(WeaponClasses[Choice]);
+	return Affectable->AuthTryGiveWeapon(WeaponClasses[Choice], WeaponConfig);
 }
