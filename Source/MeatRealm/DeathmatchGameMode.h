@@ -32,7 +32,7 @@ public:
 	virtual void SetPlayerDefaults(APawn* PlayerPawn) override;
 	virtual void RestartPlayer(AController* NewPlayer) override;
 
-	void IterateAllChests();
+	void SpawnAChest();
 
 	void PostLogin(APlayerController* NewPlayer) override;
 	void Logout(AController* Exiting) override;

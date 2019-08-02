@@ -13,6 +13,7 @@
 #include "TimerManager.h"
 #include "Engine/Engine.h"
 #include "Engine/TargetPoint.h"
+#include "PickupSpawnLocation.h"
 
 ADeathmatchGameMode::ADeathmatchGameMode()
 {
@@ -93,31 +94,41 @@ void ADeathmatchGameMode::SetPlayerDefaults(APawn* PlayerPawn)
 	HChar->SetTint(PlayerTints[TintNumber]);
 }
 
-void ADeathmatchGameMode::IterateAllChests()
+void ADeathmatchGameMode::SpawnAChest()
 {
 	UWorld* World = GetWorld();
 	if (!World) return;
 
-	int Count = 0;
-	for (TActorIterator<ATargetPoint> It(World); It; ++It)
+
+	TArray<APickupSpawnLocation*> Spawns{};
+	for (TActorIterator<APickupSpawnLocation> It(World); It; ++It)
 	{
-		ATargetPoint* TP = *It;
-		for (auto Tag : TP->Tags)
-		{
-			UE_LOG(LogTemp, Warning, TEXT("Tag: %s"), *Tag.ToString());
-
-		}
-
+		APickupSpawnLocation* TP = *It;
 		if (TP->ActorHasTag(FName("ChestSpawnLocation")))
 		{
-			Count++;
+			if (TP->PickupClass == nullptr)
+			{
+				UE_LOG(LogTemp, Error, TEXT("Set the pickup spawn class to spawn in a derived Blueprint"));
+				continue;
+			}
 
-			// TODO Spawn chest
+			Spawns.Emplace(TP);
 		}
-
 	}
 
-	UE_LOG(LogTemp, Warning, TEXT("Weapon Pickups Found: %d"), Count);
+
+	UE_LOG(LogTemp, Warning, TEXT("Weapon Pickups Found: %d"), Spawns.Num());
+
+
+	if (Spawns.Num() > 0)
+	{
+		FActorSpawnParameters Params{};
+		Params.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AdjustIfPossibleButAlwaysSpawn;
+
+		const auto Choice = FMath::RandRange(0, Spawns.Num() - 1);
+		APickupSpawnLocation* SpawnPoint = Spawns[Choice];
+		auto* Pickup = GetWorld()->SpawnActorAbsolute<APickupBase>(SpawnPoint->PickupClass, SpawnPoint->GetActorTransform(), Params);
+	}
 }
 
 AActor* ADeathmatchGameMode::FindFurthestPlayerStart(AController* Controller)
@@ -274,7 +285,7 @@ void ADeathmatchGameMode::HandleMatchHasStarted()
 
 	UE_LOG(LogTemp, Warning, TEXT("ADeathmatchGameMode::HandleMatchHasStarted()"));
 
-	IterateAllChests();
+	SpawnAChest();
 }
 
 void ADeathmatchGameMode::HandleMatchHasEnded()
