@@ -32,20 +32,29 @@ public:
 	virtual void SetPlayerDefaults(APawn* PlayerPawn) override;
 	virtual void RestartPlayer(AController* NewPlayer) override;
 
-	void SpawnAChest();
+	void SpawnAChest() const;
 
 	void PostLogin(APlayerController* NewPlayer) override;
 	void Logout(AController* Exiting) override;
 	bool ShouldSpawnAtStartSpot(AController* Player) override;
 	AActor* FindFurthestPlayerStart(AController* Controller);
 	void OnPlayerTakeDamage(FMRHitResult Hit);
+
+
 private:
+	UPROPERTY(EditAnywhere)
+		float PowerUpInitialDelay = 30;
+
+	UPROPERTY(EditAnywhere)
+		float PowerUpSpawnRate = 120;
+
 	TMap<uint32, AHeroController*> ConnectedHeroControllers;
 	TMap<uint32, int> PlayerMappedTints;
 	TArray<FColor> PlayerTints;
 	int TintCount = 0;
 
-	
+	FTimerHandle ChestSpawnTimerHandle;
+
 	//bool HasMetGameEndConditions() const;
 	void AddKillfeedEntry(AHeroController* const Killer, AHeroController* const Dead);
 };

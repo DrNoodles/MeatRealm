@@ -94,7 +94,7 @@ void ADeathmatchGameMode::SetPlayerDefaults(APawn* PlayerPawn)
 	HChar->SetTint(PlayerTints[TintNumber]);
 }
 
-void ADeathmatchGameMode::SpawnAChest()
+void ADeathmatchGameMode::SpawnAChest() const
 {
 	UWorld* World = GetWorld();
 	if (!World) return;
@@ -285,13 +285,15 @@ void ADeathmatchGameMode::HandleMatchHasStarted()
 
 	UE_LOG(LogTemp, Warning, TEXT("ADeathmatchGameMode::HandleMatchHasStarted()"));
 
-	SpawnAChest();
+
+	GetWorldTimerManager().SetTimer(ChestSpawnTimerHandle, this, &ADeathmatchGameMode::SpawnAChest, PowerUpSpawnRate, true, PowerUpInitialDelay);
 }
 
 void ADeathmatchGameMode::HandleMatchHasEnded()
 {
 	Super::HandleMatchHasEnded();
 
+	/*if (GetWorld()) */GetWorld()->GetTimerManager().ClearTimer(ChestSpawnTimerHandle);
 
 	// TODO Disable shooting
 	// TODO Show scoreboards on clients
