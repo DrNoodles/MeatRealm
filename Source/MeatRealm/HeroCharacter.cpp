@@ -1665,7 +1665,7 @@ AWeapon* AHeroCharacter::FindWeaponToReceiveAmmo() const
 	AWeapon* AltWeap = nullptr;
 	if (CurrentInventorySlot == EInventorySlots::Primary) AltWeap = GetWeapon(EInventorySlots::Secondary);
 	if (CurrentInventorySlot == EInventorySlots::Secondary) AltWeap = GetWeapon(EInventorySlots::Primary);
-	if (AltWeap && AltWeap->TryGiveAmmo())
+	if (AltWeap && AltWeap->CanGiveAmmo() && AltWeap->TryGiveAmmo())
 	{
 		return AltWeap; // ammo given to alt weapon
 	}
