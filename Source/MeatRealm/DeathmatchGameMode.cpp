@@ -148,9 +148,9 @@ void ADeathmatchGameMode::AnnounceChestSpawn()
 	else
 	{
 		FActorSpawnParameters Params{};
-		Params.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AdjustIfPossibleButAlwaysSpawn;
+		Params.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
 
-		auto* Preview = GetWorld()->SpawnActor<AActor>(PreviewClass, NextChestSpawnLocation->GetActorLocation(), FRotator{}, Params);
+		auto* Preview = GetWorld()->SpawnActor<AActor>(PreviewClass, NextChestSpawnLocation->GetActorTransform(), Params);
 		if (Preview)
 		{
 			Preview->SetLifeSpan(PowerUpAnnouncementLeadTime);
