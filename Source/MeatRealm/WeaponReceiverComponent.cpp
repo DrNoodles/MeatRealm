@@ -21,9 +21,15 @@ void UWeaponReceiverComponent::BeginPlay()
 {
 	Super::BeginPlay();
 
-	WeaponState.AmmoInClip = ClipSizeGiven;
-	WeaponState.AmmoInPool = AmmoPoolGiven;
+	if (HasAuthority())
+	{
+		WeaponState.AmmoInClip = ClipSizeGiven;
+		WeaponState.AmmoInPool = AmmoPoolGiven;
+
+		//LogMsgWithRole(FString::Printf(TEXT("BeginPlay - Clip:%d Pool:%d"), WeaponState.AmmoInClip, WeaponState.AmmoInPool));
+	}
 }
+	
 
 
 
@@ -31,23 +37,28 @@ void UWeaponReceiverComponent::BeginPlay()
 
 void UWeaponReceiverComponent::DrawWeapon()
 {
-	LogMsgWithRole(FString::Printf(TEXT("InputState.DrawRequested = true")));
+	//LogMsgWithRole(FString::Printf(TEXT("InputState.DrawRequested = true")));
 	InputState.DrawRequested = true;
 }
 void UWeaponReceiverComponent::HolsterWeapon()
 {
-	LogMsgWithRole(FString::Printf(TEXT("InputState.HolsterRequested = true")));
+	//LogMsgWithRole(FString::Printf(TEXT("InputState.HolsterRequested = true")));
 	InputState.HolsterRequested = true;
 }
 void UWeaponReceiverComponent::PullTrigger()
 {
 	InputState.FireRequested = true;
-	WeaponState.HasFired = false;
+
+	WeaponState.BurstCount = 0;
+	ShotTimes.Empty();
+
 }
 void UWeaponReceiverComponent::ReleaseTrigger()
 {
 	InputState.FireRequested = false;
-	WeaponState.HasFired = false;
+
+	WeaponState.BurstCount = 0;
+	ShotTimes.Empty();
 }
 void UWeaponReceiverComponent::Reload()
 {
@@ -65,7 +76,7 @@ void UWeaponReceiverComponent::AdsReleased()
 }
 bool UWeaponReceiverComponent::CanGiveAmmo()
 {
-	return WeaponState.AmmoInPool < AmmoPoolSize;
+	return CanReceiveAmmo && WeaponState.AmmoInPool < AmmoPoolSize;
 }
 bool UWeaponReceiverComponent::TryGiveAmmo()
 {
@@ -161,7 +172,7 @@ bool UWeaponReceiverComponent::TickIdle(float DT)
 
 	if (InputState.HolsterRequested)
 	{
-		LogMsgWithRole("EWeaponModes::TickReady - Processing HolsterRequested");
+		//LogMsgWithRole("EWeaponModes::TickReady - Processing HolsterRequested");
 		InputState.HolsterRequested = false;
 		return ChangeState(EWeaponCommands::UnEquip, WeaponState);
 	}
@@ -172,7 +183,7 @@ bool UWeaponReceiverComponent::TickIdle(float DT)
 	// Ready > Firing
 	if (InputState.FireRequested)
 	{
-		LogMsgWithRole("EWeaponModes::TickReady - Processing FirePressed");
+		//LogMsgWithRole("EWeaponModes::TickReady - Processing FirePressed");
 		return ChangeState(EWeaponCommands::FireStart, WeaponState);
 	}
 
@@ -188,7 +199,7 @@ bool UWeaponReceiverComponent::TickIdle(float DT)
 	// Ready > Reloading
 	if (InputState.ReloadRequested)
 	{
-		LogMsgWithRole("EWeaponModes::TickReady - Processing ReloadRequested");
+		//LogMsgWithRole("EWeaponModes::TickReady - Processing ReloadRequested");
 		// Only process for one frame as we dont have a release
 
 		InputState.ReloadRequested = false;
@@ -219,7 +230,7 @@ bool UWeaponReceiverComponent::TickFiring(float DT)
 
 
 	if (bIsBusy) return false;
-	const auto bReceiverCanCycle = bFullAuto || !WeaponState.HasFired;
+	const auto bReceiverCanCycle = bFullAuto || WeaponState.BurstCount == 0;
 
 
 	// Process State Transitions
@@ -248,7 +259,7 @@ bool UWeaponReceiverComponent::TickFiring(float DT)
 	}
 
 
-	LogMsgWithRole("TickFiring: BANG!");
+	//LogMsgWithRole("TickFiring: BANG!");
 
 
 	// Subtract some ammo
@@ -261,8 +272,31 @@ bool UWeaponReceiverComponent::TickFiring(float DT)
 
 
 	// Fire the shot(s)!
+	auto ShotRate = 1.f / ShotsPerSecond;
+
+
+	float ShotRateError = 0;
 	{
-		WeaponState.HasFired = true;
+
+		// Record time of shot and compute how much slack time till the next shot
+		float Now = GetWorld()->TimeSeconds;
+
+		if (bFullAuto && ShotTimes.Num() > 0)
+		{
+			float TimeSinceFirstShot = Now - ShotTimes[0];
+			float ExpectedTimeSinceFirstShot = ShotRate * WeaponState.BurstCount;
+			float TotalError = TimeSinceFirstShot - ExpectedTimeSinceFirstShot;
+
+			//UE_LOG(LogTemp, Warning, TEXT("TimeSinceFirstShot:%f, ExpectedTimeSinceFirstShot:%f, Err:%f"), TimeSinceFirstShot, ExpectedTimeSinceFirstShot, TotalError);
+
+			ShotRateError = TotalError;
+		}
+
+		// Store shot timing/count
+		ShotTimes.Add(Now);
+		WeaponState.BurstCount++;
+
+		// Shoot the damn thing!
 		auto ShotPattern = CalcShotPattern();
 		for (auto Direction : ShotPattern)
 		{
@@ -274,7 +308,11 @@ bool UWeaponReceiverComponent::TickFiring(float DT)
 	// Start the busy timer
 	{
 		bIsBusy = true;
-		GetWorld()->GetTimerManager().SetTimer(BusyTimerHandle, this, &UWeaponReceiverComponent::FireEnd, 1.f / ShotsPerSecond, false);
+
+		float TimeTillNextShot = FMath::Max<float>(ShotRate - ShotRateError, SMALL_NUMBER);
+		TimeTillNextShot -= 1/60.f; // TODO Hack! Generally the shots are delayed by about 1 tick @ 60Hz from the requested time. 
+
+		GetWorld()->GetTimerManager().SetTimer(BusyTimerHandle, this, &UWeaponReceiverComponent::FireEnd, TimeTillNextShot, false);
 	}
 
 
@@ -292,7 +330,7 @@ bool UWeaponReceiverComponent::TickFiring(float DT)
 }
 void UWeaponReceiverComponent::FireEnd()
 {
-	LogMsgWithRole("FireEnd");
+	//LogMsgWithRole("FireEnd");
 	bIsBusy = false;
 	GetWorld()->GetTimerManager().ClearTimer(BusyTimerHandle);
 }
@@ -348,11 +386,11 @@ void UWeaponReceiverComponent::ReloadEnd()
 {
 	if (WeaponState.Mode != EWeaponModes::Reloading)
 	{
-		LogMsgWithRole("ReloadEnd() - early out - this shouldn't have run!!");
+		//LogMsgWithRole("ReloadEnd() - early out - this shouldn't have run!!");
 		return;//HACK HACK HACK. I can't stop this fucking timer for some reason...
 	}
 
-	LogMsgWithRole("ReloadEnd()");
+	//LogMsgWithRole("ReloadEnd()");
 	bIsMidReload = false;
 	WeaponState.ReloadProgress = 100;
 
@@ -368,62 +406,64 @@ void UWeaponReceiverComponent::ReloadEnd()
 	ChangeState(EWeaponCommands::ReloadEnd, WeaponState);
 }
 
-bool UWeaponReceiverComponent::ChangeState(EWeaponCommands Cmd, const FWeaponState& InState)
+bool UWeaponReceiverComponent::ChangeState(EWeaponCommands Cmd, FWeaponState& WeapState)
 {
-	FWeaponState OutState = InState.Clone();
+	//FWeaponState OutState = InState;
+
+	const auto OldMode = WeapState.Mode;
 
 	if (Cmd == EWeaponCommands::FireStart) {
-		OutState.Mode = EWeaponModes::Firing;
+		WeapState.Mode = EWeaponModes::Firing;
 	}
 
 	if (Cmd == EWeaponCommands::FireEnd) {
-		OutState.Mode = EWeaponModes::Idle;
+		WeapState.Mode = EWeaponModes::Idle;
 	}
 
 	if (Cmd == EWeaponCommands::ReloadStart) {
-		OutState.Mode = EWeaponModes::Reloading;
+		WeapState.Mode = EWeaponModes::Reloading;
 	}
 
 	if (Cmd == EWeaponCommands::ReloadEnd) {
-		OutState.Mode = EWeaponModes::Idle;
+		WeapState.Mode = EWeaponModes::Idle;
 	}
 
 	if (Cmd == EWeaponCommands::UnEquip) {
-		OutState.Mode = EWeaponModes::UnEquipped;
+		WeapState.Mode = EWeaponModes::UnEquipped;
 	}
 
 	if (Cmd == EWeaponCommands::EquipStart) {
-		OutState.Mode = EWeaponModes::Equipping;
+		WeapState.Mode = EWeaponModes::Equipping;
 	}
 
 	if (Cmd == EWeaponCommands::EquipEnd) {
-		OutState.Mode = EWeaponModes::Idle;
+		WeapState.Mode = EWeaponModes::Idle;
 	}
 
 	LogMsgWithRole(FString::Printf(TEXT("WeapReceiver::ChangeState(%s > %s > %s)"),
-		*EWeaponModesStr(InState.Mode), *EWeaponCommandsStr(Cmd), *EWeaponModesStr(OutState.Mode)));
+		*EWeaponModesStr(OldMode), *EWeaponCommandsStr(Cmd), *EWeaponModesStr(WeapState.Mode)));
 
-	const bool bWeChangedStates = InState.Mode != OutState.Mode;
+	const bool bWeChangedStates = OldMode != WeapState.Mode;
 	if (bWeChangedStates)
 	{
-		DoTransitionAction(InState.Mode, OutState.Mode);
+		DoTransitionAction(OldMode, WeapState.Mode, WeapState);
 	}
 
-	WeaponState = OutState;
+	//WeaponState = OutState;
 
 	return bWeChangedStates;
 }
 void UWeaponReceiverComponent::EquipEnd()
 {
-	LogMsgWithRole("EquipEnd()");
+	//LogMsgWithRole("EquipEnd()");
 	ChangeState(EWeaponCommands::EquipEnd, WeaponState);
 }
-void UWeaponReceiverComponent::DoTransitionAction(const EWeaponModes OldMode, const EWeaponModes NewMode)
+void UWeaponReceiverComponent::DoTransitionAction(const EWeaponModes OldMode, const EWeaponModes NewMode, FWeaponState& NewState)
 {
 	// Any > Equipping
 	if (NewMode == EWeaponModes::Equipping)
 	{
-		LogMsgWithRole("NewMode == Equipping");
+		//LogMsgWithRole("NewMode == Equipping");
 
 		// Stop any actions - should never be true.. TODO Convert these to asserts to make sure we've good elsewhere
 		bIsBusy = false;
@@ -433,9 +473,11 @@ void UWeaponReceiverComponent::DoTransitionAction(const EWeaponModes OldMode, co
 		InputState.Reset();
 
 		// Forget all unimportant state
-		WeaponState.ReloadProgress = 0;
-		WeaponState.IsAdsing = false;
-		WeaponState.HasFired = false;
+		NewState.ReloadProgress = 0;
+		NewState.IsAdsing = false;
+		
+		NewState.BurstCount = 0;
+		ShotTimes.Empty();
 
 
 		GetWorld()->GetTimerManager().SetTimer(BusyTimerHandle, this, &UWeaponReceiverComponent::EquipEnd, Delegate->GetDrawDuration(), false);
@@ -445,7 +487,7 @@ void UWeaponReceiverComponent::DoTransitionAction(const EWeaponModes OldMode, co
 	// Any > UnEquipped
 	if (NewMode == EWeaponModes::UnEquipped)
 	{
-		LogMsgWithRole("NewMode == UnEquipped");
+		//LogMsgWithRole("NewMode == UnEquipped");
 
 		// NEW HERE
 
@@ -455,11 +497,61 @@ void UWeaponReceiverComponent::DoTransitionAction(const EWeaponModes OldMode, co
 		InputState.Reset();
 
 		// Leave Reload alone! We might want to resume it
-		WeaponState.ReloadProgress = 0;
-		WeaponState.IsAdsing = false;
-		WeaponState.HasFired = false;
+		NewState.ReloadProgress = 0;
+		NewState.IsAdsing = false;
+		NewState.BurstCount = 0;
+		ShotTimes.Empty();
 
 		//LogMsgWithRole(WeaponState.ToString());
+	}
+
+
+	if (OldMode == EWeaponModes::Firing)
+	{
+		//LogMsgWithRole("OldMode == Firing");
+
+
+		// Track the fire rate error and report as error if it's above a tolerance
+
+		// Compute the time between shots if we've had a burst of at least 3
+		const auto Num = ShotTimes.Num();
+		auto TotalDiff = 0.f;
+		int Count = 0;
+		const int Skip = 1;
+
+		if (bFullAuto && Num > Skip+1)
+		{
+			for (int i = Skip+1; i < Num; ++i)
+			{
+				const auto First = ShotTimes[i-1];
+				const auto Second = ShotTimes[i];
+				const auto Diff = Second - First;
+				TotalDiff += Diff;
+				++Count;
+			}
+
+			// Report
+			const float Avg = TotalDiff / Count;
+			const float Expected = 1.f / ShotsPerSecond;
+			const float AvgDiff = Avg - Expected;
+			const float DiffPercentage = (Avg / Expected - 1) * 100;
+
+			//LogMsgWithRole(FString::Printf(TEXT("Avg:%f, Expected:%f, AvgDiff:%f %.3f%%"), Avg, Expected, AvgDiff, DiffPercentage));
+
+			const float ErrorTolerance = 1.5;
+			if (FMath::Abs(DiffPercentage) > ErrorTolerance) // error tolerance
+			{
+				UE_LOG(LogTemp, Error, TEXT("Gun fire rate error is %.3f%%. Time before shot:"), DiffPercentage);
+				for (int j = 1; j < ShotTimes.Num(); ++j)
+				{
+					const auto Diff = ShotTimes[j] - ShotTimes[j - 1];
+					UE_LOG(LogTemp, Error, TEXT("   Shot%d: %f"), j+1, Diff);
+				}
+			}
+		}
+
+		ShotTimes.Empty();
+		NewState.BurstCount = 0;
 	}
 }
 

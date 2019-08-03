@@ -22,16 +22,15 @@ public:
 	}
 
 	bool CanInteract(IAffectableInterface* const Affectable, float& OutDelay) override;
+	void SetWeaponConfig(/*copy of config*/ FWeaponConfig NewWeaponConfig); 
 
 protected:
 
 	bool TryApplyAffect(IAffectableInterface* const Affectable) override;
 
 private:
-	//UPROPERTY(EditDefaultsOnly, Category = Pickup)
-	//	TSubclassOf<class AWeapon> WeaponClass;
-
-	// Projectile class to spawn.
 	UPROPERTY(EditDefaultsOnly, Category = Pickup)
 		TArray<TSubclassOf<class AWeapon>> WeaponClasses;
+
+	FWeaponConfig WeaponConfig;
 };

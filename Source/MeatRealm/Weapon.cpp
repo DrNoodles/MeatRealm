@@ -57,6 +57,16 @@ AWeapon::AWeapon()
 	ReceiverComp->SetIsReplicated(true);
 }
 
+void AWeapon::ConfigWeapon(FWeaponConfig& Config) const
+{
+	check(HasAuthority());
+
+	if (Config.AmmoInClip > -1) ReceiverComp->ClipSizeGiven = Config.AmmoInClip;
+	if (Config.AmmoInPool > -1) ReceiverComp->AmmoPoolGiven = Config.AmmoInPool;
+
+	//LogMsgWithRole(FString::Printf(TEXT("OverrideAmmoGiven - Clip:%d Pool:%d"), Config.AmmoInClip, Config.AmmoInPool));
+}
+
 
 // INPUT //////////////////////
 
@@ -223,7 +233,7 @@ void AWeapon::MultiRPC_NotifyOnShotFired_Implementation()
 
 void AWeapon::ClientRPC_NotifyOnAmmoWarning_Implementation()
 {
-	LogMsgWithRole("AWeapon::ClientRPC_NotifyOnAmmoWarning_Implementation()");
+	//LogMsgWithRole("AWeapon::ClientRPC_NotifyOnAmmoWarning_Implementation()");
 	if (OnAmmoWarning.IsBound()) OnAmmoWarning.Broadcast();
 }
 
@@ -235,7 +245,7 @@ void AWeapon::ShotFired()
 }
 void AWeapon::AmmoInClipChanged(int AmmoInClip)
 {
-	LogMsgWithRole(FString::Printf(TEXT("AWeapon::AmmoInClipChanged(%d)"), AmmoInClip));
+	//LogMsgWithRole(FString::Printf(TEXT("AWeapon::AmmoInClipChanged(%d)"), AmmoInClip));
 
 	if (AmmoInClip == 0)
 	{
@@ -244,7 +254,7 @@ void AWeapon::AmmoInClipChanged(int AmmoInClip)
 }
 void AWeapon::AmmoInPoolChanged(int AmmoInPool)
 {
-	LogMsgWithRole(FString::Printf(TEXT("AWeapon::AmmoInPoolChanged(%d)"), AmmoInPool));
+	//LogMsgWithRole(FString::Printf(TEXT("AWeapon::AmmoInPoolChanged(%d)"), AmmoInPool));
 	if (AmmoInPool == 0)
 	{
 		ClientRPC_NotifyOnAmmoWarning();
@@ -253,7 +263,7 @@ void AWeapon::AmmoInPoolChanged(int AmmoInPool)
 void AWeapon::InReloadingChanged(bool IsReloading)
 {
 	//FString Str{ IsReloading ? "True" : "False" };
-	LogMsgWithRole(FString::Printf(TEXT("AWeapon::InReloadingChanged(%s)"), *FString{ IsReloading ? "True" : "False" }));
+	//LogMsgWithRole(FString::Printf(TEXT("AWeapon::InReloadingChanged(%s)"), *FString{ IsReloading ? "True" : "False" }));
 
 	// Use for client side effects only 
 	if (HasAuthority()) return;
@@ -269,7 +279,7 @@ void AWeapon::InReloadingChanged(bool IsReloading)
 }
 void AWeapon::OnReloadProgressChanged(float ReloadProgress)
 {
-	LogMsgWithRole(FString::Printf(TEXT("AWeapon::OnReloadProgressChanged(%f)"), ReloadProgress));
+	//LogMsgWithRole(FString::Printf(TEXT("AWeapon::OnReloadProgressChanged(%f)"), ReloadProgress));
 }
 bool AWeapon::SpawnAProjectile(const FVector& Direction)
 {
@@ -363,7 +373,7 @@ float AWeapon::GetDrawDuration()
 }
 /* End IReceiverComponentDelegate */
 
-void AWeapon::LogMsgWithRole(FString message)
+void AWeapon::LogMsgWithRole(FString message) const
 {
 	FString m = GetRoleText() + ": " + message;
 	UE_LOG(LogTemp, Warning, TEXT("%s"), *m);
@@ -384,7 +394,7 @@ FString GetEnumText(ENetRole role)
 		return "ERROR";
 	}
 }
-FString AWeapon::GetRoleText()
+FString AWeapon::GetRoleText() const
 {
 	return GetEnumText(Role) + " " + GetEnumText(GetRemoteRole());
 }

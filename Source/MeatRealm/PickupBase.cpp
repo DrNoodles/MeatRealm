@@ -83,9 +83,23 @@ void APickupBase::PickupItem()
 	MakePickupAvailable(false); // simulate on server
 	IsAvailable = false; // replicates to clients
 
-	// Start respawn timer
-	GetWorld()->GetTimerManager().SetTimer(
-		RespawnTimerHandle, this, &APickupBase::Respawn, RespawnDelay, false, -1);
+
+	if (bIsSingleUse)
+	{
+		// Destroy the pickup after a delay to allow client effects/sounds to finish
+
+		FTimerHandle ThrowAwayHandle;
+		const float DestroyDelay = 0.5;
+
+		GetWorld()->GetTimerManager().SetTimer(
+			ThrowAwayHandle, [&] { Destroy(); }, DestroyDelay, false, -1);
+	}
+	else
+	{
+		// Start respawn timer
+		GetWorld()->GetTimerManager().SetTimer(
+			RespawnTimerHandle, this, &APickupBase::Respawn, RespawnDelay, false, -1);
+	}
 }
 
 void APickupBase::Respawn()
