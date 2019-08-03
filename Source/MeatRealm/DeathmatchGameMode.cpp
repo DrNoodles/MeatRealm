@@ -129,7 +129,9 @@ void ADeathmatchGameMode::AnnounceChestSpawn()
 	UE_LOG(LogTemp, Warning, TEXT("Weapon Pickups Found: %d"), Spawns.Num());
 
 	if (Spawns.Num() == 0)
+	{
 		return;
+	}
 
 	const auto Choice = FMath::RandRange(0, Spawns.Num() - 1);
 	NextChestSpawnLocation = Spawns[Choice];
@@ -146,24 +148,9 @@ void ADeathmatchGameMode::AnnounceChestSpawn()
 	FString TopBottomStr = (ActorLocation.X < (MaxX + MinX) / 2) ? "Bottom" : "Top";
 	FString LocationMsg = FString::Printf(TEXT("%s %s"), *TopBottomStr, *LeftRightStr);
 
-
-	//FString LocationMsg = FString::Printf(TEXT("INCOMING SUPER - %s %s - %f SECONDS"), *TopBottomStr, *LeftRightStr, PowerUpAnnouncementLeadTime);
-
-
-
 	// Notify incoming chest! Use delegate so the hud can bind onto it
 	auto* const GS = GetGameState<ADeathmatchGameState>();
-	if (GS)
-	{
-		GS->NotifyIncomingSuper(PowerUpAnnouncementLeadTime, LocationMsg);
-	}
-
-	//if (GEngine)
-	//{
-	//
-
-	//	GEngine->AddOnScreenDebugMessage(INDEX_NONE, 5, FColor::White, LocationMsg, true, FVector2D{ 2,2 });
-	//}
+	if (GS) GS->NotifyIncomingSuper(PowerUpAnnouncementLeadTime, LocationMsg);
 
 
 	GetWorldTimerManager().SetTimer(ChestSpawnTimerHandle, this, &ADeathmatchGameMode::SpawnChest, PowerUpAnnouncementLeadTime);
