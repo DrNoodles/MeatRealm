@@ -12,7 +12,6 @@
 #include "Structs/DmgHitResult.h"
 #include "TimerManager.h"
 #include "Engine/Engine.h"
-#include "Engine/TargetPoint.h"
 #include "PickupSpawnLocation.h"
 
 ADeathmatchGameMode::ADeathmatchGameMode()
@@ -138,6 +137,29 @@ void ADeathmatchGameMode::AnnounceChestSpawn()
 
 
 
+
+	// Spawn drop placeholder
+
+	const auto PreviewClass = NextChestSpawnLocation->PreviewClass;
+	if (PreviewClass == nullptr)
+	{
+		UE_LOG(LogTemp, Error, TEXT("Set the pickup spawn class to spawn in a derived Blueprint"));
+	}
+	else
+	{
+		FActorSpawnParameters Params{};
+		Params.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AdjustIfPossibleButAlwaysSpawn;
+
+		auto* Preview = GetWorld()->SpawnActor<AActor>(PreviewClass, NextChestSpawnLocation->GetActorLocation(), FRotator{}, Params);
+		if (Preview)
+		{
+			Preview->SetLifeSpan(PowerUpAnnouncementLeadTime);
+		}
+	}
+
+
+
+	// Find WHERE it will spawn and notify approx. location
 
 	auto ActorLocation = NextChestSpawnLocation->GetActorLocation();
 

@@ -88,6 +88,8 @@ void APickupBase::PickupItem()
 	{
 		// Destroy the pickup after a delay to allow client effects/sounds to finish
 
+		SetActorHiddenInGame(true);
+
 		FTimerHandle ThrowAwayHandle;
 		const float DestroyDelay = 0.5;
 

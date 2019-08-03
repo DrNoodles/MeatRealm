@@ -5,6 +5,7 @@
 #include "CoreMinimal.h"
 #include "Engine/TargetPoint.h"
 #include "PickupBase.h"
+
 #include "PickupSpawnLocation.generated.h"
 
 /**
@@ -15,7 +16,11 @@ class MEATREALM_API APickupSpawnLocation : public ATargetPoint
 {
 	GENERATED_BODY()
 
-	public:
+public:
 	UPROPERTY(EditDefaultsOnly, Category = Pickup)
-	TSubclassOf<class APickupBase> PickupClass;
+		TSubclassOf<class APickupBase> PickupClass;
+
+	UPROPERTY(EditDefaultsOnly, Category = Pickup)
+		TSubclassOf<AActor> PreviewClass;
+
 };

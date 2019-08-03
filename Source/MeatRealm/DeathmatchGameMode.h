@@ -66,4 +66,6 @@ private:
 
 	//bool HasMetGameEndConditions() const;
 	void AddKillfeedEntry(AHeroController* const Killer, AHeroController* const Dead);
+
+
 };
