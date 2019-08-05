@@ -98,14 +98,6 @@ protected:
 		FString WeaponName = "NoNameWeapon";
 
 private:
-	UPROPERTY(EditAnywhere)
-		bool IsBuff = false;
-
-	UPROPERTY(EditAnywhere)
-		float DrawDurationBuffMultiplier	= 0.5;
-
-	UPROPERTY(EditAnywhere)
-		float AdsMovementScaleBuffFactor = 0.5;
 	
 	uint32 HeroControllerId;
 
@@ -118,7 +110,7 @@ public:
 	/* IEquippable */
 	void Equip() override;
 	void Unequip() override;
-	float GetEquipDuration() override { return IsBuff ? DrawDuration * DrawDurationBuffMultiplier : DrawDuration; }
+	float GetEquipDuration() override { return DrawDuration; }
 	void SetHidden(bool bIsHidden) override { SetActorHiddenInGame(bIsHidden); }
 	void EnterInventory() override;
 	void ExitInventory() override;
@@ -137,9 +129,7 @@ public:
 	bool CanGiveAmmo();
 	bool TryGiveAmmo();
 	void SetHeroControllerId(uint32 HeroControllerUid) { this->HeroControllerId = HeroControllerUid; }
-	float GetAdsMovementScale() const { return IsBuff
-		? AdsMovementScale + (1 - AdsMovementScale) * AdsMovementScaleBuffFactor
-		: AdsMovementScale; }
+	float GetAdsMovementScale() const { return AdsMovementScale; }
 	//float GetHolsterDuration() const { return HolsterDuration; }
 
 	/* IReceiverComponentDelegate */
@@ -159,8 +149,6 @@ public:
 	bool IsEquipping() const { return ReceiverComp->IsEquipping(); }
 	bool IsReloading() const { return ReceiverComp->IsReloading(); }
 	void CancelAnyReload();
-
-	bool IsWeaponBuff() const { return IsBuff; }
 
 	int GetAmmoInClip() const { return ReceiverComp->GetState().AmmoInClip; }
 	int GetAmmoInPool() const { return ReceiverComp->GetState().AmmoInPool; }
