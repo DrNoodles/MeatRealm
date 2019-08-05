@@ -198,7 +198,7 @@ void ADeathmatchGameMode::OnPlayerTakeDamage(FMRHitResult Hit)
 			AHeroCharacter* DeadChar = ReceivingController->GetHeroCharacter();
 			if (DeadChar)
 			{
-				DeadChar->DropGearOnDeath();
+				DeadChar->SpawnHeldWeaponsAsPickups();
 				DeadChar->Destroy();
 			}
 

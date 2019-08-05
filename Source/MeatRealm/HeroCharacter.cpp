@@ -1145,6 +1145,12 @@ AWeapon* AHeroCharacter::AuthSpawnWeapon(TSubclassOf<AWeapon> weaponClass, FWeap
 		this,
 		ESpawnActorCollisionHandlingMethod::AlwaysSpawn);
 
+	if (!Weapon)
+	{
+		UE_LOG(LogTemp, Error, TEXT("AHeroCharacter::AuthSpawnWeapon - Failed to spawn weapon"));
+		return nullptr;
+	}
+
 	Weapon->ConfigWeapon(Config);
 	Weapon->SetHeroControllerId(GetHeroController()->PlayerState->PlayerId);
 
@@ -1352,7 +1358,7 @@ void AHeroCharacter::NotifyItemIsExpended(AItemBase* Item)
 
 // Inventory - Dropping
 
-void AHeroCharacter::DropGearOnDeath() const
+void AHeroCharacter::SpawnHeldWeaponsAsPickups() const
 {
 	check(HasAuthority());
 

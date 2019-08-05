@@ -124,7 +124,7 @@ public:
 	void ExitInventory() override;
 	EInventoryCategory GetInventoryCategory() override { return EInventoryCategory::Weapon; }
 	virtual bool ShouldHideWhenUnequipped() override { return false; }
-	void SetDelegate(AHeroCharacter* Delegate) { }
+	void SetDelegate(AHeroCharacter* Delegate) override { }
 	/* End IEquippable */
 
 	void ConfigWeapon(FWeaponConfig& Config) const;
@@ -199,11 +199,8 @@ private:
 	UFUNCTION(Client, Reliable)
 		void ClientRPC_NotifyOnAmmoWarning();
 
-	void BeginPlay() override;
 
 	void LogMsgWithRole(FString message) const;
 	FString GetRoleText() const;
-
-
 };
 
