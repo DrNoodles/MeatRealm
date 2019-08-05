@@ -320,8 +320,9 @@ void ADeathmatchGameMode::AnnounceChestSpawn()
 
 
 	// Find the next spawn location
-
-	float MinX = 0, MinY = 0, MaxX = 0, MaxY = 0;
+	float min = TNumericLimits< float >::Min();
+	float max = TNumericLimits< float >::Max();
+	float MinX = max, MinY = max, MaxX = min, MaxY = min;
 	TArray<APickupSpawnLocation*> Spawns{};
 	for (TActorIterator<APickupSpawnLocation> It(World); It; ++It)
 	{
@@ -341,7 +342,7 @@ void ADeathmatchGameMode::AnnounceChestSpawn()
 			if (L.X < MinX) MinX = L.X;
 			if (L.X > MaxX) MaxX = L.X;
 			if (L.Y < MinY) MinY = L.Y;
-			if (L.Y > MaxX) MaxY = L.Y;
+			if (L.Y > MaxY) MaxY = L.Y;
 		}
 	}
 
