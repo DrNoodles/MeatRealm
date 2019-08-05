@@ -44,6 +44,9 @@ public:
 
 	UPROPERTY(BlueprintReadOnly)
 		int BurstCount = 0; // For Firing state
+	
+	UPROPERTY(BlueprintReadOnly)
+		float Instability = 0;
 
 	//FWeaponState Clone() const
 	//{
@@ -93,7 +96,7 @@ public:
 	virtual void InReloadingChanged(bool IsReloading) = 0;
 	virtual void OnReloadProgressChanged(float ReloadProgress) = 0;
 	virtual bool SpawnAProjectile(const FVector& Direction) = 0;
-	virtual FVector GetBarrelDirection() = 0;
+	virtual FVector GetIdealAimDirection() = 0;
 	virtual FVector GetBarrelLocation() = 0;
 	virtual AActor* GetOwningPawn() = 0;
 	virtual FString GetWeaponName() = 0;
@@ -186,6 +189,22 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly)
 		bool CanReceiveAmmo = true;
 
+	UPROPERTY(EditAnywhere)
+		float StabilityPerSecond = 5;
+
+	UPROPERTY(EditAnywhere)
+		float InstabilityPerShot = 1;
+
+	UPROPERTY(EditAnywhere)
+		float StabilityFactor = 1;
+
+	UPROPERTY(EditAnywhere)
+		float InstabilityRotationFactor = 1;
+
+	UPROPERTY(EditAnywhere)
+		float RandomRotationFactor = 1;
+
+
 protected:
 
 	UPROPERTY(BlueprintReadOnly, Replicated)
@@ -263,6 +282,7 @@ private:
 	TArray<FVector> CalcShotPattern() const;
 	bool CanReload() const;
 	bool NeedsReload() const;
+	FVector GetActualAimDirection() const;
 	void DrawAdsLine(const FColor& Color, float LineLength) const;
 
 	void LogMsgWithRole(FString message);

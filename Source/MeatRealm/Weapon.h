@@ -139,7 +139,7 @@ public:
 	void InReloadingChanged(bool IsReloading) override;
 	void OnReloadProgressChanged(float ReloadProgress) override;
 	bool SpawnAProjectile(const FVector& Direction) override;
-	FVector GetBarrelDirection() override;
+	FVector GetIdealAimDirection() override;
 	FVector GetBarrelLocation() override;
 	const UArrowComponent* GetMuzzleComponent() const { return MuzzleLocationComp; }
 	float GetDrawDuration() override;

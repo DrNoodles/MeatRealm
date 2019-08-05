@@ -315,7 +315,7 @@ bool AWeapon::SpawnAProjectile(const FVector& Direction)
 
 	return true;
 }
-FVector AWeapon::GetBarrelDirection()
+FVector AWeapon::GetIdealAimDirection()
 {
 	//AActor* OwningPawn = GetOwningPawn();
 

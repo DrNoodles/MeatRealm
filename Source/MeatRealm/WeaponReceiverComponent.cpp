@@ -109,6 +109,13 @@ void UWeaponReceiverComponent::TickComponent(float DeltaTime, ELevelTick TickTyp
 	// TODO These ticks might only do 1 operation per tick. Maybe return a bool from each TickFunction if a state was changed so we can reprocess it right away?
 	if (HasAuthority())
 	{
+		const float StabilityRate = StabilityPerSecond + WeaponState.Instability * StabilityFactor;
+	
+		WeaponState.Instability = FMath::Max<float>(0, WeaponState.Instability -= StabilityRate * DeltaTime);
+		
+		if (FMath::Abs(WeaponState.Instability) > SMALL_NUMBER) 
+			LogMsgWithRole(FString::Printf(TEXT("Instability: %.2f"), WeaponState.Instability));
+
 		switch (WeaponState.Mode)
 		{
 		case EWeaponModes::Idle:
@@ -302,6 +309,8 @@ bool UWeaponReceiverComponent::TickFiring(float DT)
 		{
 			Delegate->SpawnAProjectile(Direction);
 		}
+
+		WeaponState.Instability += InstabilityPerShot;
 	}
 
 
@@ -475,7 +484,7 @@ void UWeaponReceiverComponent::DoTransitionAction(const EWeaponModes OldMode, co
 		// Forget all unimportant state
 		NewState.ReloadProgress = 0;
 		NewState.IsAdsing = false;
-		
+		NewState.Instability = 0;
 		NewState.BurstCount = 0;
 		ShotTimes.Empty();
 
@@ -499,6 +508,7 @@ void UWeaponReceiverComponent::DoTransitionAction(const EWeaponModes OldMode, co
 		// Leave Reload alone! We might want to resume it
 		NewState.ReloadProgress = 0;
 		NewState.IsAdsing = false;
+		NewState.Instability = 0;
 		NewState.BurstCount = 0;
 		ShotTimes.Empty();
 
@@ -570,11 +580,28 @@ bool UWeaponReceiverComponent::NeedsReload() const
 	return bUseClip && WeaponState.AmmoInClip < 1;
 }
 
+FVector UWeaponReceiverComponent::GetActualAimDirection() const
+{
+	auto IdealAim = Delegate->GetIdealAimDirection();
+
+	auto PullRotation = WeaponState.Instability * WeaponState.Instability * InstabilityRotationFactor;
+	//auto RandomRotation = FMath::FRandRange(-1, 1) * WeaponState.Instability * RandomRotationFactor;
+
+	auto UnstableAim = FRotator{ 0, PullRotation/* + RandomRotation*/, 0 }.RotateVector(IdealAim);
+	
+	return UnstableAim;
+}
+
 TArray<FVector> UWeaponReceiverComponent::CalcShotPattern() const
 {
 	TArray<FVector> Shots;
 
-	const float BarrelAngle = Delegate->GetBarrelDirection().HeadingAngle();
+	auto ActualAimDirection = GetActualAimDirection();
+	auto KickRotation = FMath::FRandRange(-1, 1) * WeaponState.Instability * RandomRotationFactor;
+	auto ActualAimPlusKick = FRotator{ 0, KickRotation, 0 }.RotateVector(ActualAimDirection);
+	
+	const float BarrelAngle = ActualAimPlusKick.HeadingAngle();
+	
 	const float SpreadInRadians = FMath::DegreesToRadians(WeaponState.IsAdsing ? GetAdsSpread() :
 		GetHipfireSpread());
 
@@ -624,8 +651,8 @@ TArray<FVector> UWeaponReceiverComponent::CalcShotPattern() const
 
 void UWeaponReceiverComponent::DrawAdsLine(const FColor& Color, float LineLength) const
 {
-	FVector BarrelLocation = Delegate->GetBarrelLocation();
-	FVector BarrelDirection = Delegate->GetBarrelDirection();
+	const FVector BarrelLocation = Delegate->GetBarrelLocation();
+	const FVector BarrelDirection = GetActualAimDirection();
 
 	const FVector Start = BarrelLocation + BarrelDirection;// *100; // dont draw line for first meter
 	FVector End = BarrelLocation + BarrelDirection * LineLength;
