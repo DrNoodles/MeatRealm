@@ -15,15 +15,6 @@
 #include "HeroCharacter.h"
 #include "Interfaces/AffectableInterface.h"
 
-//void AWeapon::GetLifetimeReplicatedProps(TArray< FLifetimeProperty >& OutLifetimeProps) const
-//{
-//	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
-//	//DOREPLIFETIME(AWeapon, ReceiverComp);
-//}
-void AWeapon::BeginPlay()
-{
-	Super::BeginPlay();
-}
 
 AWeapon::AWeapon()
 {
@@ -56,7 +47,6 @@ AWeapon::AWeapon()
 	ReceiverComp->SetDelegate(this);
 	ReceiverComp->SetIsReplicated(true);
 }
-
 void AWeapon::ConfigWeapon(FWeaponConfig& Config) const
 {
 	check(HasAuthority());
@@ -69,7 +59,6 @@ void AWeapon::ConfigWeapon(FWeaponConfig& Config) const
 
 
 // INPUT //////////////////////
-
 
 void AWeapon::Equip()
 {

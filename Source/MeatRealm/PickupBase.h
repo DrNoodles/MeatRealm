@@ -22,8 +22,6 @@ class MEATREALM_API APickupBase : public AActor
 	GENERATED_BODY()
 
 
-	/// Data
-
 public:
 	UPROPERTY(BlueprintAssignable, Category = "Event Dispatchers")
 		FPickupSpawned OnSpawn;

@@ -5,7 +5,6 @@
 #include "CoreMinimal.h"
 #include "GameFramework/Character.h"
 #include "Interfaces/AffectableInterface.h"
-//#include "Interfaces/EquippableDelegate.h"
 
 #include "HeroCharacter.generated.h"
 
@@ -33,13 +32,6 @@ class MEATREALM_API AHeroCharacter : public ACharacter, public IAffectableInterf
 
 
 public:
-	bool RemoveEquippableFromInventory(IEquippable* Equippable);
-	void NotifyItemIsExpended(AItemBase* Item);
-
-	float GetHealingMovementSpeed() const { return HealingMovementSpeed; }
-	void DropGearOnDeath() const;
-	void SpawnWeaponPickups(TArray<AWeapon*> & Weapons) const;
-
 	UPROPERTY(EditAnywhere, Category = Camera)
 		bool bLeanCameraWithAim = true;
 
@@ -226,6 +218,10 @@ public:
 	}
 	FColor GetTint() const { return TeamTint; }
 
+	void NotifyItemIsExpended(AItemBase* Item);
+	float GetHealingMovementSpeed() const { return HealingMovementSpeed; }
+	void SpawnHeldWeaponsAsPickups() const;
+	
 
 	/* IAffectableInterface */
 	UFUNCTION()
@@ -328,6 +324,8 @@ public:
 
 private:
 
+	bool RemoveEquippableFromInventory(IEquippable* Equippable);
+	void SpawnWeaponPickups(TArray<AWeapon*>& Weapons) const;
 	AWeapon* FindWeaponToReceiveAmmo() const;
 
 	void ScanForWeaponPickups(float DeltaSeconds);

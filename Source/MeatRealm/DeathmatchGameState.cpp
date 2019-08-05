@@ -10,17 +10,6 @@
 #include "TimerManager.h"
 #include "KillfeedEntryData.h"
 
-void ADeathmatchGameState::PostInitializeComponents()
-{
-	Super::PostInitializeComponents();
-
-	/*if (HasAuthority())
-	{
-		auto Entry = NewObject<UKillfeedEntryData>(this);
-		KillfeedData.Add(Entry);
-	}*/
-}
-
 void ADeathmatchGameState::GetLifetimeReplicatedProps(TArray< FLifetimeProperty >& OutLifetimeProps) const
 {
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
@@ -77,30 +66,7 @@ TArray<UScoreboardEntryData*> ADeathmatchGameState::GetScoreboard()
 	return std::move(Scoreboard);
 }
 
-void ADeathmatchGameState::ClientNotifyIncomingSuper_Implementation(float PowerUpAnnouncementLeadTime,
-	const FString& LocationMsg)
-{
-	OnIncomingSuper.Broadcast(PowerUpAnnouncementLeadTime, LocationMsg);
-}
-
-
-//
-//void ADeathmatchGameState::ClientNotifyIncomingSuper_Implementation(float PowerUpAnnouncementLeadTime, const FString& LocationMsg)
-//{
-//	LogMsgWithRole("ADeathmatchGameState::ClientNotifyIncomingSuper_Implementation");
-//	OnIncomingSuper.Broadcast(PowerUpAnnouncementLeadTime, LocationMsg);
-//}
-
-void ADeathmatchGameState::NotifyIncomingSuper(float PowerUpAnnouncementLeadTime, const FString& LocationMsg)
-{
-	LogMsgWithRole("ADeathmatchGameState::NotifyIncomingSuper");
-
-	ClientNotifyIncomingSuper(PowerUpAnnouncementLeadTime, LocationMsg);
-//	OnIncomingSuper.Broadcast(PowerUpAnnouncementLeadTime, LocationMsg);
-
-}
-
-void ADeathmatchGameState::StartARemoveTimer()
+void ADeathmatchGameState::StartARemoveKillfeedItemTimer()
 {
 	// Create a timer
 	FTimerHandle Handle;
@@ -109,13 +75,13 @@ void ADeathmatchGameState::StartARemoveTimer()
 	if (World)
 	{
 		World->GetTimerManager().SetTimer(
-			Handle, this, &ADeathmatchGameState::FinishOldestTimer, KillfeedItemDuration, false, -1);
+			Handle, this, &ADeathmatchGameState::FinishOldestKillfeedItemTimer, KillfeedItemDuration, false, -1);
 		
 		Timers.Add(Handle);
 	}
 }
 
-void ADeathmatchGameState::FinishOldestTimer()
+void ADeathmatchGameState::FinishOldestKillfeedItemTimer()
 {
 	if (Timers.Num() == 0) 
 		UE_LOG(LogTemp, Error, TEXT("Attempted to move a timer but there aren't any!"));
@@ -154,10 +120,10 @@ void ADeathmatchGameState::AddKillfeedData(const FString& Victor, const FString&
 
 	if (KillfeedData.Num() > 4)
 	{
-		FinishOldestTimer();
+		FinishOldestKillfeedItemTimer();
 	}
 
-	StartARemoveTimer();
+	StartARemoveKillfeedItemTimer();
 	
 
 	// Make sure a listen server knows about this
@@ -183,6 +149,21 @@ void ADeathmatchGameState::OnRep_KillfeedDataChanged()
 			*entry->Winner, *entry->Verb, *entry->Loser);
 	}*/
 }
+
+
+
+void ADeathmatchGameState::NotifyIncomingSuper(float PowerUpAnnouncementLeadTime, const FString& LocationMsg)
+{
+	//LogMsgWithRole("ADeathmatchGameState::NotifyIncomingSuper");
+	MultiNotifyIncomingSuper(PowerUpAnnouncementLeadTime, LocationMsg);
+}
+
+void ADeathmatchGameState::MultiNotifyIncomingSuper_Implementation(float PowerUpAnnouncementLeadTime,
+	const FString& LocationMsg)
+{
+	OnIncomingSuper.Broadcast(PowerUpAnnouncementLeadTime, LocationMsg);
+}
+
 
 void ADeathmatchGameState::LogMsgWithRole(FString message) const
 {
@@ -211,4 +192,5 @@ FString ADeathmatchGameState::GetRoleText() const
 	return GetEnumText(Role) + " " + GetEnumText(GetRemoteRole()) + " Ded:" + (IsRunningDedicatedServer() ? "True" : "False");
 
 }
+
 
