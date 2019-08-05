@@ -410,8 +410,5 @@ void ADeathmatchGameMode::SpawnChest()
 
 	auto* Pickup = GetWorld()->SpawnActorAbsolute<APickupBase>(NextChestSpawnLocation->PickupClass, NextChestSpawnLocation->GetActorTransform(), Params);
 
-	//// TODO Defer spawn to properly set this initial delay
-	Pickup->SetLifeSpan(60);// = PowerUpAnnouncementLeadTime;
-
 	GetWorldTimerManager().ClearTimer(ChestSpawnTimerHandle);
 }
