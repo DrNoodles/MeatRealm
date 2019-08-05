@@ -5,7 +5,6 @@
 #include "CoreMinimal.h"
 #include "GameFramework/Character.h"
 #include "Interfaces/AffectableInterface.h"
-//#include "Interfaces/EquippableDelegate.h"
 
 #include "HeroCharacter.generated.h"
 

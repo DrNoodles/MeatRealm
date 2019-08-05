@@ -23,7 +23,6 @@
 #include "Engine/World.h"
 #include "DrawDebugHelpers.h"
 #include "Interfaces/Equippable.h"
-#include "Weapon.h"
 
 /// Lifecycle
 
