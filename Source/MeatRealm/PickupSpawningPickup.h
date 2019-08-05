@@ -5,18 +5,18 @@
 #include "CoreMinimal.h"
 #include "PickupBase.h"
 
-#include "ChestPickup.generated.h"
+#include "PickupSpawningPickup.generated.h"
 
 /**
- * 
+ * A pickup that when interacted with will spawn a pickup and self destruct
  */
-UCLASS() // TODO rename to APickupSpawnerPickup
-class MEATREALM_API AChestPickup : public APickupBase
+UCLASS()
+class MEATREALM_API APickupSpawningPickup : public APickupBase
 {
 	GENERATED_BODY()
 	
 	public:
-		AChestPickup()
+		APickupSpawningPickup()
 		{
 			bExplicitInteraction = true;
 			bIsSingleUse = true;
@@ -29,5 +29,4 @@ class MEATREALM_API AChestPickup : public APickupBase
 	private:
 		UPROPERTY(EditDefaultsOnly, Category = Pickup)
 			TArray<TSubclassOf<class APickupBase>> PickupClasses;
-
 };
