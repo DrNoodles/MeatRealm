@@ -23,7 +23,6 @@
 #include "Engine/World.h"
 #include "DrawDebugHelpers.h"
 #include "Interfaces/Equippable.h"
-#include "Weapon.h"
 
 /// Lifecycle
 
@@ -127,7 +126,10 @@ void AHeroCharacter::Restart()
 		if (HasAuthority())
 		{
 			const auto Choice = FMath::RandRange(0, DefaultWeaponClass.Num() - 1);
-			GiveWeaponToPlayer(DefaultWeaponClass[Choice]);
+			const auto WeaponClass = DefaultWeaponClass[Choice];
+			auto Config = FWeaponConfig{};
+
+			GiveWeaponToPlayer(WeaponClass, Config);
 		}
 	}
 }
@@ -135,23 +137,23 @@ void AHeroCharacter::Restart()
 void AHeroCharacter::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
 {
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
-	DOREPLIFETIME(AHeroCharacter, CurrentInventorySlot);
-	DOREPLIFETIME(AHeroCharacter, PrimaryWeaponSlot);
-	DOREPLIFETIME(AHeroCharacter, SecondaryWeaponSlot);
-	DOREPLIFETIME(AHeroCharacter, HealthSlot);
-	DOREPLIFETIME(AHeroCharacter, ArmourSlot);
-	DOREPLIFETIME(AHeroCharacter, Health);
-	DOREPLIFETIME(AHeroCharacter, Armour);
-	DOREPLIFETIME(AHeroCharacter, TeamTint);
-	//	DOREPLIFETIME(AHeroCharacter, bIsAdsing);
 
-	// everyone except local owner: flag change is locally instigated
+	// Everyone!
+	DOREPLIFETIME(AHeroCharacter, TeamTint);
+
+	// Everyone except local owner: flag change is locally instigated
 	DOREPLIFETIME_CONDITION(AHeroCharacter, bIsRunning, COND_SkipOwner);
 	DOREPLIFETIME_CONDITION(AHeroCharacter, bIsTargeting, COND_SkipOwner);
 
 	// Just the owner
+	DOREPLIFETIME_CONDITION(AHeroCharacter, Armour, COND_OwnerOnly);
 	DOREPLIFETIME_CONDITION(AHeroCharacter, LastInventorySlot, COND_OwnerOnly);
-
+	DOREPLIFETIME_CONDITION(AHeroCharacter, CurrentInventorySlot, COND_OwnerOnly);
+	DOREPLIFETIME_CONDITION(AHeroCharacter, PrimaryWeaponSlot, COND_OwnerOnly);
+	DOREPLIFETIME_CONDITION(AHeroCharacter, SecondaryWeaponSlot, COND_OwnerOnly);
+	DOREPLIFETIME_CONDITION(AHeroCharacter, HealthSlot, COND_OwnerOnly);
+	DOREPLIFETIME_CONDITION(AHeroCharacter, ArmourSlot, COND_OwnerOnly);
+	DOREPLIFETIME_CONDITION(AHeroCharacter, Health, COND_OwnerOnly);
 }
 
 void AHeroCharacter::ScanForWeaponPickups(float DeltaSeconds)
@@ -212,7 +214,7 @@ void AHeroCharacter::ScanForWeaponPickups(float DeltaSeconds)
 		}
 		if (World)
 		{
-			auto Str = FString::Printf(TEXT("Grab (%s)"), *ActionText);
+			auto Str = FString::Printf(TEXT("Grab %s (%s)"), *Pickup->GetPickupName(), *ActionText);
 			const auto YOffset = -5.f * Str.Len();
 
 			DrawDebugString(World, FVector{ 50, YOffset, 100 },	Str, Pickup, FColor::White, DeltaSeconds * 0.5);
@@ -441,23 +443,22 @@ void AHeroCharacter::SetupPlayerInputComponent(class UInputComponent* PlayerInpu
 
 void AHeroCharacter::UseItemPressed() const
 {
-	LogMsgWithRole("AHeroCharacter::UseItemPressed");
+	//LogMsgWithRole("AHeroCharacter::UseItemPressed");
 	auto Item = GetCurrentItem();
 	if (Item) Item->UsePressed();
 }
 void AHeroCharacter::UseItemReleased() const
 {
-	LogMsgWithRole("AHeroCharacter::UseItemReleased");
+	//LogMsgWithRole("AHeroCharacter::UseItemReleased");
 	auto Item = GetCurrentItem();
 	if (Item) Item->UseReleased();
 }
 void AHeroCharacter::UseItemCancelled() const
 {
-	LogMsgWithRole("AHeroCharacter::UseItemCancelled");
+	//LogMsgWithRole("AHeroCharacter::UseItemCancelled");
 	auto Item = GetCurrentItem();
 	if (Item) Item->Cancel();
 }
-
 
 void AHeroCharacter::OnEquipSmartHeal()
 {
@@ -893,7 +894,7 @@ void AHeroCharacter::Input_Reload() const
 // TODO Make this handle both client/server requests to fire - like ads pressed etc.
 void AHeroCharacter::StartWeaponFire()
 {
-	LogMsgWithRole("AHeroCharacter::StartWeaponFire");
+	//LogMsgWithRole("AHeroCharacter::StartWeaponFire");
 	if (!bWantsToFire)
 	{
 		bWantsToFire = true;
@@ -926,7 +927,7 @@ void AHeroCharacter::StartWeaponFire()
 
 void AHeroCharacter::StopWeaponFire()
 {
-	LogMsgWithRole("AHeroCharacter::StopWeaponFire");
+	//LogMsgWithRole("AHeroCharacter::StopWeaponFire");
 
 	if (bWantsToFire)
 	{
@@ -1094,7 +1095,7 @@ void AHeroCharacter::GiveItemToPlayer(TSubclassOf<AItemBase> ItemClass)
 	// Put it in our hands! TODO - Or not?
 	//EquipSlot(Slot);
 
-	LogMsgWithRole("AHeroCharacter::GiveItemToPlayer2");
+	//LogMsgWithRole("AHeroCharacter::GiveItemToPlayer2");
 }
 
 AItemBase* AHeroCharacter::GetFirstHealthItemOrNull() const
@@ -1106,9 +1107,9 @@ AItemBase* AHeroCharacter::GetFirstArmourItemOrNull() const
 	return ArmourSlot.Num() > 0 ? ArmourSlot[0] : nullptr;
 }
 
-void AHeroCharacter::GiveWeaponToPlayer(TSubclassOf<class AWeapon> WeaponClass)
+void AHeroCharacter::GiveWeaponToPlayer(TSubclassOf<class AWeapon> WeaponClass, FWeaponConfig& Config)
 {
-	const auto Weapon = AuthSpawnWeapon(WeaponClass);
+	const auto Weapon = AuthSpawnWeapon(WeaponClass, Config);
 	const auto Slot = FindGoodWeaponSlot();
 	const auto RemovedWeapon = AssignWeaponToInventorySlot(Weapon, Slot);
 
@@ -1116,13 +1117,18 @@ void AHeroCharacter::GiveWeaponToPlayer(TSubclassOf<class AWeapon> WeaponClass)
 	{
 		// If it's the same slot, replay the equip weapon
 		RemovedWeapon->ExitInventory();
+
+		// Drop weapon on ground
+		TArray<AWeapon*> WeaponArray{ RemovedWeapon };
+		SpawnWeaponPickups(WeaponArray);
+
 		RemovedWeapon->Destroy();
 		CurrentInventorySlot = EInventorySlots::Undefined;
 	}
 
 	EquipSlot(Slot);
 }
-AWeapon* AHeroCharacter::AuthSpawnWeapon(TSubclassOf<AWeapon> weaponClass)
+AWeapon* AHeroCharacter::AuthSpawnWeapon(TSubclassOf<AWeapon> weaponClass, FWeaponConfig& Config)
 {
 	//LogMsgWithRole("AHeroCharacter::ServerRPC_SpawnWeapon");
 	check(HasAuthority())
@@ -1139,6 +1145,13 @@ AWeapon* AHeroCharacter::AuthSpawnWeapon(TSubclassOf<AWeapon> weaponClass)
 		this,
 		ESpawnActorCollisionHandlingMethod::AlwaysSpawn);
 
+	if (!Weapon)
+	{
+		UE_LOG(LogTemp, Error, TEXT("AHeroCharacter::AuthSpawnWeapon - Failed to spawn weapon"));
+		return nullptr;
+	}
+
+	Weapon->ConfigWeapon(Config);
 	Weapon->SetHeroControllerId(GetHeroController()->PlayerState->PlayerId);
 
 	UGameplayStatics::FinishSpawningActor(Weapon, TF);
@@ -1331,7 +1344,7 @@ void AHeroCharacter::RefreshWeaponAttachments() const
 
 void AHeroCharacter::NotifyItemIsExpended(AItemBase* Item)
 {
-	LogMsgWithRole("AHeroCharacter::NotifyEquippableIsExpended()");
+	//LogMsgWithRole("AHeroCharacter::NotifyEquippableIsExpended()");
 	check(HasAuthority())
 
 	auto WasRemoved = RemoveEquippableFromInventory(Item);
@@ -1343,7 +1356,51 @@ void AHeroCharacter::NotifyItemIsExpended(AItemBase* Item)
 }
 
 
+// Inventory - Dropping
 
+void AHeroCharacter::SpawnHeldWeaponsAsPickups() const
+{
+	check(HasAuthority());
+
+	// Gather all weapons to drop
+	TArray<AWeapon*> WeaponsToDrop{};
+	const auto W1 = GetWeapon(EInventorySlots::Primary);
+	const auto W2 = GetWeapon(EInventorySlots::Secondary);
+	if (W1) WeaponsToDrop.Add(W1);
+	if (W2) WeaponsToDrop.Add(W2);
+
+	SpawnWeaponPickups(WeaponsToDrop);
+}
+
+void AHeroCharacter::SpawnWeaponPickups(TArray<AWeapon*> & Weapons) const
+{
+	// Gather the Pickup Class types to spawn
+	TArray<TTuple<TSubclassOf<AWeaponPickupBase>, FWeaponConfig>> PickupClassesToSpawn{};
+	int Count = 0;
+	
+	for (auto W : Weapons)
+	{
+		if (W && W->PickupClass && W->HasAmmo())
+		{
+			// Spawn location algorithm: Alternative between in front and behind player location
+			const int FacingFactor = Count % 2 == 0 ? 1 : -1;
+			auto Loc = GetActorLocation() + GetActorForwardVector() * 30 * FacingFactor;
+
+			auto Params = FActorSpawnParameters{};
+			Params.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AdjustIfPossibleButAlwaysSpawn;
+
+			auto WeaponPickup = GetWorld()->SpawnActor<AWeaponPickupBase>(W->PickupClass, Loc, FRotator{}, Params);
+			if (WeaponPickup)
+			{
+				WeaponPickup->SetWeaponConfig(FWeaponConfig{ W->GetAmmoInClip(), W->GetAmmoInPool() });
+				WeaponPickup->bIsSingleUse = true;
+				WeaponPickup->SetLifeSpan(60);
+			
+				Count++;
+			}
+		}
+	}
+}
 
 
 // Camera tracks aim
@@ -1613,7 +1670,7 @@ AWeapon* AHeroCharacter::FindWeaponToReceiveAmmo() const
 	AWeapon* AltWeap = nullptr;
 	if (CurrentInventorySlot == EInventorySlots::Primary) AltWeap = GetWeapon(EInventorySlots::Secondary);
 	if (CurrentInventorySlot == EInventorySlots::Secondary) AltWeap = GetWeapon(EInventorySlots::Primary);
-	if (AltWeap && AltWeap->TryGiveAmmo())
+	if (AltWeap && AltWeap->CanGiveAmmo() && AltWeap->TryGiveAmmo())
 	{
 		return AltWeap; // ammo given to alt weapon
 	}
@@ -1648,7 +1705,7 @@ bool AHeroCharacter::AuthTryGiveArmour(float Delta)
 	return true;
 }
 
-bool AHeroCharacter::AuthTryGiveWeapon(const TSubclassOf<AWeapon>& Class)
+bool AHeroCharacter::AuthTryGiveWeapon(const TSubclassOf<AWeapon>& Class, FWeaponConfig& Config)
 {
 	check(HasAuthority());
 	check(Class != nullptr);
@@ -1658,7 +1715,7 @@ bool AHeroCharacter::AuthTryGiveWeapon(const TSubclassOf<AWeapon>& Class)
 	float OutDelay;
 	if (!CanGiveWeapon(Class, OUT OutDelay)) return false;
 
-	GiveWeaponToPlayer(Class);
+	GiveWeaponToPlayer(Class, Config);
 	return true;
 }
 

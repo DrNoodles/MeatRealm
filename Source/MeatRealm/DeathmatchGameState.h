@@ -11,6 +11,7 @@
 class UScoreboardEntryData;
 class UKillfeedEntryData;
 
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FIncomingSuper, float, Time, FString, Location);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FKillfeedChanged);
 
 UCLASS()
@@ -19,18 +20,22 @@ class MEATREALM_API ADeathmatchGameState : public AGameState
 	GENERATED_BODY()
 
 public:
-	virtual void PostInitializeComponents() override;
 	virtual bool ReplicateSubobjects(UActorChannel* Channel, FOutBunch* Bunch, FReplicationFlags* RepFlags) override;
 
 	UFUNCTION(BlueprintCallable)
 		TArray<UScoreboardEntryData*> GetScoreboard();
 
+	
+	void NotifyIncomingSuper(float PowerUpAnnouncementLeadTime, const FString& LocationMsg);
+
 	UPROPERTY(BlueprintAssignable, Category = "Event Dispatchers")
 		FKillfeedChanged OnKillfeedChanged;
 
+	UPROPERTY(BlueprintAssignable, Category = "Event Dispatchers")
+		FIncomingSuper OnIncomingSuper;
 
-	void StartARemoveTimer();
-	void FinishOldestTimer();
+	void StartARemoveKillfeedItemTimer();
+	void FinishOldestKillfeedItemTimer();
 
 	void AddKillfeedData(const FString& Victor, const FString& Verb, const FString& Dead);
 
@@ -52,6 +57,10 @@ public:
 		void OnRep_KillfeedDataChanged();
 
 private:
+
+	UFUNCTION(NetMulticast, Reliable)
+		void MultiNotifyIncomingSuper(float PowerUpAnnouncementLeadTime, const FString& LocationMsg);
+
 	TArray<FTimerHandle> Timers{};
 
 	void LogMsgWithRole(FString message) const;

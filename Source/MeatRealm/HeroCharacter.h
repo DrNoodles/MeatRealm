@@ -5,7 +5,6 @@
 #include "CoreMinimal.h"
 #include "GameFramework/Character.h"
 #include "Interfaces/AffectableInterface.h"
-//#include "Interfaces/EquippableDelegate.h"
 
 #include "HeroCharacter.generated.h"
 
@@ -33,11 +32,6 @@ class MEATREALM_API AHeroCharacter : public ACharacter, public IAffectableInterf
 
 
 public:
-	bool RemoveEquippableFromInventory(IEquippable* Equippable);
-	void NotifyItemIsExpended(AItemBase* Item);
-
-	float GetHealingMovementSpeed() const { return HealingMovementSpeed; }
-
 	UPROPERTY(EditAnywhere, Category = Camera)
 		bool bLeanCameraWithAim = true;
 
@@ -224,6 +218,10 @@ public:
 	}
 	FColor GetTint() const { return TeamTint; }
 
+	void NotifyItemIsExpended(AItemBase* Item);
+	float GetHealingMovementSpeed() const { return HealingMovementSpeed; }
+	void SpawnHeldWeaponsAsPickups() const;
+	
 
 	/* IAffectableInterface */
 	UFUNCTION()
@@ -241,7 +239,7 @@ public:
 	UFUNCTION()
 	bool AuthTryGiveAmmo() override;
 	UFUNCTION()
-	bool AuthTryGiveWeapon(const TSubclassOf<AWeapon>& Class) override;
+	bool AuthTryGiveWeapon(const TSubclassOf<AWeapon>& Class, FWeaponConfig& Config) override;
 	UFUNCTION()
 	bool CanGiveWeapon(const TSubclassOf<AWeapon>& Class, float& OutDelay) override;
 	
@@ -326,6 +324,8 @@ public:
 
 private:
 
+	bool RemoveEquippableFromInventory(IEquippable* Equippable);
+	void SpawnWeaponPickups(TArray<AWeapon*>& Weapons) const;
 	AWeapon* FindWeaponToReceiveAmmo() const;
 
 	void ScanForWeaponPickups(float DeltaSeconds);
@@ -365,8 +365,8 @@ private:
 	AItemBase* GetFirstArmourItemOrNull() const;
 	
 	void GiveItemToPlayer(TSubclassOf<class AItemBase> ItemClass);
-	void GiveWeaponToPlayer(TSubclassOf<class AWeapon> WeaponClass);
-	AWeapon* AuthSpawnWeapon(TSubclassOf<AWeapon> weaponClass);
+	void GiveWeaponToPlayer(TSubclassOf<class AWeapon> WeaponClass, FWeaponConfig& Config);
+	AWeapon* AuthSpawnWeapon(TSubclassOf<AWeapon> weaponClass, FWeaponConfig& Config);
 	EInventorySlots FindGoodWeaponSlot() const;
 	AWeapon* AssignWeaponToInventorySlot(AWeapon* Weapon, EInventorySlots Slot);
 	void EquipSlot(EInventorySlots Slot);

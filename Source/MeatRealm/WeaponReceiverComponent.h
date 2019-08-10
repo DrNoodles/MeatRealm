@@ -43,19 +43,19 @@ public:
 		bool IsAdsing = false;
 
 	UPROPERTY(BlueprintReadOnly)
-		bool HasFired = false; // For Firing state
+		int BurstCount = 0; // For Firing state
 
-	FWeaponState Clone() const
-	{
-		FWeaponState Clone;
-		Clone.Mode = this->Mode;
-		Clone.AmmoInClip = this->AmmoInClip;
-		Clone.AmmoInPool = this->AmmoInPool;
-		Clone.ReloadProgress = this->ReloadProgress;
-		Clone.IsAdsing = this->IsAdsing;
-		Clone.HasFired = this->HasFired;
-		return Clone;
-	}
+	//FWeaponState Clone() const
+	//{
+	//	FWeaponState Clone;
+	//	Clone.Mode = this->Mode;
+	//	Clone.AmmoInClip = this->AmmoInClip;
+	//	Clone.AmmoInPool = this->AmmoInPool;
+	//	Clone.ReloadProgress = this->ReloadProgress;
+	//	Clone.IsAdsing = this->IsAdsing;
+	//	Clone.BurstCount = this->BurstCount;
+	//	return Clone;
+	//}
 
 	FString ToString() const
 	{
@@ -136,7 +136,6 @@ class MEATREALM_API UWeaponReceiverComponent : public UActorComponent
 	GENERATED_BODY()
 
 public:
-
 	// Configure the gun
 
 	UPROPERTY(EditAnywhere)
@@ -184,16 +183,16 @@ public:
 	UPROPERTY(EditAnywhere, meta = (EditCondition = "bEvenSpread"))
 		bool bSpreadClumping = true;
 
+	UPROPERTY(EditAnywhere, BlueprintReadOnly)
+		bool CanReceiveAmmo = true;
 
 protected:
 
 	UPROPERTY(BlueprintReadOnly, Replicated)
 		FWeaponState WeaponState {};
 
-	UFUNCTION(BlueprintCallable)
-		float GetReloadTimeRemaining() const { return (1 - WeaponState.ReloadProgress) * ReloadTime; }
-
 private:
+
 	UPROPERTY(EditAnywhere)
 		float AdsLineLength = 1500; // cm
 
@@ -215,6 +214,8 @@ private:
 	bool bIsBusy;
 
 
+	TArray<float> ShotTimes{};
+
 
 public:	
 	UWeaponReceiverComponent();
@@ -232,7 +233,11 @@ public:
 	void CancelAnyReload();
 	bool IsReloading() const { return WeaponState.Mode == EWeaponModes::Reloading; }
 
+	FWeaponState GetState() const { return WeaponState; }
 protected:
+
+	UFUNCTION(BlueprintCallable)
+		float GetReloadTimeRemaining() const { return (1 - WeaponState.ReloadProgress) * GetReloadTime(); }
 
 private:
 	bool HasAuthority() const { return GetOwnerRole() == ROLE_Authority; }
@@ -247,9 +252,13 @@ private:
 	void FireEnd();
 	bool TickReloading(float DT);
 	void ReloadEnd();
-	void DoTransitionAction(const EWeaponModes OldMode, const EWeaponModes NewMode);
-	bool ChangeState(EWeaponCommands Cmd, const FWeaponState& InState);
+	void DoTransitionAction(const EWeaponModes OldMode, const EWeaponModes NewMode, FWeaponState& NewState);
+	bool ChangeState(EWeaponCommands Cmd, FWeaponState& WeapState);
 	void EquipEnd();
+
+	float GetReloadTime() const { return ReloadTime; }
+	float GetAdsSpread() const { return  AdsSpread; }
+	float GetHipfireSpread() const { return HipfireSpread; }
 
 	TArray<FVector> CalcShotPattern() const;
 	bool CanReload() const;
@@ -262,4 +271,5 @@ private:
 	ENetRole GetOwnerOwnerLocalRole() const;
 	ENetRole GetOwnerOwnerRemoteRole() const;
 	FString GetRoleText();
+
 };

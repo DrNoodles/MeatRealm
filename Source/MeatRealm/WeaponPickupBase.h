@@ -22,6 +22,7 @@ public:
 	}
 
 	bool CanInteract(IAffectableInterface* const Affectable, float& OutDelay) override;
+	void SetWeaponConfig(/*copy of config*/ FWeaponConfig NewWeaponConfig); 
 
 protected:
 
@@ -29,5 +30,7 @@ protected:
 
 private:
 	UPROPERTY(EditDefaultsOnly, Category = Pickup)
-		TSubclassOf<class AWeapon> WeaponClass;
+		TArray<TSubclassOf<class AWeapon>> WeaponClasses;
+
+	FWeaponConfig WeaponConfig;
 };

@@ -4,6 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/GameMode.h"
+#include "PickupSpawnLocation.h"
 
 #include "DeathmatchGameMode.generated.h"
 
@@ -19,15 +20,38 @@ class MEATREALM_API ADeathmatchGameMode : public AGameMode
 {
 	GENERATED_BODY()
 
+private:
+
+	// Time before initial announcement
+	UPROPERTY(EditAnywhere)
+		float PowerUpInitialDelay = 30;
+
+	// Time after announcement till the item spawns
+	UPROPERTY(EditAnywhere)
+		float PowerUpAnnouncementLeadTime = 15;
+
+	UPROPERTY(EditAnywhere)
+		float PowerUpSpawnRate = 120;
+
+	TMap<uint32, AHeroController*> ConnectedHeroControllers;
+	TMap<uint32, int> PlayerMappedTints;
+	TArray<FColor> PlayerTints;
+	int TintCount = 0;
+
+	FTimerHandle ChestAnnouncementTimerHandle;
+	FTimerHandle ChestSpawnTimerHandle;
+	APickupSpawnLocation* NextChestSpawnLocation = nullptr;
+
+
 public:
 	ADeathmatchGameMode();
 
 	// Game Lifecycle
 	virtual bool ReadyToStartMatch_Implementation() override;
 	virtual bool ReadyToEndMatch_Implementation() override;
+	virtual void HandleMatchHasStarted() override;
 	virtual void HandleMatchHasEnded() override;
 	void OnRestartGame();
-
 
 	virtual void SetPlayerDefaults(APawn* PlayerPawn) override;
 	virtual void RestartPlayer(AController* NewPlayer) override;
@@ -38,13 +62,14 @@ public:
 	bool ShouldSpawnAtStartSpot(AController* Player) override;
 	AActor* FindFurthestPlayerStart(AController* Controller);
 	void OnPlayerTakeDamage(FMRHitResult Hit);
-private:
-	TMap<uint32, AHeroController*> ConnectedHeroControllers;
-	TMap<uint32, int> PlayerMappedTints;
-	TArray<FColor> PlayerTints;
-	int TintCount = 0;
 
-	
+
+
+
+private:
 	//bool HasMetGameEndConditions() const;
 	void AddKillfeedEntry(AHeroController* const Killer, AHeroController* const Dead);
+
+	void AnnounceChestSpawn();
+	void SpawnChest();
 };

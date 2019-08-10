@@ -22,28 +22,35 @@ class MEATREALM_API APickupBase : public AActor
 	GENERATED_BODY()
 
 
-	/// Data
-
 public:
 	UPROPERTY(BlueprintAssignable, Category = "Event Dispatchers")
 		FPickupSpawned OnSpawn;
 	UPROPERTY(BlueprintAssignable, Category = "Event Dispatchers")
 		FPickupSpawned OnTaken;
-	// In Seconds
-	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-		float RespawnDelay = 20;
+
+	UPROPERTY(EditAnywhere)
+		bool bIsSingleUse = false;
+
+	UPROPERTY(EditAnywhere)
+		float InitialDelay = 0;
 
 protected:
 	UPROPERTY(EditAnywhere)
 		bool bExplicitInteraction = false;
 
-private:
-	UPROPERTY(VisibleAnywhere)
+	// In Seconds
+	UPROPERTY(EditAnywhere)//, meta = (EditCondition = "bIsSingleUse"))
+		float RespawnDelay = 20;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
 		USkeletalMeshComponent* SkeletalMeshComp = nullptr;
+
+private:
+
 	UPROPERTY(VisibleAnywhere)
 		UCapsuleComponent* CollisionComp = nullptr;
 	UPROPERTY(ReplicatedUsing = OnRep_IsAvailableChanged)
-		bool IsAvailable = true;;
+		bool IsAvailable = true;
 	
 	FTimerHandle RespawnTimerHandle;
 
@@ -62,6 +69,7 @@ public:
 		return  bExplicitInteraction && IsAvailable;
 	}
 	bool AuthTryInteract(IAffectableInterface* const Affectable);
+	FString GetPickupName() const { return NiceName; }
 
 protected:
 
@@ -70,6 +78,9 @@ protected:
 	{
 		unimplemented(); return false;
 	}
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly)
+		FString NiceName = "";
 
 private:
 	UFUNCTION()
