@@ -100,7 +100,7 @@ void AProjectile::OnCompBeginOverlap(UPrimitiveComponent* OverlappedComp, AActor
 	else
 	{
 		// Apply damage
-		AffectableReceiver->AuthApplyDamage(HeroControllerId, ShotDamage, GetActorLocation());
+		AffectableReceiver->AuthApplyDamage(HeroControllerId, ShotDamage, SweepResult.ImpactPoint);
 	}
 	
 	Destroy();
