@@ -15,7 +15,7 @@ bool AWeaponPickupBase::CanInteract(IAffectableInterface* const Affectable, floa
 	bool bCanInteract = Super::CanInteract(Affectable, OutDelay);
 	if (bCanInteract)
 	{
-		bCanInteract = Affectable->CanGiveWeapon(WeaponClasses[0], OUT OutDelay); // TODO Solve this random issue, might have to select a seed on spawn so we can query CanGiveWeapon with the same class that it'll inevitably spawn
+		bCanInteract = Affectable->CanGiveWeapon(WeaponClasses[0], OUT OutDelay); // TODO Solve this random issue, might have to select a seed on spawn so we can query CanGiveWeapon with the same class that it'll inevitably spawn. Right now it just checks that we can take some random weapon. We have no restrictions per weapon so this is fine for now.
 	}
 	return bCanInteract;
 }

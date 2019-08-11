@@ -22,8 +22,6 @@ class MEATREALM_API APickupBase : public AActor
 	GENERATED_BODY()
 
 
-	/// Data
-
 public:
 	UPROPERTY(BlueprintAssignable, Category = "Event Dispatchers")
 		FPickupSpawned OnSpawn;
@@ -44,9 +42,11 @@ protected:
 	UPROPERTY(EditAnywhere)//, meta = (EditCondition = "bIsSingleUse"))
 		float RespawnDelay = 20;
 
-private:
-	UPROPERTY(VisibleAnywhere)
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
 		USkeletalMeshComponent* SkeletalMeshComp = nullptr;
+
+private:
+
 	UPROPERTY(VisibleAnywhere)
 		UCapsuleComponent* CollisionComp = nullptr;
 	UPROPERTY(ReplicatedUsing = OnRep_IsAvailableChanged)

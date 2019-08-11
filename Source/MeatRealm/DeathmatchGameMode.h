@@ -20,28 +20,6 @@ class MEATREALM_API ADeathmatchGameMode : public AGameMode
 {
 	GENERATED_BODY()
 
-public:
-	ADeathmatchGameMode();
-
-	// Game Lifecycle
-	virtual bool ReadyToStartMatch_Implementation() override;
-	virtual bool ReadyToEndMatch_Implementation() override;
-	virtual void HandleMatchHasStarted() override;
-	virtual void HandleMatchHasEnded() override;
-	void OnRestartGame();
-
-	virtual void SetPlayerDefaults(APawn* PlayerPawn) override;
-	virtual void RestartPlayer(AController* NewPlayer) override;
-
-	void AnnounceChestSpawn();
-	void SpawnChest();
-
-	void PostLogin(APlayerController* NewPlayer) override;
-	void Logout(AController* Exiting) override;
-	bool ShouldSpawnAtStartSpot(AController* Player) override;
-	AActor* FindFurthestPlayerStart(AController* Controller);
-	void OnPlayerTakeDamage(FMRHitResult Hit);
-
 private:
 
 	// Time before initial announcement
@@ -64,6 +42,34 @@ private:
 	FTimerHandle ChestSpawnTimerHandle;
 	APickupSpawnLocation* NextChestSpawnLocation = nullptr;
 
+
+public:
+	ADeathmatchGameMode();
+
+	// Game Lifecycle
+	virtual bool ReadyToStartMatch_Implementation() override;
+	virtual bool ReadyToEndMatch_Implementation() override;
+	virtual void HandleMatchHasStarted() override;
+	virtual void HandleMatchHasEnded() override;
+	void OnRestartGame();
+
+	virtual void SetPlayerDefaults(APawn* PlayerPawn) override;
+	virtual void RestartPlayer(AController* NewPlayer) override;
+
+
+	void PostLogin(APlayerController* NewPlayer) override;
+	void Logout(AController* Exiting) override;
+	bool ShouldSpawnAtStartSpot(AController* Player) override;
+	AActor* FindFurthestPlayerStart(AController* Controller);
+	void OnPlayerTakeDamage(FMRHitResult Hit);
+
+
+
+
+private:
 	//bool HasMetGameEndConditions() const;
 	void AddKillfeedEntry(AHeroController* const Killer, AHeroController* const Dead);
+
+	void AnnounceChestSpawn();
+	void SpawnChest();
 };

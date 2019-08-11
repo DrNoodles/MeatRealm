@@ -1,10 +1,10 @@
 // Fill out your copyright notice in the Description page of Project Settings.
 
 
-#include "ChestPickup.h"
+#include "PickupSpawningPickup.h"
 #include "Engine/World.h"
 
-bool AChestPickup::TryApplyAffect(IAffectableInterface* const Affectable)
+bool APickupSpawningPickup::TryApplyAffect(IAffectableInterface* const Affectable)
 {
 	if (PickupClasses.Num() == 0)
 	{
@@ -21,9 +21,10 @@ bool AChestPickup::TryApplyAffect(IAffectableInterface* const Affectable)
 	Params.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AdjustIfPossibleButAlwaysSpawn;
 
 	auto* Pickup = GetWorld()->SpawnActorAbsolute<APickupBase>(PickupClasses[Choice], GetActorTransform(), Params);
-	
-	if (Pickup) 
+	if (Pickup)
+	{
 		Pickup->bIsSingleUse = true;
+	}
 
 	return Pickup != nullptr;
 }

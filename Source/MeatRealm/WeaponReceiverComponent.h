@@ -191,23 +191,7 @@ protected:
 	UPROPERTY(BlueprintReadOnly, Replicated)
 		FWeaponState WeaponState {};
 
-	UFUNCTION(BlueprintCallable)
-		float GetReloadTimeRemaining() const { return (1 - WeaponState.ReloadProgress) * GetReloadTime(); }
-
 private:
-
-	UPROPERTY(EditAnywhere)
-		bool IsBuff = false;
-
-	UPROPERTY(EditAnywhere)
-		float ReloadTimeBuffFactor = 0.5;
-
-	UPROPERTY(EditAnywhere)
-		float AdsSpreadBuffFactor = 0.7;
-
-	UPROPERTY(EditAnywhere)
-		float HipfireSpreadBuffFactor = 0.7;
-
 
 	UPROPERTY(EditAnywhere)
 		float AdsLineLength = 1500; // cm
@@ -252,6 +236,9 @@ public:
 	FWeaponState GetState() const { return WeaponState; }
 protected:
 
+	UFUNCTION(BlueprintCallable)
+		float GetReloadTimeRemaining() const { return (1 - WeaponState.ReloadProgress) * GetReloadTime(); }
+
 private:
 	bool HasAuthority() const { return GetOwnerRole() == ROLE_Authority; }
 	virtual void BeginPlay() override;
@@ -269,9 +256,9 @@ private:
 	bool ChangeState(EWeaponCommands Cmd, FWeaponState& WeapState);
 	void EquipEnd();
 
-	float GetReloadTime() const { return IsBuff ? ReloadTime * ReloadTimeBuffFactor : ReloadTime; }
-	float GetAdsSpread() const { return  IsBuff ? AdsSpread * AdsSpreadBuffFactor : AdsSpread; }
-	float GetHipfireSpread() const { return IsBuff ? HipfireSpread * HipfireSpreadBuffFactor : HipfireSpread; }
+	float GetReloadTime() const { return ReloadTime; }
+	float GetAdsSpread() const { return  AdsSpread; }
+	float GetHipfireSpread() const { return HipfireSpread; }
 
 	TArray<FVector> CalcShotPattern() const;
 	bool CanReload() const;
@@ -284,4 +271,5 @@ private:
 	ENetRole GetOwnerOwnerLocalRole() const;
 	ENetRole GetOwnerOwnerRemoteRole() const;
 	FString GetRoleText();
+
 };
