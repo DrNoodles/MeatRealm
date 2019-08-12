@@ -1041,8 +1041,8 @@ void AHeroCharacter::GiveItemToPlayer(TSubclassOf<AItemBase> ItemClass)
 		auto* Item = GetWorld()->SpawnActorDeferred<AItemBase>(
 		ItemClass,
 		TF,
-		this,
-		this,
+		this, // owner actor
+		this, // instigator pawn
 		ESpawnActorCollisionHandlingMethod::AlwaysSpawn);
 
 	UGameplayStatics::FinishSpawningActor(Item, TF);
@@ -1137,6 +1137,7 @@ AWeapon* AHeroCharacter::AuthSpawnWeapon(TSubclassOf<AWeapon> weaponClass, FWeap
 
 	const auto TF = GetMesh()->GetSocketTransform(HandSocketName, RTS_World);
 
+	
 	// Spawn the weapon at the weapon socket
 	auto* Weapon = GetWorld()->SpawnActorDeferred<AWeapon>(
 		weaponClass,
@@ -1580,6 +1581,23 @@ FVector2D AHeroCharacter::GetGameViewportSize()
 
 	return Result;
 }
+
+bool AHeroCharacter::ShouldTakeDamage(float Damage, FDamageEvent const& DamageEvent, AController* EventInstigator,
+	AActor* DamageCauser) const
+{
+	return Super::ShouldTakeDamage(Damage, DamageEvent, EventInstigator, DamageCauser);
+}
+
+float AHeroCharacter::TakeDamage(float DamageAmount, FDamageEvent const& DamageEvent, AController* EventInstigator,
+	AActor* DamageCauser)
+{
+	float Dmg = Super::TakeDamage(DamageAmount, DamageEvent, EventInstigator, DamageCauser);
+
+	LogMsgWithRole(FString::Printf(TEXT("TakeDamage(%f)"), Dmg));
+	
+	return Dmg;
+}
+
 
 
 // Affect the character
