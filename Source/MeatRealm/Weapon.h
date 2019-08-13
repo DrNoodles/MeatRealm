@@ -157,6 +157,10 @@ public:
 	/* End IReceiverComponentDelegate */
 
 
+	// How much the weapon should aim up or down in degrees. Eg 90 is up, 0 straight ahead, and -90 is down.
+	UPROPERTY(EditAnywhere, BlueprintReadOnly)
+		float PitchAimOffset = 0;
+
 protected:
 private:
 

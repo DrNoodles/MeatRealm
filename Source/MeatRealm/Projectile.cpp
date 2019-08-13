@@ -57,7 +57,7 @@ void AProjectile::OnCompHit(UPrimitiveComponent* HitComponent, AActor* OtherActo
 	if (!HasAuthority()) { return; }
 	
 	//UE_LOG(LogTemp, Warning, TEXT("AProjectile::OnCompHit()"));
-
+	if (ProjectileMovementComp->bShouldBounce) return;
 	
 	// Ignore certain thangs - TODO Use channels tho wholesale solve this problem
 	if (OtherActor && (OtherActor->IsA(AProjectile::StaticClass()) || OtherActor->IsA(APickupBase::StaticClass())))
@@ -78,7 +78,7 @@ void AProjectile::OnCompHit(UPrimitiveComponent* HitComponent, AActor* OtherActo
 	//}
 
 
-	if (bIsAoe) AoeDamage(Hit);
+	if (bIsAoe) AoeDamage(Hit.Location);
 	Destroy();
 }
 
@@ -100,7 +100,7 @@ void AProjectile::OnCompBeginOverlap(UPrimitiveComponent* OverlappedComp, AActor
 
 	if (bIsAoe)
 	{
-		AoeDamage(SweepResult);
+		AoeDamage(SweepResult.Location);
 	}
 	else // Point Damage
 	{
@@ -116,7 +116,7 @@ void AProjectile::OnCompBeginOverlap(UPrimitiveComponent* OverlappedComp, AActor
 	Destroy();
 }
 
-void AProjectile::AoeDamage(const FHitResult& Hit)
+void AProjectile::AoeDamage(const FVector& Location)
 {
 	if (!GetWorld()) return;
 
@@ -126,14 +126,14 @@ void AProjectile::AoeDamage(const FHitResult& Hit)
 	//UE_LOG(LogTemp, Warning, TEXT("FoundDmgInstigator: %s"), *FString{ DmgInstigator ? "True" : "False" });
 
 	const bool RadialDmgWasGiven = UGameplayStatics::ApplyRadialDamageWithFalloff(
-		GetWorld(), ShotDamage, 1, Hit.Location,
+		GetWorld(), ShotDamage, 1, Location,
 		InnerRadius, OuterRadius, Falloff, UDamageType::StaticClass(),
 		{ this }, this, DmgInstigator);// , ECollisionChannel::ECC_Visibility);
 
 	UE_LOG(LogTemp, Warning, TEXT("RadialDmgWasGiven: %s"), *FString{ RadialDmgWasGiven ? "True" : "False" });
 
 	
-	const FTransform Transform{ Hit.Location };
+	const FTransform Transform{ Location };
 	
 	// Spawn hit effect
 	if (EffectClass)
@@ -185,3 +185,24 @@ void AProjectile::PointDamage(AActor* OtherActor, const FHitResult& Hit)
 		GetWorld()->SpawnActorAbsolute(EffectClass, Transform, SpawnParameters);
 	}
 }
+
+void AProjectile::BeginPlay()
+{
+	Super::BeginPlay();
+	
+	if (FuseTime > 0 && GetWorld() && HasAuthority())
+	{
+		GetWorldTimerManager().SetTimer(DetonationTimerHandle, this, &AProjectile::Detonate, FuseTime, false);
+	}
+}
+
+void AProjectile::Detonate()
+{
+	check(HasAuthority())
+	
+	if (bIsAoe) AoeDamage(GetActorLocation());
+	Destroy();
+
+	GetWorldTimerManager().ClearTimer(DetonationTimerHandle);
+}
+
