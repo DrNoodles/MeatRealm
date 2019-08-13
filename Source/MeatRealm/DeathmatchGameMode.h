@@ -33,7 +33,7 @@ private:
 	UPROPERTY(EditAnywhere)
 		float PowerUpSpawnRate = 120;
 
-	TMap<uint32, AHeroController*> ConnectedHeroControllers;
+	TMap<uint32, AHeroController*> ConnectedPlayers;
 	TMap<uint32, int> PlayerMappedTints;
 	TArray<FColor> PlayerTints;
 	int TintCount = 0;

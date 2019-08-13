@@ -9,6 +9,7 @@
 #include "Blueprint/UserWidget.h"
 #include "DeathmatchGameMode.h"
 #include "DamageNumber.h"
+#include "GameFramework/PlayerState.h"
 
 AHeroController::AHeroController()
 {
@@ -62,6 +63,14 @@ void AHeroController::OnUnPossess()
 	}*/
 
 	Super::OnUnPossess();
+}
+
+void AHeroController::InstigatedAnyDamage(float Damage, const UDamageType* DamageType, AActor* DamagedActor,
+	AActor* DamageCauser)
+{
+	Super::InstigatedAnyDamage(Damage, DamageType, DamagedActor, DamageCauser);
+
+	LogMsgWithRole(FString::Printf(TEXT("Instigated some damage! id: %d"), GetUniqueID()));
 }
 
 AHeroState* AHeroController::GetHeroPlayerState() const
@@ -207,6 +216,11 @@ void AHeroController::ClientRPC_PlayHit_Implementation(const FMRHitResult& Hit)
 
 
 /// Input
+
+uint32 AHeroController::GetPlayerId() const
+{
+	return PlayerState->PlayerId;
+}
 
 void AHeroController::PreInitializeComponents()
 {

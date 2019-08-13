@@ -203,6 +203,7 @@ private:
 	
 public:
 	AHeroCharacter(const FObjectInitializer& ObjectInitializer);
+	void DestroyInventory();
 	void Restart() override;
 	void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
 	
@@ -223,11 +224,11 @@ public:
 	void SpawnHeldWeaponsAsPickups() const;
 
 	virtual bool ShouldTakeDamage(float Damage, FDamageEvent const& DamageEvent, AController* EventInstigator, AActor* DamageCauser) const override;
+	
+	
 	virtual float TakeDamage(float DamageAmount, FDamageEvent const& DamageEvent, AController* EventInstigator, AActor* DamageCauser) override;
 
 	/* IAffectableInterface */
-	UFUNCTION()
-	void AuthApplyDamage(uint32 InstigatorHeroControllerId, float Damage, FVector Location) override;
 	UFUNCTION()
 	bool CanGiveHealth() override;
 	UFUNCTION()
@@ -326,6 +327,8 @@ public:
 
 private:
 
+	void SetRagdollPhysics();
+
 	bool RemoveEquippableFromInventory(IEquippable* Equippable);
 	void SpawnWeaponPickups(TArray<AWeapon*>& Weapons) const;
 	AWeapon* FindWeaponToReceiveAmmo() const;
@@ -349,6 +352,9 @@ private:
 	void EquipArmour();
 	UFUNCTION(Server, Reliable, WithValidation)
 		void ServerEquipArmour();
+
+	UFUNCTION(NetMulticast, Reliable, WithValidation)
+		void MultiOnDeath();
 
 
 	void OnRunToggle();

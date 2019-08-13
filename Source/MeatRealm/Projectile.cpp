@@ -126,25 +126,29 @@ void AProjectile::AoeDamage(const FHitResult& Hit)
 	//UE_LOG(LogTemp, Warning, TEXT("FoundDmgInstigator: %s"), *FString{ DmgInstigator ? "True" : "False" });
 
 	const bool RadialDmgWasGiven = UGameplayStatics::ApplyRadialDamageWithFalloff(
-		GetWorld(), ShotDamage, 0, Hit.Location,
+		GetWorld(), ShotDamage, 1, Hit.Location,
 		InnerRadius, OuterRadius, Falloff, UDamageType::StaticClass(),
 		{ this }, this, DmgInstigator);// , ECollisionChannel::ECC_Visibility);
 
 	UE_LOG(LogTemp, Warning, TEXT("RadialDmgWasGiven: %s"), *FString{ RadialDmgWasGiven ? "True" : "False" });
 
 	
-	// Spawn hit effect
 	const FTransform Transform{ Hit.Location };
-	FActorSpawnParameters SpawnParameters{};
-	SpawnParameters.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
-	AActor* FX = GetWorld()->SpawnActorAbsolute(EffectClass, Transform, SpawnParameters);
-	if (!FX)
+	
+	// Spawn hit effect
+	if (EffectClass)
 	{
-		UE_LOG(LogTemp, Warning, TEXT("Why?"));
+		FActorSpawnParameters SpawnParameters{};
+		SpawnParameters.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+		AActor* FX = GetWorld()->SpawnActorAbsolute(EffectClass, Transform, SpawnParameters);
+		if (!FX)
+		{
+			UE_LOG(LogTemp, Warning, TEXT("Why?"));
+		}
 	}
 	
 	
-	if (bDebugVisualiseAoe)
+	if (bDebugVisualiseAoe && DebugVisClass)
 	{
 		const auto DebugEffect = UGameplayStatics::BeginDeferredActorSpawnFromClass(
 			GetWorld(),
@@ -155,16 +159,8 @@ void AProjectile::AoeDamage(const FHitResult& Hit)
 		if (DebugEffect != nullptr)
 		{
 			UGameplayStatics::FinishSpawningActor(DebugEffect, Transform);
-
 			DebugEffect->SetActorScale3D(FVector{ OuterRadius / 50.f });
-			/*auto FXComp = Effect->FindComponentByClass<UStaticMeshComponent>();
-			if (FXComp)
-			{
-				FXComp->SetWorldScale3D(FVector{OuterRadius / 50.f});
-				UE_LOG(LogTemp, Warning, TEXT("Set Scale asdflkhasdflkjasdhf"));
-			}*/
 		}
-
 	}
 }
 
@@ -181,8 +177,11 @@ void AProjectile::PointDamage(AActor* OtherActor, const FHitResult& Hit)
 	UGameplayStatics::ApplyPointDamage(Affected, ShotDamage, Hit.ImpactNormal, Hit, DmgInstigator, this, UDamageType::StaticClass());
 
 	// Spawn hit effect
-	const FTransform Transform{ Hit.Location };
-	FActorSpawnParameters SpawnParameters{};
-	SpawnParameters.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
-	GetWorld()->SpawnActorAbsolute(EffectClass, Transform, SpawnParameters);
+	if (EffectClass)
+	{
+		const FTransform Transform{ Hit.Location };
+		FActorSpawnParameters SpawnParameters{};
+		SpawnParameters.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+		GetWorld()->SpawnActorAbsolute(EffectClass, Transform, SpawnParameters);
+	}
 }

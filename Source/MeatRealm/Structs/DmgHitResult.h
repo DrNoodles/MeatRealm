@@ -11,9 +11,9 @@ struct MEATREALM_API FMRHitResult
 	GENERATED_BODY()
 
 	UPROPERTY()
-		uint32 ReceiverControllerId;
+		uint32 VictimId;
 	UPROPERTY()
-		uint32 AttackerControllerId;
+		uint32 AttackerId;
 	UPROPERTY(BlueprintReadOnly)
 		int HealthRemaining;
 	UPROPERTY(BlueprintReadOnly)

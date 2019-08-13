@@ -87,28 +87,7 @@ void AHeroCharacter::EndPlay(const EEndPlayReason::Type EndPlayReason)
 {
 	if (ROLE_Authority == Role)
 	{
-		LastInventorySlot = EInventorySlots::Undefined;
-		CurrentInventorySlot = EInventorySlots::Undefined;
-		if (PrimaryWeaponSlot)
-		{
-			PrimaryWeaponSlot->Destroy();
-			PrimaryWeaponSlot = nullptr;
-		}
-		if (SecondaryWeaponSlot)
-		{
-			SecondaryWeaponSlot->Destroy();
-			SecondaryWeaponSlot = nullptr;
-		}
-
-		for (auto* HP: HealthSlot)
-		{
-			HP->Destroy();
-		}
-
-		for (auto* AP : ArmourSlot)
-		{
-			AP->Destroy();
-		}
+		DestroyInventory();
 	}
 }
 
@@ -649,8 +628,6 @@ bool AHeroCharacter::ServerToggleWeapon_Validate()
 	return true;
 }
 
-
-
 void AHeroCharacter::OnRunToggle()
 {
 	if (IsRunning())
@@ -1153,7 +1130,7 @@ AWeapon* AHeroCharacter::AuthSpawnWeapon(TSubclassOf<AWeapon> weaponClass, FWeap
 	}
 
 	Weapon->ConfigWeapon(Config);
-	Weapon->SetHeroControllerId(GetHeroController()->PlayerState->PlayerId);
+	Weapon->SetHeroControllerId(GetHeroController()->GetPlayerId());
 
 	UGameplayStatics::FinishSpawningActor(Weapon, TF);
 
@@ -1342,7 +1319,6 @@ void AHeroCharacter::RefreshWeaponAttachments() const
 
 	}
 }
-
 void AHeroCharacter::NotifyItemIsExpended(AItemBase* Item)
 {
 	//LogMsgWithRole("AHeroCharacter::NotifyEquippableIsExpended()");
@@ -1372,7 +1348,6 @@ void AHeroCharacter::SpawnHeldWeaponsAsPickups() const
 
 	SpawnWeaponPickups(WeaponsToDrop);
 }
-
 void AHeroCharacter::SpawnWeaponPickups(TArray<AWeapon*> & Weapons) const
 {
 	// Gather the Pickup Class types to spawn
@@ -1404,7 +1379,38 @@ void AHeroCharacter::SpawnWeaponPickups(TArray<AWeapon*> & Weapons) const
 }
 
 
-// Camera tracks aim
+// Inventory - Lifecycle
+
+void AHeroCharacter::DestroyInventory()
+{
+	LastInventorySlot = EInventorySlots::Undefined;
+	CurrentInventorySlot = EInventorySlots::Undefined;
+	if (PrimaryWeaponSlot)
+	{
+		PrimaryWeaponSlot->Destroy();
+		PrimaryWeaponSlot = nullptr;
+	}
+	if (SecondaryWeaponSlot)
+	{
+		SecondaryWeaponSlot->Destroy();
+		SecondaryWeaponSlot = nullptr;
+	}
+
+	for (auto* HP : HealthSlot)
+	{
+		HP->Destroy();
+	}
+
+	for (auto* AP : ArmourSlot)
+	{
+		AP->Destroy();
+	}
+}
+
+
+
+
+//// Camera tracks aim /////////////////////////////////////////////////////
 
 void AHeroCharacter::MoveCameraByOffsetVector(const FVector2D& OffsetVec, float DeltaSeconds) const
 {
@@ -1434,7 +1440,6 @@ void AHeroCharacter::MoveCameraByOffsetVector(const FVector2D& OffsetVec, float 
 
 	FollowCameraOffsetComp->SetRelativeLocation(Current + Change);
 }
-
 FVector2D AHeroCharacter::TrackCameraWithAimMouse() const
 {
 	// Inputs
@@ -1478,13 +1483,11 @@ FVector2D AHeroCharacter::TrackCameraWithAimMouse() const
 
 	return ClippedLinearLeanVector;
 }
-
 FVector2D AHeroCharacter::TrackCameraWithAimGamepad() const
 {
 	FVector2D LinearLeanVector = FVector2D{AxisFaceRight, AxisFaceUp};
 	return LinearLeanVector;
 }
-
 void AHeroCharacter::ExperimentalMouseAimTracking(float DT)
 {
 	auto* const Hero = GetHeroController();
@@ -1554,7 +1557,6 @@ void AHeroCharacter::ExperimentalMouseAimTracking(float DT)
 	*/
 	//	FVector2D{ AimVec.X, AimVec.Y };
 }
-
 FVector2D AHeroCharacter::CalcLinearLeanVectorUnclipped(const FVector2D& CursorLoc, const FVector2D& ViewportSize)
 {
 	const auto Mid = ViewportSize / 2.f;
@@ -1569,7 +1571,6 @@ FVector2D AHeroCharacter::CalcLinearLeanVectorUnclipped(const FVector2D& CursorL
 	// Flip Y
 	return CursorVecRelative * FVector2D{1, -1};
 }
-
 FVector2D AHeroCharacter::GetGameViewportSize()
 {
 	FVector2D Result{};
@@ -1582,81 +1583,175 @@ FVector2D AHeroCharacter::GetGameViewportSize()
 	return Result;
 }
 
+
+
+
+//// Affect the character /////////////////////////////////////////////////////
+
 bool AHeroCharacter::ShouldTakeDamage(float Damage, FDamageEvent const& DamageEvent, AController* EventInstigator,
 	AActor* DamageCauser) const
 {
 	return Super::ShouldTakeDamage(Damage, DamageEvent, EventInstigator, DamageCauser);
 }
 
+
+
+void AHeroCharacter::MultiOnDeath_Implementation()
+{
+	// Tweak networking
+	NetUpdateFrequency = GetDefault<AHeroCharacter>()->NetUpdateFrequency;
+	bReplicateMovement = false;
+	TearOff();
+	GetCharacterMovement()->ForceReplicationUpdate();
+
+	GetMesh()->VisibilityBasedAnimTickOption = EVisibilityBasedAnimTickOption::AlwaysTickPoseAndRefreshBones;
+
+	DestroyInventory();
+
+	// TODO Switch to 3rd person view of death
+
+	DetachFromControllerPendingDestroy();
+
+
+
+	if (GetMesh())
+	{
+		static FName CollisionProfileName(TEXT("Ragdoll"));
+		GetMesh()->SetCollisionProfileName(CollisionProfileName);
+	}
+	
+	SetActorEnableCollision(true);
+
+	SetRagdollPhysics();
+
+	// disable collisions on capsule
+	GetCapsuleComponent()->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+	GetCapsuleComponent()->SetCollisionResponseToAllChannels(ECR_Ignore);
+
+	GetMesh()->AddRadialImpulse(GetMesh()->GetComponentLocation(), 100, 1000, ERadialImpulseFalloff::RIF_Linear);
+	//LaunchCharacter(FVector{ 10000,1000,1000 }, true, true);
+}
+
+bool AHeroCharacter::MultiOnDeath_Validate()
+{
+	return true;
+}
+
 float AHeroCharacter::TakeDamage(float DamageAmount, FDamageEvent const& DamageEvent, AController* EventInstigator,
 	AActor* DamageCauser)
 {
-	float Dmg = Super::TakeDamage(DamageAmount, DamageEvent, EventInstigator, DamageCauser);
-
-	LogMsgWithRole(FString::Printf(TEXT("TakeDamage(%f)"), Dmg));
+	if (!HasAuthority()) return 0;
 	
-	return Dmg;
-}
+	float ActualDamage = Super::TakeDamage(DamageAmount, DamageEvent, EventInstigator, DamageCauser);
+	ActualDamage = FMath::RoundHalfFromZero(ActualDamage);
+	if (ActualDamage < 1)
+	{
+		UE_LOG(LogTemp, Error, TEXT("HeroCharacter::TakeDamage() - Damage < 1!"))
+		return 0;
+	}
+	
+	LogMsgWithRole(FString::Printf(TEXT("AHeroCharacter::TakeDamage: %f"), ActualDamage));
+	
 
-
-
-// Affect the character
-
-void AHeroCharacter::AuthApplyDamage(uint32 InstigatorHeroControllerId, float Damage, FVector Location)
-{
-	//This must only run on a dedicated server or listen server
-
-	if (!HasAuthority()) return;
-
+	
+	// Subtract vitality. Take from Armour first, then Health
 	auto bHitArmour = false;
-
 	if (Armour > 0)
 	{
 		bHitArmour = true;
 
-		if (Damage > Armour)
+		if (ActualDamage > Armour)
 		{
-			const float DamageToHealth = Damage - Armour;
+			const float DamageToHealth = ActualDamage - Armour;
 			Armour = 0;
 			Health -= DamageToHealth;
 		}
 		else
 		{
-			Armour -= Damage;
+			Armour -= ActualDamage;
 		}
 	}
 	else
 	{
-		Health -= Damage;
+		Health -= ActualDamage;
 	}
 
-
-	FString S = FString::Printf(TEXT("%fhp"), Health);
-	//LogMsgWithRole(S);
+	//LogMsgWithRole(FString::Printf(TEXT("%fhp %fap"), Health, Armour));
 
 
+
+	// Handle being dead!
+	if (Health <= 0)
+	{
+		//MultiOnDeath();
+	}
+
+	
+	auto VictimController = GetHeroController();
+	const auto AttackerController = Cast<AHeroController>(EventInstigator);
+	
 	// Report hit to controller
-	auto HC = GetHeroController();
-	if (HC)
+	if (VictimController)
 	{
 		FMRHitResult Hit{};
-		Hit.ReceiverControllerId = HC->PlayerState->PlayerId;
-		Hit.AttackerControllerId = InstigatorHeroControllerId;
+		Hit.VictimId = VictimController->GetPlayerId();
+		Hit.AttackerId = AttackerController->GetPlayerId();
 		Hit.HealthRemaining = (int)Health;
-		Hit.DamageTaken = (int)Damage;
+		Hit.DamageTaken = (int)ActualDamage;
 		Hit.bHitArmour = bHitArmour;
-		Hit.HitLocation = Location;
+		Hit.HitLocation = GetActorLocation(); // TODO Get the actual location of the damage
 		//Hit.HitDirection
 
-		HC->TakeDamage2(Hit);
+		VictimController->TakeDamage2(Hit);
+	}
+	
+	return ActualDamage;
+}
+
+void AHeroCharacter::SetRagdollPhysics()
+{
+	bool bInRagdoll = false;
+
+	if (IsPendingKill())
+	{
+		bInRagdoll = false;
+	}
+	else if (!GetMesh() || !GetMesh()->GetPhysicsAsset())
+	{
+		bInRagdoll = false;
+	}
+	else
+	{
+		// initialize physics/etc
+		GetMesh()->SetSimulatePhysics(true);
+		GetMesh()->WakeAllRigidBodies();
+		GetMesh()->bBlendPhysics = true;
+
+		bInRagdoll = true;
+	}
+
+	//GetCharacterMovement()->StopMovementImmediately();
+	//GetCharacterMovement()->DisableMovement();
+	//GetCharacterMovement()->SetComponentTickEnabled(false);
+
+	if (!bInRagdoll)
+	{
+		// hide and set short lifespan
+		TurnOff();
+		SetActorHiddenInGame(true);
+		SetLifeSpan(1.0f);
+	}
+	else
+	{
+		SetLifeSpan(10.0f);
 	}
 }
+
 
 bool AHeroCharacter::CanGiveHealth()
 {
 	return Health < MaxHealth;
 }
-
 bool AHeroCharacter::AuthTryGiveHealth(float Hp)
 {
 	//LogMsgWithRole("TryGiveHealth");
@@ -1707,12 +1802,10 @@ bool AHeroCharacter::AuthTryGiveAmmo()
 	return false;
 }
 
-
 bool AHeroCharacter::CanGiveArmour()
 {
 	return Armour < MaxArmour;
 }
-
 bool AHeroCharacter::AuthTryGiveArmour(float Delta)
 {
 	//LogMsgWithRole("TryGiveArmour");
@@ -1736,7 +1829,6 @@ bool AHeroCharacter::AuthTryGiveWeapon(const TSubclassOf<AWeapon>& Class, FWeapo
 	GiveWeaponToPlayer(Class, Config);
 	return true;
 }
-
 bool AHeroCharacter::CanGiveWeapon(const TSubclassOf<AWeapon>& Class, OUT float& OutDelay)
 {
 	EInventorySlots GoodSlot = FindGoodWeaponSlot();
@@ -1775,7 +1867,6 @@ bool AHeroCharacter::CanGiveItem(const TSubclassOf<AItemBase>& Class, float& Out
 
 	return true;
 }
-
 bool AHeroCharacter::TryGiveItem(const TSubclassOf<AItemBase>& Class)
 {
 	LogMsgWithRole("AHeroCharacter::TryGiveItem");
@@ -1818,7 +1909,9 @@ FTransform AHeroCharacter::GetAimTransform() const
 }
 
 
-// Interacting
+
+
+//// Interacting //////////////////////////////////////////////////////////////
 
 void AHeroCharacter::Input_Interact()
 {
@@ -1846,14 +1939,12 @@ bool AHeroCharacter::ServerRPC_TryInteract_Validate()
 	return true;
 }
 
-
 template <class T>
 T* AHeroCharacter::ScanForInteractable()
 {
 	FHitResult Hit = GetFirstPhysicsBodyInReach();
 	return Cast<T>(Hit.GetActor());
 }
-
 
 FHitResult AHeroCharacter::GetFirstPhysicsBodyInReach() const
 {
