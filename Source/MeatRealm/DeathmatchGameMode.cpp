@@ -45,19 +45,19 @@ void ADeathmatchGameMode::PostLogin(APlayerController* NewPlayer)
 	Super::PostLogin(NewPlayer);
 	
 	const auto Hero = Cast<AHeroController>(NewPlayer);
-	ConnectedHeroControllers.Add(Hero->PlayerState->PlayerId, Hero);
+	ConnectedPlayers.Add(Hero->GetPlayerId(), Hero);
 
-	UE_LOG(LogTemp, Warning, TEXT("ConnectedHeroControllers: %d"), ConnectedHeroControllers.Num());
+	UE_LOG(LogTemp, Warning, TEXT("ConnectedHeroControllers: %d"), ConnectedPlayers.Num());
 }
 
 void ADeathmatchGameMode::Logout(AController* Exiting)
 {
 	const auto Hero = Cast<AHeroController>(Exiting);
 
-	ConnectedHeroControllers.Remove(Hero->PlayerState->PlayerId);
+	ConnectedPlayers.Remove(Hero->GetPlayerId());
 	Hero->GetHeroPlayerState()->HasLeftTheGame = true; // not using bIsInactive as it never replicates!
 
-	UE_LOG(LogTemp, Warning, TEXT("ConnectedHeroControllers: %d"), ConnectedHeroControllers.Num());
+	UE_LOG(LogTemp, Warning, TEXT("ConnectedHeroControllers: %d"), ConnectedPlayers.Num());
 
 	Super::Logout(Exiting);
 }
@@ -108,7 +108,7 @@ AActor* ADeathmatchGameMode::FindFurthestPlayerStart(AController* Controller)
 		APlayerStart* PlayerStart = *It;
 		float ClosestEnemyDist = BIG_NUMBER;
 
-		for (const TPair<uint32, AHeroController*>& pair : ConnectedHeroControllers)
+		for (const TPair<uint32, AHeroController*>& pair : ConnectedPlayers)
 		{
 			auto HChar = Cast<AHeroCharacter>(pair.Value->GetPawn());
 			if (HChar)
@@ -165,24 +165,24 @@ void ADeathmatchGameMode::OnPlayerTakeDamage(FMRHitResult Hit)
 
 	//UE_LOG(LogTemp, Warning, TEXT("TakeDamage %d"), Hit.DamageTaken);
 
-	if (!ConnectedHeroControllers.Contains(Hit.ReceiverControllerId))
+	if (!ConnectedPlayers.Contains(Hit.VictimId))
 	{
 		UE_LOG(LogTemp, Error, TEXT("ADeathmatchGameMode::OnPlayerTakeDamage cant find receiver controller!"));
 		return;
 	}
-	if (!ConnectedHeroControllers.Contains(Hit.AttackerControllerId))
+	if (!ConnectedPlayers.Contains(Hit.AttackerId))
 	{
 		UE_LOG(LogTemp, Error, TEXT("ADeathmatchGameMode::OnPlayerTakeDamage cant find attacker controller!"));
 		return;
 	}
 
-	const auto AttackerController = ConnectedHeroControllers[Hit.AttackerControllerId];
+	const auto AttackerController = ConnectedPlayers[Hit.AttackerId];
 	// TODO Route hit location through OnPlayerTakeDamage. Probs time to introduce a hit struct!
 	
 	AttackerController->SimulateHitGiven(Hit);
 
 
-	const auto ReceivingController = ConnectedHeroControllers[Hit.ReceiverControllerId];
+	const auto ReceivingController = ConnectedPlayers[Hit.VictimId];
 	
 
 	if (Hit.HealthRemaining <= 0)
@@ -202,7 +202,7 @@ void ADeathmatchGameMode::OnPlayerTakeDamage(FMRHitResult Hit)
 				DeadChar->Destroy();
 			}
 
-			RestartPlayer(ReceivingController);
+			RestartPlayer(ReceivingController); // TODO Delay this - Better yet, look at how ShooterGame is officially doing this.
 		}
 
 		AddKillfeedEntry(AttackerController, ReceivingController);

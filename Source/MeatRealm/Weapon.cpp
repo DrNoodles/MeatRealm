@@ -277,7 +277,7 @@ bool AWeapon::SpawnAProjectile(const FVector& Direction)
 		UE_LOG(LogTemp, Error, TEXT("Set a Projectile Class in your Weapon Blueprint to shoot"));
 		return false;
 	}
-	
+
 	UWorld* World = GetWorld();
 	if (World == nullptr) { return false; }
 
@@ -287,31 +287,24 @@ bool AWeapon::SpawnAProjectile(const FVector& Direction)
 
 	auto Hero = Cast<AHeroCharacter>(GetOwningPawn());
 	if (!Hero) return false;
-	const auto ProjectileStartTform = Hero->GetAimTransform();
+	
+	const FTransform SpawnTF{ Direction.Rotation(), Hero->GetAimTransform().GetLocation() };
 
-
-
-
+	
 	// Spawn the projectile at the muzzle.
-	AProjectile* Projectile = World->SpawnActorDeferred<AProjectile>(
-		ProjectileClass,
-		ProjectileStartTform,
-		GetOwner(),
-		Instigator,
-		ESpawnActorCollisionHandlingMethod::AlwaysSpawn);
-	if (Projectile == nullptr) { return false; }
+	auto Projectile = (AProjectile*)UGameplayStatics::BeginDeferredActorSpawnFromClass(this, ProjectileClass, SpawnTF, ESpawnActorCollisionHandlingMethod::AlwaysSpawn);
+	
+	if (Projectile == nullptr)
+	{
+		return false;
+	}
 
-
-	// Configure it
 	Projectile->SetHeroControllerId(HeroControllerId);
+	Projectile->Instigator = Instigator;
+	Projectile->SetOwner(this);	//Projectile->SetOwner(GetOwner());
+	//Projectile->InitVelocity(Direction);
 
-
-	// Fire it!
-	UGameplayStatics::FinishSpawningActor(
-		Projectile,
-		ProjectileStartTform);
-
-	Projectile->FireInDirection(Direction);
+	UGameplayStatics::FinishSpawningActor(Projectile, SpawnTF);
 
 	return true;
 }
