@@ -23,9 +23,7 @@ class MEATREALM_API IAffectableInterface
 	GENERATED_BODY()
 
 public: // NOTE This interface breaks the I in SOLID. But it'll do for now.
-	UFUNCTION()
-		virtual void AuthApplyDamage(uint32 InstigatorHeroControllerId, float Delta, FVector Location) = 0;
-
+	
 	UFUNCTION()
 		virtual bool CanGiveHealth() = 0;
 	UFUNCTION()
