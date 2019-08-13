@@ -57,9 +57,12 @@ public:
 	void OnPossess(APawn* InPawn) override;
 	void AcknowledgePossession(APawn* P) override;
 	void OnUnPossess() override;
-
+	void InstigatedAnyDamage(float Damage, const UDamageType* DamageType, AActor* DamagedActor, AActor* DamageCauser) override;
+	
 	AHeroState* GetHeroPlayerState() const;
 	AHeroCharacter* GetHeroCharacter() const;
+	uint32 GetPlayerId() const;
+
 	void CreateHud();
 	void DestroyHud();
 
@@ -75,6 +78,7 @@ public:
 
 	UFUNCTION(Client, Reliable)
 	void ClientRPC_NotifyOnTakenDamage(const FMRHitResult& Hit);
+	
 
 
 	//DECLARE_EVENT_TwoParams(AHeroController, FHealthDepleted, uint32, uint32)
