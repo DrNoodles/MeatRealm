@@ -132,11 +132,20 @@ void AProjectile::AoeDamage(const FHitResult& Hit)
 
 	UE_LOG(LogTemp, Warning, TEXT("RadialDmgWasGiven: %s"), *FString{ RadialDmgWasGiven ? "True" : "False" });
 
-
+	
+	// Spawn hit effect
+	const FTransform Transform{ Hit.Location };
+	FActorSpawnParameters SpawnParameters{};
+	SpawnParameters.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+	AActor* FX = GetWorld()->SpawnActorAbsolute(EffectClass, Transform, SpawnParameters);
+	if (!FX)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("Why?"));
+	}
+	
 	
 	if (bDebugVisualiseAoe)
 	{
-		const FTransform Transform{ Hit.Location };
 		const auto DebugEffect = UGameplayStatics::BeginDeferredActorSpawnFromClass(
 			GetWorld(),
 			DebugVisClass,
@@ -170,4 +179,10 @@ void AProjectile::PointDamage(AActor* OtherActor, const FHitResult& Hit)
 	//UE_LOG(LogTemp, Warning, TEXT("FoundDmgInstigator: %s"), *FString{ DmgInstigator ? "True" : "False" });
 
 	UGameplayStatics::ApplyPointDamage(Affected, ShotDamage, Hit.ImpactNormal, Hit, DmgInstigator, this, UDamageType::StaticClass());
+
+	// Spawn hit effect
+	const FTransform Transform{ Hit.Location };
+	FActorSpawnParameters SpawnParameters{};
+	SpawnParameters.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+	GetWorld()->SpawnActorAbsolute(EffectClass, Transform, SpawnParameters);
 }
