@@ -78,7 +78,12 @@ void AProjectile::OnCompHit(UPrimitiveComponent* HitComponent, AActor* OtherActo
 	//}
 
 
-	if (bIsAoe) AoeDamage(Hit.Location);
+	if (bIsAoe)
+	{
+		const FVector NudgedImpactLocation = Hit.ImpactPoint + Hit.ImpactNormal * 10.0f;
+		AoeDamage(NudgedImpactLocation);
+		//AoeDamage(Hit.Location);
+	}
 	Destroy();
 }
 
@@ -100,7 +105,8 @@ void AProjectile::OnCompBeginOverlap(UPrimitiveComponent* OverlappedComp, AActor
 
 	if (bIsAoe)
 	{
-		AoeDamage(SweepResult.Location);
+		const FVector NudgedImpactLocation = SweepResult.ImpactPoint + SweepResult.ImpactNormal * 10.0f;
+		AoeDamage(NudgedImpactLocation);
 	}
 	else // Point Damage
 	{
@@ -124,7 +130,7 @@ void AProjectile::AoeDamage(const FVector& Location)
 
 	AController* DmgInstigator = GetInstigatorController();
 	//UE_LOG(LogTemp, Warning, TEXT("FoundDmgInstigator: %s"), *FString{ DmgInstigator ? "True" : "False" });
-
+	
 	const bool RadialDmgWasGiven = UGameplayStatics::ApplyRadialDamageWithFalloff(
 		GetWorld(), ShotDamage, 1, Location,
 		InnerRadius, OuterRadius, Falloff, UDamageType::StaticClass(),

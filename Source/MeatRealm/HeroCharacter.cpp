@@ -1130,6 +1130,8 @@ AWeapon* AHeroCharacter::AuthSpawnWeapon(TSubclassOf<AWeapon> weaponClass, FWeap
 	}
 
 	Weapon->ConfigWeapon(Config);
+
+	UE_LOG(LogTemp, Warning, TEXT("AuthSpawnWeapon GetPlayerId"));
 	Weapon->SetHeroControllerId(GetHeroController()->GetPlayerId());
 
 	UGameplayStatics::FinishSpawningActor(Weapon, TF);
@@ -1606,7 +1608,11 @@ void AHeroCharacter::MultiOnDeath_Implementation()
 
 	GetMesh()->VisibilityBasedAnimTickOption = EVisibilityBasedAnimTickOption::AlwaysTickPoseAndRefreshBones;
 
-	DestroyInventory();
+	if (HasAuthority())
+	{
+		SpawnHeldWeaponsAsPickups();
+		DestroyInventory();
+	}
 
 	// TODO Switch to 3rd person view of death
 
@@ -1619,6 +1625,7 @@ void AHeroCharacter::MultiOnDeath_Implementation()
 		static FName CollisionProfileName(TEXT("Ragdoll"));
 		GetMesh()->SetCollisionProfileName(CollisionProfileName);
 	}
+
 	
 	SetActorEnableCollision(true);
 
@@ -1628,10 +1635,15 @@ void AHeroCharacter::MultiOnDeath_Implementation()
 	GetCapsuleComponent()->SetCollisionEnabled(ECollisionEnabled::NoCollision);
 	GetCapsuleComponent()->SetCollisionResponseToAllChannels(ECR_Ignore);
 
-	GetMesh()->AddRadialImpulse(GetMesh()->GetComponentLocation(), 100, 1000, ERadialImpulseFalloff::RIF_Linear);
-	//LaunchCharacter(FVector{ 10000,1000,1000 }, true, true);
-}
+	auto fn = [&] {
+		GetMesh()->AddRadialImpulse(FVector::ZeroVector, 10000, 1000, ERadialImpulseFalloff::RIF_Constant);
+		LaunchCharacter(FVector{ 10000,1000,1000 }, true, true);
+	};
+	
+	FTimerHandle TimerHandle;
+	GetWorldTimerManager().SetTimer(TimerHandle, fn, 1, false);
 
+}
 bool AHeroCharacter::MultiOnDeath_Validate()
 {
 	return true;
@@ -1676,14 +1688,14 @@ float AHeroCharacter::TakeDamage(float DamageAmount, FDamageEvent const& DamageE
 		Health -= ActualDamage;
 	}
 
-	//LogMsgWithRole(FString::Printf(TEXT("%fhp %fap"), Health, Armour));
+	LogMsgWithRole(FString::Printf(TEXT("%fhp %fap"), Health, Armour));
 
 
 
 	// Handle being dead!
 	if (Health <= 0)
 	{
-		//MultiOnDeath();
+		MultiOnDeath();
 	}
 
 	
@@ -1694,7 +1706,10 @@ float AHeroCharacter::TakeDamage(float DamageAmount, FDamageEvent const& DamageE
 	if (VictimController)
 	{
 		FMRHitResult Hit{};
+
+		UE_LOG(LogTemp, Warning, TEXT("TakeDamage Victim.GetPlayerId"));
 		Hit.VictimId = VictimController->GetPlayerId();
+		UE_LOG(LogTemp, Warning, TEXT("TakeDamage Attacker.GetPlayerId"));
 		Hit.AttackerId = AttackerController->GetPlayerId();
 		Hit.HealthRemaining = (int)Health;
 		Hit.DamageTaken = (int)ActualDamage;
@@ -1730,9 +1745,9 @@ void AHeroCharacter::SetRagdollPhysics()
 		bInRagdoll = true;
 	}
 
-	//GetCharacterMovement()->StopMovementImmediately();
-	//GetCharacterMovement()->DisableMovement();
-	//GetCharacterMovement()->SetComponentTickEnabled(false);
+	GetCharacterMovement()->StopMovementImmediately();
+	GetCharacterMovement()->DisableMovement();
+	GetCharacterMovement()->SetComponentTickEnabled(false);
 
 	if (!bInRagdoll)
 	{

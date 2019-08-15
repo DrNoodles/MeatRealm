@@ -27,6 +27,8 @@ ADeathmatchGameMode::ADeathmatchGameMode()
 	PlayerStateClass = AHeroState::StaticClass();
 	GameStateClass = ADeathmatchGameState::StaticClass();
 
+	MinRespawnDelay = 3;
+	
 	bStartPlayersAsSpectators = false;
 
 	PlayerTints.Add(FColor{   0,167,226 });// Sky
@@ -143,6 +145,15 @@ void ADeathmatchGameMode::RestartPlayer(AController* NewPlayer)
 		return;
 	}
 
+	//const auto HeroController = Cast<AHeroController>(NewPlayer);
+	//AHeroCharacter* DeadChar = HeroController ? HeroController->GetHeroCharacter() : nullptr;
+	//if (DeadChar)
+	//{
+	//	DeadChar->SpawnHeldWeaponsAsPickups();
+	//	DeadChar->Destroy();
+	//}
+
+	
 	AActor* StartSpot = FindFurthestPlayerStart(NewPlayer);
 
 	// If a start spot wasn't found,
@@ -163,7 +174,7 @@ void ADeathmatchGameMode::OnPlayerTakeDamage(FMRHitResult Hit)
 {
 	if (!HasAuthority()) return;
 
-	//UE_LOG(LogTemp, Warning, TEXT("TakeDamage %d"), Hit.DamageTaken);
+	UE_LOG(LogTemp, Warning, TEXT("TakeDamage %d"), Hit.DamageTaken);
 
 	if (!ConnectedPlayers.Contains(Hit.VictimId))
 	{
@@ -194,14 +205,6 @@ void ADeathmatchGameMode::OnPlayerTakeDamage(FMRHitResult Hit)
 		if (ReceivingController)
 		{
 			ReceivingController->GetPlayerState<AHeroState>()->Deaths++;
-
-			AHeroCharacter* DeadChar = ReceivingController->GetHeroCharacter();
-			if (DeadChar)
-			{
-				DeadChar->SpawnHeldWeaponsAsPickups();
-				DeadChar->Destroy();
-			}
-
 			RestartPlayer(ReceivingController); // TODO Delay this - Better yet, look at how ShooterGame is officially doing this.
 		}
 
