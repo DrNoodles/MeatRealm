@@ -1407,6 +1407,9 @@ void AHeroCharacter::DestroyInventory()
 	{
 		AP->Destroy();
 	}
+
+	HealthSlot.Empty();
+	ArmourSlot.Empty();
 }
 
 
