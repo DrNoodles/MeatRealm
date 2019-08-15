@@ -1600,6 +1600,8 @@ bool AHeroCharacter::ShouldTakeDamage(float Damage, FDamageEvent const& DamageEv
 
 void AHeroCharacter::MultiOnDeath_Implementation()
 {
+	
+
 	// Tweak networking
 	NetUpdateFrequency = GetDefault<AHeroCharacter>()->NetUpdateFrequency;
 	bReplicateMovement = false;
@@ -1635,14 +1637,17 @@ void AHeroCharacter::MultiOnDeath_Implementation()
 	GetCapsuleComponent()->SetCollisionEnabled(ECollisionEnabled::NoCollision);
 	GetCapsuleComponent()->SetCollisionResponseToAllChannels(ECR_Ignore);
 
+
+	// TODO Add an impulse to fling the ragdoll
 	auto fn = [&] {
-		GetMesh()->AddRadialImpulse(FVector::ZeroVector, 10000, 1000, ERadialImpulseFalloff::RIF_Constant);
-		LaunchCharacter(FVector{ 10000,1000,1000 }, true, true);
+		Destroy();
+
+		//GetMesh()->AddRadialImpulse(FVector::ZeroVector, 10000, 1000, ERadialImpulseFalloff::RIF_Constant);
+		//LaunchCharacter(FVector{ 10000,1000,1000 }, true, true);
 	};
 	
 	FTimerHandle TimerHandle;
-	GetWorldTimerManager().SetTimer(TimerHandle, fn, 1, false);
-
+	GetWorldTimerManager().SetTimer(TimerHandle, fn, 10, false);
 }
 bool AHeroCharacter::MultiOnDeath_Validate()
 {
@@ -1695,6 +1700,7 @@ float AHeroCharacter::TakeDamage(float DamageAmount, FDamageEvent const& DamageE
 	// Handle being dead!
 	if (Health <= 0)
 	{
+		//SetLifeSpan(5); // TODO Find why this isn't working! Maybe a reference held somewhere?
 		MultiOnDeath();
 	}
 
@@ -1754,11 +1760,11 @@ void AHeroCharacter::SetRagdollPhysics()
 		// hide and set short lifespan
 		TurnOff();
 		SetActorHiddenInGame(true);
-		SetLifeSpan(1.0f);
+		//SetLifeSpan(1.0f);
 	}
 	else
 	{
-		SetLifeSpan(10.0f);
+		//SetLifeSpan(10.0f);
 	}
 }
 
