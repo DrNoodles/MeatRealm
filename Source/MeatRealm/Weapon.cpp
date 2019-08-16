@@ -285,14 +285,17 @@ bool AWeapon::SpawnAProjectile(const FVector& Direction)
 
 	//const auto ProjectileStartTform = MuzzleLocationComp->GetComponentTransform();
 
-	auto Hero = Cast<AHeroCharacter>(GetOwningPawn());
+	const auto Hero = Cast<AHeroCharacter>(GetOwningPawn());
 	if (!Hero) return false;
-	
-	const FTransform SpawnTF{ Direction.Rotation(), Hero->GetAimTransform().GetLocation() };
 
+
+	// Offset the aim up or down
+	const FRotator DirectionWithPitch{ PitchAimOffset, FMath::RadiansToDegrees(Direction.HeadingAngle()), 0 };
+	
+	const FTransform SpawnTransform{ DirectionWithPitch, Hero->GetAimTransform().GetLocation() };
 	
 	// Spawn the projectile at the muzzle.
-	auto Projectile = (AProjectile*)UGameplayStatics::BeginDeferredActorSpawnFromClass(this, ProjectileClass, SpawnTF, ESpawnActorCollisionHandlingMethod::AlwaysSpawn);
+	auto Projectile = (AProjectile*)UGameplayStatics::BeginDeferredActorSpawnFromClass(this, ProjectileClass, SpawnTransform, ESpawnActorCollisionHandlingMethod::AlwaysSpawn);
 	
 	if (Projectile == nullptr)
 	{
@@ -304,24 +307,25 @@ bool AWeapon::SpawnAProjectile(const FVector& Direction)
 	Projectile->SetOwner(this);	//Projectile->SetOwner(GetOwner());
 	//Projectile->InitVelocity(Direction);
 
-	UGameplayStatics::FinishSpawningActor(Projectile, SpawnTF);
+	UGameplayStatics::FinishSpawningActor(Projectile, SpawnTransform);
 
 	return true;
 }
 FVector AWeapon::GetBarrelDirection()
 {
-	//AActor* OwningPawn = GetOwningPawn();
-
-	auto Hero = Cast<AHeroCharacter>(GetOwningPawn());
+	FVector AimVec;
+	
+	const auto Hero = Cast<AHeroCharacter>(GetOwningPawn());
 	if (Hero)
-		return Hero->GetAimTransform().GetRotation().Vector();
-
-	//return FVector::ZeroVector;
-	// We are using the actor facing direction so that animation doesn't affect the weapon's firing mechanics
-//	return OwningPawn ? OwningPawn->GetActorForwardVector() : FVector::ZeroVector;
-
-	// Plan B
-	return MuzzleLocationComp->GetForwardVector();
+	{
+		AimVec = Hero->GetAimTransform().GetRotation().Vector();
+	}
+	else // Plan B
+	{
+		AimVec = MuzzleLocationComp->GetForwardVector();
+	}
+	
+	return AimVec;
 }
 FVector AWeapon::GetBarrelLocation()
 {
