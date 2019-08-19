@@ -324,6 +324,8 @@ public:
 	float GetRunningReloadSpeed() const { return RunningReloadSpeed; }
 
 
+	UFUNCTION(NetMulticast, Reliable, WithValidation)
+		void MultiOnDeath();
 
 private:
 
@@ -353,8 +355,6 @@ private:
 	UFUNCTION(Server, Reliable, WithValidation)
 		void ServerEquipArmour();
 
-	UFUNCTION(NetMulticast, Reliable, WithValidation)
-		void MultiOnDeath();
 
 
 	void OnRunToggle();

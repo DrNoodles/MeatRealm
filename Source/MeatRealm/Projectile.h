@@ -19,8 +19,8 @@ class MEATREALM_API AProjectile : public AActor
 public:
 	AProjectile();
 
-	void SetHeroControllerId(uint32 HeroContId) { HeroControllerId = HeroContId; }
-
+	void SetInstigatingControllerId(uint32 Id) { InstigatingControllerId = Id; }
+	uint32 GetInstigatingControllerId() const { return InstigatingControllerId; }
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly)
 	TSubclassOf<AActor> EffectClass;
@@ -78,5 +78,5 @@ private:
 	UPROPERTY(VisibleAnywhere, Category = Movement)
 	UProjectileMovementComponent* ProjectileMovementComp;
 
-	uint32 HeroControllerId;
+	uint32 InstigatingControllerId;
 };

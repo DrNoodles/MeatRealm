@@ -84,7 +84,12 @@ void AProjectile::OnCompHit(UPrimitiveComponent* HitComponent, AActor* OtherActo
 		AoeDamage(NudgedImpactLocation);
 		//AoeDamage(Hit.Location);
 	}
-	Destroy();
+
+	ProjectileMovementComp->StopMovementImmediately();
+	// give clients some time to show explosion
+	SetLifeSpan(2.0f);
+	//Destroy();
+
 }
 
 
@@ -119,7 +124,11 @@ void AProjectile::OnCompBeginOverlap(UPrimitiveComponent* OverlappedComp, AActor
 		PointDamage(OtherActor, SweepResult);
 	}
 
-	Destroy();
+
+	ProjectileMovementComp->StopMovementImmediately();
+	
+	SetLifeSpan(2.0f); // give clients some time to show explosion
+	//Destroy();
 }
 
 void AProjectile::AoeDamage(const FVector& Location)

@@ -145,13 +145,13 @@ void ADeathmatchGameMode::RestartPlayer(AController* NewPlayer)
 		return;
 	}
 
-	//const auto HeroController = Cast<AHeroController>(NewPlayer);
-	//AHeroCharacter* DeadChar = HeroController ? HeroController->GetHeroCharacter() : nullptr;
-	//if (DeadChar)
-	//{
-	//	DeadChar->SpawnHeldWeaponsAsPickups();
-	//	DeadChar->Destroy();
-	//}
+	const auto HeroController = Cast<AHeroController>(NewPlayer);
+	AHeroCharacter* DeadChar = HeroController ? HeroController->GetHeroCharacter() : nullptr;
+	if (DeadChar)
+	{
+		DeadChar->SpawnHeldWeaponsAsPickups();
+		DeadChar->MultiOnDeath();
+	}
 
 	
 	AActor* StartSpot = FindFurthestPlayerStart(NewPlayer);

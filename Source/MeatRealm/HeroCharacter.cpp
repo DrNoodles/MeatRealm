@@ -23,6 +23,7 @@
 #include "Engine/World.h"
 #include "DrawDebugHelpers.h"
 #include "Interfaces/Equippable.h"
+#include "Projectile.h"
 
 /// Lifecycle
 
@@ -1013,14 +1014,14 @@ void AHeroCharacter::GiveItemToPlayer(TSubclassOf<AItemBase> ItemClass)
 	check(HasAuthority() && GetWorld() && ItemClass)
 
 
-		// Spawn the item at the hand socket
-		const auto TF = GetMesh()->GetSocketTransform(HandSocketName, RTS_World);
-		auto* Item = GetWorld()->SpawnActorDeferred<AItemBase>(
-		ItemClass,
-		TF,
-		this, // owner actor
-		this, // instigator pawn
-		ESpawnActorCollisionHandlingMethod::AlwaysSpawn);
+	// Spawn the item at the hand socket
+	const auto TF = GetMesh()->GetSocketTransform(HandSocketName, RTS_World);
+	auto* Item = GetWorld()->SpawnActorDeferred<AItemBase>(
+	ItemClass,
+	TF,
+	this, // owner actor
+	this, // instigator pawn
+	ESpawnActorCollisionHandlingMethod::AlwaysSpawn);
 
 	UGameplayStatics::FinishSpawningActor(Item, TF);
 
@@ -1599,8 +1600,6 @@ bool AHeroCharacter::ShouldTakeDamage(float Damage, FDamageEvent const& DamageEv
 	return Super::ShouldTakeDamage(Damage, DamageEvent, EventInstigator, DamageCauser);
 }
 
-
-
 void AHeroCharacter::MultiOnDeath_Implementation()
 {
 	
@@ -1643,7 +1642,8 @@ void AHeroCharacter::MultiOnDeath_Implementation()
 
 	// TODO Add an impulse to fling the ragdoll
 	auto fn = [&] {
-		Destroy();
+		if (!IsActorBeingDestroyed())
+			Destroy();
 
 		//GetMesh()->AddRadialImpulse(FVector::ZeroVector, 10000, 1000, ERadialImpulseFalloff::RIF_Constant);
 		//LaunchCharacter(FVector{ 10000,1000,1000 }, true, true);
@@ -1699,32 +1699,25 @@ float AHeroCharacter::TakeDamage(float DamageAmount, FDamageEvent const& DamageE
 	LogMsgWithRole(FString::Printf(TEXT("%fhp %fap"), Health, Armour));
 
 
-
-	// Handle being dead!
-	if (Health <= 0)
-	{
-		//SetLifeSpan(5); // TODO Find why this isn't working! Maybe a reference held somewhere?
-		MultiOnDeath();
-	}
-
 	
+
 	auto VictimController = GetHeroController();
-	const auto AttackerController = Cast<AHeroController>(EventInstigator);
+
+
+	const auto Projectile = Cast<AProjectile>(DamageCauser);
+	if (Projectile == nullptr) 
+		UE_LOG(LogTemp, Error, TEXT("AHeroCharacter - Projectile IS NULL! WTF"));
 	
 	// Report hit to controller
 	if (VictimController)
 	{
 		FMRHitResult Hit{};
-
-		UE_LOG(LogTemp, Warning, TEXT("TakeDamage Victim.GetPlayerId"));
 		Hit.VictimId = VictimController->GetPlayerId();
-		UE_LOG(LogTemp, Warning, TEXT("TakeDamage Attacker.GetPlayerId"));
-		Hit.AttackerId = AttackerController->GetPlayerId();
+		Hit.AttackerId = Projectile ? Projectile->GetInstigatingControllerId() : -1;
 		Hit.HealthRemaining = (int)Health;
 		Hit.DamageTaken = (int)ActualDamage;
 		Hit.bHitArmour = bHitArmour;
 		Hit.HitLocation = GetActorLocation(); // TODO Get the actual location of the damage
-		//Hit.HitDirection
 
 		VictimController->TakeDamage2(Hit);
 	}
