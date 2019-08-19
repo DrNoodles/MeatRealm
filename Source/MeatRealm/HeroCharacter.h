@@ -323,12 +323,15 @@ public:
 	
 	float GetRunningReloadSpeed() const { return RunningReloadSpeed; }
 
-
-	UFUNCTION(NetMulticast, Reliable, WithValidation)
-		void MultiOnDeath();
+	void AuthOnDeath();
 
 private:
 
+	UFUNCTION(NetMulticast, Reliable, WithValidation)
+	void MultiOnDeath();
+	
+	void OnDeathImpl();
+	
 	void SetRagdollPhysics();
 
 	bool RemoveEquippableFromInventory(IEquippable* Equippable);

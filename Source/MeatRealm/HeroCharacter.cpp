@@ -1594,16 +1594,26 @@ FVector2D AHeroCharacter::GetGameViewportSize()
 
 //// Affect the character /////////////////////////////////////////////////////
 
-bool AHeroCharacter::ShouldTakeDamage(float Damage, FDamageEvent const& DamageEvent, AController* EventInstigator,
-	AActor* DamageCauser) const
+void AHeroCharacter::AuthOnDeath()
 {
-	return Super::ShouldTakeDamage(Damage, DamageEvent, EventInstigator, DamageCauser);
-}
+	check(HasAuthority());
+	OnDeathImpl();
 
+	// Inform clients
+	MultiOnDeath();
+}
 void AHeroCharacter::MultiOnDeath_Implementation()
 {
+	if (HasAuthority()) return;
 	
-
+	OnDeathImpl();
+}
+bool AHeroCharacter::MultiOnDeath_Validate()
+{
+	return true;
+}
+void AHeroCharacter::OnDeathImpl()
+{
 	// Tweak networking
 	NetUpdateFrequency = GetDefault<AHeroCharacter>()->NetUpdateFrequency;
 	bReplicateMovement = false;
@@ -1630,7 +1640,7 @@ void AHeroCharacter::MultiOnDeath_Implementation()
 		GetMesh()->SetCollisionProfileName(CollisionProfileName);
 	}
 
-	
+
 	SetActorEnableCollision(true);
 
 	SetRagdollPhysics();
@@ -1648,13 +1658,15 @@ void AHeroCharacter::MultiOnDeath_Implementation()
 		//GetMesh()->AddRadialImpulse(FVector::ZeroVector, 10000, 1000, ERadialImpulseFalloff::RIF_Constant);
 		//LaunchCharacter(FVector{ 10000,1000,1000 }, true, true);
 	};
-	
+
 	FTimerHandle TimerHandle;
 	GetWorldTimerManager().SetTimer(TimerHandle, fn, 10, false);
 }
-bool AHeroCharacter::MultiOnDeath_Validate()
+
+bool AHeroCharacter::ShouldTakeDamage(float Damage, FDamageEvent const& DamageEvent, AController* EventInstigator,
+	AActor* DamageCauser) const
 {
-	return true;
+	return Super::ShouldTakeDamage(Damage, DamageEvent, EventInstigator, DamageCauser);
 }
 
 float AHeroCharacter::TakeDamage(float DamageAmount, FDamageEvent const& DamageEvent, AController* EventInstigator,

@@ -27,7 +27,7 @@ ADeathmatchGameMode::ADeathmatchGameMode()
 	PlayerStateClass = AHeroState::StaticClass();
 	GameStateClass = ADeathmatchGameState::StaticClass();
 
-	MinRespawnDelay = 3;
+	MinRespawnDelay = 2;
 	
 	bStartPlayersAsSpectators = false;
 
@@ -145,14 +145,6 @@ void ADeathmatchGameMode::RestartPlayer(AController* NewPlayer)
 		return;
 	}
 
-	const auto HeroController = Cast<AHeroController>(NewPlayer);
-	AHeroCharacter* DeadChar = HeroController ? HeroController->GetHeroCharacter() : nullptr;
-	if (DeadChar)
-	{
-		DeadChar->SpawnHeldWeaponsAsPickups();
-		DeadChar->MultiOnDeath();
-	}
-
 	
 	AActor* StartSpot = FindFurthestPlayerStart(NewPlayer);
 
@@ -205,7 +197,17 @@ void ADeathmatchGameMode::OnPlayerTakeDamage(FMRHitResult Hit)
 		if (ReceivingController)
 		{
 			ReceivingController->GetPlayerState<AHeroState>()->Deaths++;
-			RestartPlayer(ReceivingController); // TODO Delay this - Better yet, look at how ShooterGame is officially doing this.
+
+
+			//const auto HeroController = Cast<AHeroController>(ReceivingController);
+			AHeroCharacter* DeadChar = ReceivingController ? ReceivingController->GetHeroCharacter() : nullptr;
+			if (DeadChar)
+			{
+				DeadChar->AuthOnDeath();
+			}
+
+			
+			//RestartPlayer(ReceivingController); // TODO Delay this - Better yet, look at how ShooterGame is officially doing this.
 		}
 
 		AddKillfeedEntry(AttackerController, ReceivingController);

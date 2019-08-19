@@ -45,7 +45,6 @@ AProjectile::AProjectile()
 	// TODO Show a billboard if by default on the placeholder
 }
 
-
 void AProjectile::InitVelocity(const FVector& ShootDirection)
 {
 	ProjectileMovementComp->Velocity	= ShootDirection * ProjectileMovementComp->InitialSpeed;
@@ -85,13 +84,8 @@ void AProjectile::OnCompHit(UPrimitiveComponent* HitComponent, AActor* OtherActo
 		//AoeDamage(Hit.Location);
 	}
 
-	ProjectileMovementComp->StopMovementImmediately();
-	// give clients some time to show explosion
-	SetLifeSpan(2.0f);
-	//Destroy();
-
+	KillProjectile();
 }
-
 
 void AProjectile::OnCompBeginOverlap(UPrimitiveComponent* OverlappedComp, AActor* OtherActor,
 	UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult)
@@ -125,10 +119,7 @@ void AProjectile::OnCompBeginOverlap(UPrimitiveComponent* OverlappedComp, AActor
 	}
 
 
-	ProjectileMovementComp->StopMovementImmediately();
-	
-	SetLifeSpan(2.0f); // give clients some time to show explosion
-	//Destroy();
+	KillProjectile();
 }
 
 void AProjectile::AoeDamage(const FVector& Location)
@@ -211,13 +202,21 @@ void AProjectile::BeginPlay()
 	}
 }
 
+void AProjectile::KillProjectile()
+{
+	GetWorldTimerManager().ClearTimer(DetonationTimerHandle);
+	ProjectileMovementComp->StopMovementImmediately();
+	CollisionComp->SetCollisionResponseToAllChannels(ECollisionResponse::ECR_Ignore);
+	SetLifeSpan(2.0f);
+}
+
 void AProjectile::Detonate()
 {
 	check(HasAuthority())
 	
-	if (bIsAoe) AoeDamage(GetActorLocation());
-	Destroy();
+	if (bIsAoe) 
+		AoeDamage(GetActorLocation());
 
-	GetWorldTimerManager().ClearTimer(DetonationTimerHandle);
+	KillProjectile();
 }
 
