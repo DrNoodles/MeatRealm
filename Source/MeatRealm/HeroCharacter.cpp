@@ -1389,7 +1389,7 @@ void AHeroCharacter::DestroyInventory()
 	if (bInventoryDestroyed)
 	{
 		LogMsgWithRole("Attempted to destroy already destoryed inventory!");
-		UE_LOG(LogTemp, Error, "Attempted to destroy already destoryed inventory!");
+		UE_LOG(LogTemp, Error, TEXT("Attempted to destroy already destoryed inventory!"));
 		return;
 	}
 
@@ -1412,7 +1412,7 @@ void AHeroCharacter::DestroyInventory()
 		if (HP)
 			HP->Destroy();
 		else
-			UE_LOG(LogTemp, Error, "Attempted to destroy HP slot item that's null");
+			UE_LOG(LogTemp, Error, TEXT("Attempted to destroy HP slot item that's null"));
 	}
 
 	for (auto* AP : ArmourSlot)
@@ -1420,7 +1420,7 @@ void AHeroCharacter::DestroyInventory()
 		if (AP)
 			AP->Destroy();
 		else
-			UE_LOG(LogTemp, Error, "Attempted to destroy HP slot item that's null");
+			UE_LOG(LogTemp, Error, TEXT("Attempted to destroy HP slot item that's null"));
 	}
 
 	HealthSlot.Empty();
