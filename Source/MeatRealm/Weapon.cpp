@@ -272,6 +272,8 @@ void AWeapon::OnReloadProgressChanged(float ReloadProgress)
 }
 bool AWeapon::SpawnAProjectile(const FVector& Direction)
 {
+	check(HasAuthority());
+	
 	if (ProjectileClass == nullptr)
 	{
 		UE_LOG(LogTemp, Error, TEXT("Set a Projectile Class in your Weapon Blueprint to shoot"));
@@ -302,7 +304,7 @@ bool AWeapon::SpawnAProjectile(const FVector& Direction)
 		return false;
 	}
 
-	Projectile->SetHeroControllerId(HeroControllerId);
+	Projectile->SetInstigatingControllerId(HeroControllerId);
 	Projectile->Instigator = Instigator;
 	Projectile->SetOwner(this);	//Projectile->SetOwner(GetOwner());
 	//Projectile->InitVelocity(Direction);

@@ -25,6 +25,12 @@ bool AHeroController::IsGameInputAllowed() const
 	return bAllowGameActions;
 }
 
+void AHeroController::UnFreeze()
+{
+	LogMsgWithRole("Unfreeze");
+	ServerRestartPlayer();
+}
+
 void AHeroController::OnPossess(APawn* InPawn)
 {
 	// Called on server upon possessing a pawn
@@ -124,7 +130,7 @@ void AHeroController::TakeDamage2(const FMRHitResult& Hit)
 	// Encorce only callers with authority
 	if (!HasAuthority()) return;
 
-	//LogMsgWithRole("AHeroController::TakeDamage");
+	LogMsgWithRole("AHeroController::TakeDamage");
 
 
 	// Update ame state
@@ -140,6 +146,8 @@ void AHeroController::TakeDamage2(const FMRHitResult& Hit)
 	if (DM) DM->OnPlayerTakeDamage(Hit);
 
 
+	
+	
 	// Do client side effects!
 	ClientRPC_NotifyOnTakenDamage(Hit);
 }
@@ -383,7 +391,7 @@ void AHeroController::SetUseMouseaim(bool bUseMouseAim)
 
 // Helpers
 
-void AHeroController::LogMsgWithRole(FString message)
+void AHeroController::LogMsgWithRole(FString message) const
 {
 	FString m = GetRoleText() + ": " + message;
 	UE_LOG(LogTemp, Warning, TEXT("%s"), *m);
@@ -404,7 +412,7 @@ FString AHeroController::GetEnumText(ENetRole role)
 		return "ERROR";
 	}
 }
-FString AHeroController::GetRoleText()
+FString AHeroController::GetRoleText() const
 {
 	auto Local = Role;
 	auto Remote = GetRemoteRole();

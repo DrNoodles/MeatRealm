@@ -175,6 +175,8 @@ private:
 
 	bool bWantsToFire;
 
+	bool bInventoryDestroyed = false;
+
 
 	UPROPERTY(Transient, Replicated)
 	bool bIsRunning = false;
@@ -205,7 +207,7 @@ public:
 	AHeroCharacter(const FObjectInitializer& ObjectInitializer);
 	void DestroyInventory();
 	void Restart() override;
-	void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
+	//void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
 	
 	void SetTint(FColor bCond)
 	{
@@ -323,10 +325,15 @@ public:
 	
 	float GetRunningReloadSpeed() const { return RunningReloadSpeed; }
 
-
+	void AuthOnDeath();
 
 private:
 
+	UFUNCTION(NetMulticast, Reliable, WithValidation)
+	void MultiOnDeath();
+	
+	void OnDeathImpl();
+	
 	void SetRagdollPhysics();
 
 	bool RemoveEquippableFromInventory(IEquippable* Equippable);
@@ -353,8 +360,6 @@ private:
 	UFUNCTION(Server, Reliable, WithValidation)
 		void ServerEquipArmour();
 
-	UFUNCTION(NetMulticast, Reliable, WithValidation)
-		void MultiOnDeath();
 
 
 	void OnRunToggle();

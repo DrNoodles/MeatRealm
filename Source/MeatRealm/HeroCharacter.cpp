@@ -23,6 +23,7 @@
 #include "Engine/World.h"
 #include "DrawDebugHelpers.h"
 #include "Interfaces/Equippable.h"
+#include "Projectile.h"
 
 /// Lifecycle
 
@@ -83,13 +84,13 @@ AHeroCharacter::AHeroCharacter(const FObjectInitializer& ObjectInitializer) : Su
 	LastRunEnded = FDateTime::Now();
 }
 
-void AHeroCharacter::EndPlay(const EEndPlayReason::Type EndPlayReason)
-{
-	if (ROLE_Authority == Role)
-	{
-		DestroyInventory();
-	}
-}
+//void AHeroCharacter::EndPlay(const EEndPlayReason::Type EndPlayReason)
+//{
+//	/*if (ROLE_Authority == Role)
+//	{
+//		DestroyInventory();
+//	}*/
+//}
 
 void AHeroCharacter::Restart()
 {
@@ -1013,14 +1014,14 @@ void AHeroCharacter::GiveItemToPlayer(TSubclassOf<AItemBase> ItemClass)
 	check(HasAuthority() && GetWorld() && ItemClass)
 
 
-		// Spawn the item at the hand socket
-		const auto TF = GetMesh()->GetSocketTransform(HandSocketName, RTS_World);
-		auto* Item = GetWorld()->SpawnActorDeferred<AItemBase>(
-		ItemClass,
-		TF,
-		this, // owner actor
-		this, // instigator pawn
-		ESpawnActorCollisionHandlingMethod::AlwaysSpawn);
+	// Spawn the item at the hand socket
+	const auto TF = GetMesh()->GetSocketTransform(HandSocketName, RTS_World);
+	auto* Item = GetWorld()->SpawnActorDeferred<AItemBase>(
+	ItemClass,
+	TF,
+	this, // owner actor
+	this, // instigator pawn
+	ESpawnActorCollisionHandlingMethod::AlwaysSpawn);
 
 	UGameplayStatics::FinishSpawningActor(Item, TF);
 
@@ -1130,6 +1131,8 @@ AWeapon* AHeroCharacter::AuthSpawnWeapon(TSubclassOf<AWeapon> weaponClass, FWeap
 	}
 
 	Weapon->ConfigWeapon(Config);
+
+	UE_LOG(LogTemp, Warning, TEXT("AuthSpawnWeapon GetPlayerId"));
 	Weapon->SetHeroControllerId(GetHeroController()->GetPlayerId());
 
 	UGameplayStatics::FinishSpawningActor(Weapon, TF);
@@ -1383,6 +1386,13 @@ void AHeroCharacter::SpawnWeaponPickups(TArray<AWeapon*> & Weapons) const
 
 void AHeroCharacter::DestroyInventory()
 {
+	if (bInventoryDestroyed)
+	{
+		LogMsgWithRole("Attempted to destroy already destoryed inventory!");
+		UE_LOG(LogTemp, Error, TEXT("Attempted to destroy already destoryed inventory!"));
+		return;
+	}
+
 	LastInventorySlot = EInventorySlots::Undefined;
 	CurrentInventorySlot = EInventorySlots::Undefined;
 	if (PrimaryWeaponSlot)
@@ -1396,15 +1406,27 @@ void AHeroCharacter::DestroyInventory()
 		SecondaryWeaponSlot = nullptr;
 	}
 
+	
 	for (auto* HP : HealthSlot)
 	{
-		HP->Destroy();
+		if (HP)
+			HP->Destroy();
+		else
+			UE_LOG(LogTemp, Error, TEXT("Attempted to destroy HP slot item that's null"));
 	}
 
 	for (auto* AP : ArmourSlot)
 	{
-		AP->Destroy();
+		if (AP)
+			AP->Destroy();
+		else
+			UE_LOG(LogTemp, Error, TEXT("Attempted to destroy HP slot item that's null"));
 	}
+
+	HealthSlot.Empty();
+	ArmourSlot.Empty();
+
+	bInventoryDestroyed = true;
 }
 
 
@@ -1588,15 +1610,25 @@ FVector2D AHeroCharacter::GetGameViewportSize()
 
 //// Affect the character /////////////////////////////////////////////////////
 
-bool AHeroCharacter::ShouldTakeDamage(float Damage, FDamageEvent const& DamageEvent, AController* EventInstigator,
-	AActor* DamageCauser) const
+void AHeroCharacter::AuthOnDeath()
 {
-	return Super::ShouldTakeDamage(Damage, DamageEvent, EventInstigator, DamageCauser);
+	check(HasAuthority());
+	OnDeathImpl();
+
+	// Inform clients
+	MultiOnDeath();
 }
-
-
-
 void AHeroCharacter::MultiOnDeath_Implementation()
+{
+	if (HasAuthority()) return;
+	
+	OnDeathImpl();
+}
+bool AHeroCharacter::MultiOnDeath_Validate()
+{
+	return true;
+}
+void AHeroCharacter::OnDeathImpl()
 {
 	// Tweak networking
 	NetUpdateFrequency = GetDefault<AHeroCharacter>()->NetUpdateFrequency;
@@ -1606,7 +1638,11 @@ void AHeroCharacter::MultiOnDeath_Implementation()
 
 	GetMesh()->VisibilityBasedAnimTickOption = EVisibilityBasedAnimTickOption::AlwaysTickPoseAndRefreshBones;
 
-	DestroyInventory();
+	if (HasAuthority())
+	{
+		SpawnHeldWeaponsAsPickups();
+		DestroyInventory();
+	}
 
 	// TODO Switch to 3rd person view of death
 
@@ -1619,7 +1655,8 @@ void AHeroCharacter::MultiOnDeath_Implementation()
 		static FName CollisionProfileName(TEXT("Ragdoll"));
 		GetMesh()->SetCollisionProfileName(CollisionProfileName);
 	}
-	
+
+
 	SetActorEnableCollision(true);
 
 	SetRagdollPhysics();
@@ -1628,13 +1665,24 @@ void AHeroCharacter::MultiOnDeath_Implementation()
 	GetCapsuleComponent()->SetCollisionEnabled(ECollisionEnabled::NoCollision);
 	GetCapsuleComponent()->SetCollisionResponseToAllChannels(ECR_Ignore);
 
-	GetMesh()->AddRadialImpulse(GetMesh()->GetComponentLocation(), 100, 1000, ERadialImpulseFalloff::RIF_Linear);
-	//LaunchCharacter(FVector{ 10000,1000,1000 }, true, true);
+
+	// TODO Add an impulse to fling the ragdoll
+	auto fn = [&] {
+		if (!IsActorBeingDestroyed())
+			Destroy();
+
+		//GetMesh()->AddRadialImpulse(FVector::ZeroVector, 10000, 1000, ERadialImpulseFalloff::RIF_Constant);
+		//LaunchCharacter(FVector{ 10000,1000,1000 }, true, true);
+	};
+
+	FTimerHandle TimerHandle;
+	GetWorldTimerManager().SetTimer(TimerHandle, fn, 10, false);
 }
 
-bool AHeroCharacter::MultiOnDeath_Validate()
+bool AHeroCharacter::ShouldTakeDamage(float Damage, FDamageEvent const& DamageEvent, AController* EventInstigator,
+	AActor* DamageCauser) const
 {
-	return true;
+	return Super::ShouldTakeDamage(Damage, DamageEvent, EventInstigator, DamageCauser);
 }
 
 float AHeroCharacter::TakeDamage(float DamageAmount, FDamageEvent const& DamageEvent, AController* EventInstigator,
@@ -1676,31 +1724,28 @@ float AHeroCharacter::TakeDamage(float DamageAmount, FDamageEvent const& DamageE
 		Health -= ActualDamage;
 	}
 
-	//LogMsgWithRole(FString::Printf(TEXT("%fhp %fap"), Health, Armour));
+	LogMsgWithRole(FString::Printf(TEXT("%fhp %fap"), Health, Armour));
 
-
-
-	// Handle being dead!
-	if (Health <= 0)
-	{
-		//MultiOnDeath();
-	}
 
 	
+
 	auto VictimController = GetHeroController();
-	const auto AttackerController = Cast<AHeroController>(EventInstigator);
+
+
+	const auto Projectile = Cast<AProjectile>(DamageCauser);
+	if (Projectile == nullptr) 
+		UE_LOG(LogTemp, Error, TEXT("AHeroCharacter - Projectile IS NULL! WTF"));
 	
 	// Report hit to controller
 	if (VictimController)
 	{
 		FMRHitResult Hit{};
 		Hit.VictimId = VictimController->GetPlayerId();
-		Hit.AttackerId = AttackerController->GetPlayerId();
+		Hit.AttackerId = Projectile ? Projectile->GetInstigatingControllerId() : -1;
 		Hit.HealthRemaining = (int)Health;
 		Hit.DamageTaken = (int)ActualDamage;
 		Hit.bHitArmour = bHitArmour;
 		Hit.HitLocation = GetActorLocation(); // TODO Get the actual location of the damage
-		//Hit.HitDirection
 
 		VictimController->TakeDamage2(Hit);
 	}
@@ -1730,20 +1775,20 @@ void AHeroCharacter::SetRagdollPhysics()
 		bInRagdoll = true;
 	}
 
-	//GetCharacterMovement()->StopMovementImmediately();
-	//GetCharacterMovement()->DisableMovement();
-	//GetCharacterMovement()->SetComponentTickEnabled(false);
+	GetCharacterMovement()->StopMovementImmediately();
+	GetCharacterMovement()->DisableMovement();
+	GetCharacterMovement()->SetComponentTickEnabled(false);
 
 	if (!bInRagdoll)
 	{
 		// hide and set short lifespan
 		TurnOff();
 		SetActorHiddenInGame(true);
-		SetLifeSpan(1.0f);
+		//SetLifeSpan(1.0f);
 	}
 	else
 	{
-		SetLifeSpan(10.0f);
+		//SetLifeSpan(10.0f);
 	}
 }
 

@@ -54,6 +54,7 @@ public:
 	void CleanupPlayerState() override;
 	bool IsGameInputAllowed() const;
 
+	void UnFreeze() override;
 	void OnPossess(APawn* InPawn) override;
 	void AcknowledgePossession(APawn* P) override;
 	void OnUnPossess() override;
@@ -67,9 +68,9 @@ public:
 	void DestroyHud();
 
 	// Debug helpers
-	void LogMsgWithRole(FString message);
-	FString GetEnumText(ENetRole role);
-	FString GetRoleText();
+	void LogMsgWithRole(FString message) const;
+	static FString GetEnumText(ENetRole role);
+	FString GetRoleText() const;
 	void TakeDamage2(const FMRHitResult& Hit);
 	void SimulateHitGiven(const FMRHitResult& Hit);
 	
