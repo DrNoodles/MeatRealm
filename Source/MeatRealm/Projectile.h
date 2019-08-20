@@ -65,7 +65,7 @@ public:
 private:
 	void AoeDamage(const FVector& Location);
 	void PointDamage(AActor* OtherActor, const FHitResult& Hit);
-	void KillProjectile();
+	void DisableAndDestroy();
 	void Detonate();
 
 	void BeginPlay() override;

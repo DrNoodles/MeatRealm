@@ -84,7 +84,7 @@ void AProjectile::OnCompHit(UPrimitiveComponent* HitComponent, AActor* OtherActo
 		//AoeDamage(Hit.Location);
 	}
 
-	KillProjectile();
+	DisableAndDestroy();
 }
 
 void AProjectile::OnCompBeginOverlap(UPrimitiveComponent* OverlappedComp, AActor* OtherActor,
@@ -119,7 +119,7 @@ void AProjectile::OnCompBeginOverlap(UPrimitiveComponent* OverlappedComp, AActor
 	}
 
 
-	KillProjectile();
+	DisableAndDestroy();
 }
 
 void AProjectile::AoeDamage(const FVector& Location)
@@ -202,7 +202,7 @@ void AProjectile::BeginPlay()
 	}
 }
 
-void AProjectile::KillProjectile()
+void AProjectile::DisableAndDestroy()
 {
 	GetWorldTimerManager().ClearTimer(DetonationTimerHandle);
 	ProjectileMovementComp->StopMovementImmediately();
@@ -214,9 +214,11 @@ void AProjectile::Detonate()
 {
 	check(HasAuthority())
 	
-	if (bIsAoe) 
+	if (bIsAoe)
+	{
 		AoeDamage(GetActorLocation());
+	}
 
-	KillProjectile();
+	DisableAndDestroy();
 }
 

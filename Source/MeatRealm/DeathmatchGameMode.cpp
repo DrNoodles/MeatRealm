@@ -41,7 +41,6 @@ ADeathmatchGameMode::ADeathmatchGameMode()
 	PlayerTints.Add(FColor{ 237,  1,127 });// Fuchsia
 }
 
-
 void ADeathmatchGameMode::PostLogin(APlayerController* NewPlayer)
 {
 	Super::PostLogin(NewPlayer);
@@ -214,7 +213,6 @@ void ADeathmatchGameMode::OnPlayerTakeDamage(FMRHitResult Hit)
 	}
 }
 
-
 bool ADeathmatchGameMode::ReadyToStartMatch_Implementation()
 {
 	// If bDelayed Start is set, wait for a manual match start
@@ -233,7 +231,6 @@ bool ADeathmatchGameMode::ReadyToStartMatch_Implementation()
 	}
 	return false;
 }
-
 
 bool ADeathmatchGameMode::ReadyToEndMatch_Implementation()
 {
