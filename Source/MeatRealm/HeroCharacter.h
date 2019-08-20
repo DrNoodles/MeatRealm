@@ -175,6 +175,8 @@ private:
 
 	bool bWantsToFire;
 
+	bool bInventoryDestroyed = false;
+
 
 	UPROPERTY(Transient, Replicated)
 	bool bIsRunning = false;
@@ -205,7 +207,7 @@ public:
 	AHeroCharacter(const FObjectInitializer& ObjectInitializer);
 	void DestroyInventory();
 	void Restart() override;
-	void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
+	//void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
 	
 	void SetTint(FColor bCond)
 	{

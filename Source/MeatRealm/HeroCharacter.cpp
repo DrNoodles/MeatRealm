@@ -84,13 +84,13 @@ AHeroCharacter::AHeroCharacter(const FObjectInitializer& ObjectInitializer) : Su
 	LastRunEnded = FDateTime::Now();
 }
 
-void AHeroCharacter::EndPlay(const EEndPlayReason::Type EndPlayReason)
-{
-	if (ROLE_Authority == Role)
-	{
-		DestroyInventory();
-	}
-}
+//void AHeroCharacter::EndPlay(const EEndPlayReason::Type EndPlayReason)
+//{
+//	/*if (ROLE_Authority == Role)
+//	{
+//		DestroyInventory();
+//	}*/
+//}
 
 void AHeroCharacter::Restart()
 {
@@ -1386,6 +1386,13 @@ void AHeroCharacter::SpawnWeaponPickups(TArray<AWeapon*> & Weapons) const
 
 void AHeroCharacter::DestroyInventory()
 {
+	if (bInventoryDestroyed)
+	{
+		LogMsgWithRole("Attempted to destroy already destoryed inventory!");
+		UE_LOG(LogTemp, Error, "Attempted to destroy already destoryed inventory!");
+		return;
+	}
+
 	LastInventorySlot = EInventorySlots::Undefined;
 	CurrentInventorySlot = EInventorySlots::Undefined;
 	if (PrimaryWeaponSlot)
@@ -1399,18 +1406,27 @@ void AHeroCharacter::DestroyInventory()
 		SecondaryWeaponSlot = nullptr;
 	}
 
+	
 	for (auto* HP : HealthSlot)
 	{
-		HP->Destroy();
+		if (HP)
+			HP->Destroy();
+		else
+			UE_LOG(LogTemp, Error, "Attempted to destroy HP slot item that's null");
 	}
 
 	for (auto* AP : ArmourSlot)
 	{
-		AP->Destroy();
+		if (AP)
+			AP->Destroy();
+		else
+			UE_LOG(LogTemp, Error, "Attempted to destroy HP slot item that's null");
 	}
 
 	HealthSlot.Empty();
 	ArmourSlot.Empty();
+
+	bInventoryDestroyed = true;
 }
 
 
