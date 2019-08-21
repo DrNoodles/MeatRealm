@@ -45,7 +45,6 @@ AProjectile::AProjectile()
 	// TODO Show a billboard if by default on the placeholder
 }
 
-
 void AProjectile::InitVelocity(const FVector& ShootDirection)
 {
 	ProjectileMovementComp->Velocity	= ShootDirection * ProjectileMovementComp->InitialSpeed;
@@ -78,10 +77,15 @@ void AProjectile::OnCompHit(UPrimitiveComponent* HitComponent, AActor* OtherActo
 	//}
 
 
-	if (bIsAoe) AoeDamage(Hit.Location);
-	Destroy();
-}
+	if (bIsAoe)
+	{
+		const FVector NudgedImpactLocation = Hit.ImpactPoint + Hit.ImpactNormal * 10.0f;
+		AoeDamage(NudgedImpactLocation);
+		//AoeDamage(Hit.Location);
+	}
 
+	DisableAndDestroy();
+}
 
 void AProjectile::OnCompBeginOverlap(UPrimitiveComponent* OverlappedComp, AActor* OtherActor,
 	UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult)
@@ -100,7 +104,8 @@ void AProjectile::OnCompBeginOverlap(UPrimitiveComponent* OverlappedComp, AActor
 
 	if (bIsAoe)
 	{
-		AoeDamage(SweepResult.Location);
+		const FVector NudgedImpactLocation = SweepResult.ImpactPoint + SweepResult.ImpactNormal * 10.0f;
+		AoeDamage(NudgedImpactLocation);
 	}
 	else // Point Damage
 	{
@@ -113,7 +118,8 @@ void AProjectile::OnCompBeginOverlap(UPrimitiveComponent* OverlappedComp, AActor
 		PointDamage(OtherActor, SweepResult);
 	}
 
-	Destroy();
+
+	DisableAndDestroy();
 }
 
 void AProjectile::AoeDamage(const FVector& Location)
@@ -124,7 +130,7 @@ void AProjectile::AoeDamage(const FVector& Location)
 
 	AController* DmgInstigator = GetInstigatorController();
 	//UE_LOG(LogTemp, Warning, TEXT("FoundDmgInstigator: %s"), *FString{ DmgInstigator ? "True" : "False" });
-
+	
 	const bool RadialDmgWasGiven = UGameplayStatics::ApplyRadialDamageWithFalloff(
 		GetWorld(), ShotDamage, 1, Location,
 		InnerRadius, OuterRadius, Falloff, UDamageType::StaticClass(),
@@ -196,13 +202,23 @@ void AProjectile::BeginPlay()
 	}
 }
 
+void AProjectile::DisableAndDestroy()
+{
+	GetWorldTimerManager().ClearTimer(DetonationTimerHandle);
+	ProjectileMovementComp->StopMovementImmediately();
+	CollisionComp->SetCollisionResponseToAllChannels(ECollisionResponse::ECR_Ignore);
+	SetLifeSpan(2.0f);
+}
+
 void AProjectile::Detonate()
 {
 	check(HasAuthority())
 	
-	if (bIsAoe) AoeDamage(GetActorLocation());
-	Destroy();
+	if (bIsAoe)
+	{
+		AoeDamage(GetActorLocation());
+	}
 
-	GetWorldTimerManager().ClearTimer(DetonationTimerHandle);
+	DisableAndDestroy();
 }
 

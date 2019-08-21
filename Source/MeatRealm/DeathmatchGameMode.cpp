@@ -27,6 +27,8 @@ ADeathmatchGameMode::ADeathmatchGameMode()
 	PlayerStateClass = AHeroState::StaticClass();
 	GameStateClass = ADeathmatchGameState::StaticClass();
 
+	MinRespawnDelay = 2;
+	
 	bStartPlayersAsSpectators = false;
 
 	PlayerTints.Add(FColor{   0,167,226 });// Sky
@@ -38,7 +40,6 @@ ADeathmatchGameMode::ADeathmatchGameMode()
 	PlayerTints.Add(FColor{ 118, 91,167 });// Purple
 	PlayerTints.Add(FColor{ 237,  1,127 });// Fuchsia
 }
-
 
 void ADeathmatchGameMode::PostLogin(APlayerController* NewPlayer)
 {
@@ -143,6 +144,7 @@ void ADeathmatchGameMode::RestartPlayer(AController* NewPlayer)
 		return;
 	}
 
+	
 	AActor* StartSpot = FindFurthestPlayerStart(NewPlayer);
 
 	// If a start spot wasn't found,
@@ -163,7 +165,7 @@ void ADeathmatchGameMode::OnPlayerTakeDamage(FMRHitResult Hit)
 {
 	if (!HasAuthority()) return;
 
-	//UE_LOG(LogTemp, Warning, TEXT("TakeDamage %d"), Hit.DamageTaken);
+	UE_LOG(LogTemp, Warning, TEXT("TakeDamage %d"), Hit.DamageTaken);
 
 	if (!ConnectedPlayers.Contains(Hit.VictimId))
 	{
@@ -195,20 +197,21 @@ void ADeathmatchGameMode::OnPlayerTakeDamage(FMRHitResult Hit)
 		{
 			ReceivingController->GetPlayerState<AHeroState>()->Deaths++;
 
-			AHeroCharacter* DeadChar = ReceivingController->GetHeroCharacter();
+
+			//const auto HeroController = Cast<AHeroController>(ReceivingController);
+			AHeroCharacter* DeadChar = ReceivingController ? ReceivingController->GetHeroCharacter() : nullptr;
 			if (DeadChar)
 			{
-				DeadChar->SpawnHeldWeaponsAsPickups();
-				DeadChar->Destroy();
+				DeadChar->AuthOnDeath();
 			}
 
-			RestartPlayer(ReceivingController); // TODO Delay this - Better yet, look at how ShooterGame is officially doing this.
+			
+			//RestartPlayer(ReceivingController); // TODO Delay this - Better yet, look at how ShooterGame is officially doing this.
 		}
 
 		AddKillfeedEntry(AttackerController, ReceivingController);
 	}
 }
-
 
 bool ADeathmatchGameMode::ReadyToStartMatch_Implementation()
 {
@@ -228,7 +231,6 @@ bool ADeathmatchGameMode::ReadyToStartMatch_Implementation()
 	}
 	return false;
 }
-
 
 bool ADeathmatchGameMode::ReadyToEndMatch_Implementation()
 {

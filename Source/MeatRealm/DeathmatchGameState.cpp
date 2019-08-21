@@ -16,6 +16,15 @@ void ADeathmatchGameState::GetLifetimeReplicatedProps(TArray< FLifetimeProperty 
 	DOREPLIFETIME(ADeathmatchGameState, KillfeedData);
 }
 
+float ADeathmatchGameState::GetPlayerRespawnDelay(AController* Controller) const
+{
+	auto val = Super::GetPlayerRespawnDelay(Controller);
+	FString str = FString::Printf(TEXT("got delay of % f seconds"), val);
+	LogMsgWithRole(str);
+	
+	return val;
+}
+
 bool ADeathmatchGameState::ReplicateSubobjects(UActorChannel* Channel, FOutBunch* Bunch, FReplicationFlags* RepFlags)
 {
 	bool WroteSomething = Super::ReplicateSubobjects(Channel, Bunch, RepFlags);
