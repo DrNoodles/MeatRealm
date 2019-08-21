@@ -713,7 +713,7 @@ void AHeroCharacter::SetTargeting(bool bNewTargeting)
 	bIsTargeting = bNewTargeting;
 
 
-	auto CurrentWeapon = InventoryComp->GetCurrentWeapon();	
+	auto CurrentWeapon = InventoryComp->GetCurrentWeapon();
 	if (CurrentWeapon)
 	{
 		if (bNewTargeting)
@@ -727,9 +727,10 @@ void AHeroCharacter::SetTargeting(bool bNewTargeting)
 				// Delay fire!
 				auto DelayAds = [&]
 				{
-					if (bIsTargeting && CurrentWeapon)
+					const auto CurrentWeapon1 = InventoryComp->GetCurrentWeapon();
+					if (bIsTargeting && CurrentWeapon1)
 					{
-						CurrentWeapon->Input_AdsPressed();
+						CurrentWeapon1->Input_AdsPressed();
 					}
 				};
 
