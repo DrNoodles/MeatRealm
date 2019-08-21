@@ -87,13 +87,13 @@ AHeroCharacter::AHeroCharacter(const FObjectInitializer& ObjectInitializer) : Su
 	LastRunEnded = FDateTime::Now();
 }
 
-//void AHeroCharacter::EndPlay(const EEndPlayReason::Type EndPlayReason)
-//{
-//	/*if (ROLE_Authority == Role)
-//	{
-//		DestroyInventory();
-//	}*/
-//}
+void AHeroCharacter::EndPlay(const EEndPlayReason::Type EndPlayReason)
+{
+	if (ROLE_Authority == Role)
+	{
+		InventoryComp->DestroyInventory();
+	}
+}
 
 void AHeroCharacter::Restart()
 {
@@ -1654,7 +1654,7 @@ void AHeroCharacter::OnDeathImpl()
 	if (HasAuthority())
 	{
 		InventoryComp->SpawnHeldWeaponsAsPickups();
-		InventoryComp->DestroyInventory();
+		//InventoryComp->DestroyInventory();
 	}
 
 	// TODO Switch to 3rd person view of death

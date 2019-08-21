@@ -21,7 +21,6 @@ class MEATREALM_API AHeroCharacter : public ACharacter, public IAffectableInterf
 {
 	GENERATED_BODY()
 
-
 public:
 	UPROPERTY(EditAnywhere, Category = Camera)
 		bool bLeanCameraWithAim = true;
@@ -185,7 +184,7 @@ private:
 public:
 	AHeroCharacter(const FObjectInitializer& ObjectInitializer);
 	void Restart() override;
-	//void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
+	void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
 	
 	void SetTint(FColor bCond)
 	{
