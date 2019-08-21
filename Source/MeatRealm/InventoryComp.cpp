@@ -1,0 +1,617 @@
+// Fill out your copyright notice in the Description page of Project Settings.
+
+
+#include "InventoryComp.h"
+#include "Interfaces/Equippable.h"
+#include "Engine/World.h"
+#include "UnrealNetwork.h"
+#include "Kismet/GameplayStatics.h"
+#include "Weapon.h"
+#include "WeaponPickupBase.h"
+
+UInventoryComp::UInventoryComp()
+{
+	PrimaryComponentTick.bCanEverTick = true;
+	SetIsReplicated(true);
+}
+void UInventoryComp::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
+{
+	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
+
+	// Just the owner
+	DOREPLIFETIME_CONDITION(UInventoryComp, LastInventorySlot, COND_OwnerOnly);
+	DOREPLIFETIME_CONDITION(UInventoryComp, CurrentInventorySlot, COND_OwnerOnly);
+	DOREPLIFETIME_CONDITION(UInventoryComp, PrimaryWeaponSlot, COND_OwnerOnly);
+	DOREPLIFETIME_CONDITION(UInventoryComp, SecondaryWeaponSlot, COND_OwnerOnly);
+	DOREPLIFETIME_CONDITION(UInventoryComp, HealthSlot, COND_OwnerOnly);
+	DOREPLIFETIME_CONDITION(UInventoryComp, ArmourSlot, COND_OwnerOnly);
+}
+void UInventoryComp::BeginPlay()
+{
+	Super::BeginPlay();
+}
+
+void UInventoryComp::TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction)
+{
+	Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
+}
+
+
+
+
+// Inventory - Getters
+
+AWeapon* UInventoryComp::GetWeapon(EInventorySlots Slot) const
+{
+	switch (Slot)
+	{
+	case EInventorySlots::Primary: return PrimaryWeaponSlot;
+	case EInventorySlots::Secondary: return SecondaryWeaponSlot;
+
+	default:
+		return nullptr;
+	}
+}
+AItemBase* UInventoryComp::GetItem(EInventorySlots Slot) const
+{
+	switch (Slot)
+	{
+	case EInventorySlots::Health: return GetFirstHealthItemOrNull();
+	case EInventorySlots::Armour: return GetFirstArmourItemOrNull();
+		//case EInventorySlots::Secondary: return SecondaryWeaponSlot;
+
+	default:
+		return nullptr;
+	}
+}
+IEquippable* UInventoryComp::GetEquippable(EInventorySlots Slot) const
+{
+	switch (Slot)
+	{
+	case EInventorySlots::Primary: return PrimaryWeaponSlot;
+	case EInventorySlots::Secondary: return SecondaryWeaponSlot;
+	case EInventorySlots::Health: return GetFirstHealthItemOrNull();
+	case EInventorySlots::Armour: return GetFirstArmourItemOrNull();
+
+	case EInventorySlots::Undefined:
+	default:;
+	}
+
+	return nullptr;
+}
+
+int UInventoryComp::GetHealthItemCount() const
+{
+	return HealthSlot.Num();
+}
+int UInventoryComp::GetArmourItemCount() const
+{
+	return ArmourSlot.Num();
+}
+
+AWeapon* UInventoryComp::GetCurrentWeapon() const
+{
+	return GetWeapon(CurrentInventorySlot);
+}
+AItemBase* UInventoryComp::GetCurrentItem() const
+{
+	return GetItem(CurrentInventorySlot);
+}
+IEquippable* UInventoryComp::GetCurrentEquippable() const
+{
+	return GetEquippable(CurrentInventorySlot);
+}
+
+bool UInventoryComp::HasAnItemEquipped() const
+{
+	auto Equippable = GetEquippable(CurrentInventorySlot);
+	if (!Equippable) return false;
+	return Equippable->Is(EInventoryCategory::Health) || Equippable->Is(EInventoryCategory::Armour);
+}
+bool UInventoryComp::HasAWeaponEquipped() const
+{
+	auto Equippable = GetEquippable(CurrentInventorySlot);
+	if (!Equippable) return false;
+	return Equippable->Is(EInventoryCategory::Weapon);// || Equippable->Is(EInventoryCategory::Throwable);
+}
+
+
+// Inventory - Spawning
+
+
+bool UInventoryComp::CanGiveItem(const TSubclassOf<AItemBase>& Class)
+{
+	//LogMsgWithRole("AHeroCharacter::CanGiveItem");
+
+	// Health and Armour items have limits. Check if we're within them
+	const int HealthCount = HealthSlot.Num();
+	const int ArmourCount = ArmourSlot.Num();
+
+	// If we certainly have space, lets go!
+	if (HealthCount < HealthSlotLimit && ArmourCount < ArmourSlotLimit)
+		return true;
+
+
+	// Need to create an instance to see what category it is
+	auto Temp = NewObject<AItemBase>(this, Class);
+	const auto Category = Temp->GetInventoryCategory();
+	Temp->Destroy();
+
+	if (Category == EInventoryCategory::Health && HealthCount == HealthSlotLimit)
+		return false;
+
+	if (Category == EInventoryCategory::Armour && ArmourCount == ArmourSlotLimit)
+		return false;
+
+	return true;
+}
+void UInventoryComp::GiveItemToPlayer(TSubclassOf<AItemBase> ItemClass)
+{
+	//LogMsgWithRole("UInventoryComp::GiveItemToPlayer");
+
+	check(HasAuthority() && GetWorld() && ItemClass)
+
+
+	// Spawn the item at the hand socket
+	const auto TF = Delegate->GetHandSocketTransform();
+	AItemBase* Item = GetWorld()->SpawnActorDeferred<AItemBase>(
+		ItemClass,
+		TF,
+		GetOwner(), // owner actor
+		(APawn*)GetOwner(), // instigator pawn // TODO Fix this cast to Pawn
+		ESpawnActorCollisionHandlingMethod::AlwaysSpawn);
+
+	UGameplayStatics::FinishSpawningActor(Item, TF);
+
+	Item->SetHidden(true);
+
+	// Find correct slot
+	auto Slot = EInventorySlots::Undefined;
+
+	switch (Item->GetInventoryCategory()) {
+	case EInventoryCategory::Health: Slot = EInventorySlots::Health; break;
+	case EInventoryCategory::Armour: Slot = EInventorySlots::Armour; break;
+	case EInventoryCategory::Weapon: break;
+	case EInventoryCategory::Undefined: break;
+	case EInventoryCategory::Throwable: break;
+	default:;
+	}
+
+
+	const auto Recipient = Cast<IAffectableInterface>(GetOwner());
+	if (!Recipient)
+	{
+		UE_LOG(LogTemp, Error, TEXT("Failed to cast inventory owner to IAffectableInterface!"));
+	}
+
+	// Assign Item to inventory slot - TODO Combine this with the Assign weapon to slot code
+	switch (Slot) {
+
+	case EInventorySlots::Health:
+	{
+		// Add to inv
+		HealthSlot.Add(Item);
+		Item->EnterInventory();
+		Item->SetRecipient(Recipient);
+		Item->SetDelegate(this);
+	}
+	break;
+
+	case EInventorySlots::Armour:
+	{
+		// Add to inv
+		ArmourSlot.Add(Item);
+		Item->EnterInventory();
+		Item->SetRecipient(Recipient); 
+		Item->SetDelegate(this);
+	}
+	break;
+
+	case EInventorySlots::Undefined: break;
+	case EInventorySlots::Primary: break;
+	case EInventorySlots::Secondary: break;
+	default:;
+	}
+
+
+	// Put it in our hands! TODO - Or not?
+	//EquipSlot(Slot);
+
+	//LogMsgWithRole("UInventoryComp::GiveItemToPlayer2");
+}
+
+AItemBase* UInventoryComp::GetFirstHealthItemOrNull() const
+{
+	return HealthSlot.Num() > 0 ? HealthSlot[0] : nullptr;
+}
+AItemBase* UInventoryComp::GetFirstArmourItemOrNull() const
+{
+	return ArmourSlot.Num() > 0 ? ArmourSlot[0] : nullptr;
+}
+
+void UInventoryComp::GiveWeaponToPlayer(TSubclassOf<class AWeapon> WeaponClass, FWeaponConfig& Config)
+{
+	const auto Weapon = AuthSpawnWeapon(WeaponClass, Config);
+	const auto Slot = FindGoodWeaponSlot();
+	const auto RemovedWeapon = AssignWeaponToInventorySlot(Weapon, Slot);
+
+	if (RemovedWeapon)
+	{
+		// If it's the same slot, replay the equip weapon
+		RemovedWeapon->ExitInventory();
+
+		// Drop weapon on ground
+		TArray<AWeapon*> WeaponArray{ RemovedWeapon };
+		SpawnWeaponPickups(WeaponArray);
+
+		RemovedWeapon->Destroy();
+		CurrentInventorySlot = EInventorySlots::Undefined;
+	}
+
+	EquipSlot(Slot);
+}
+AWeapon* UInventoryComp::AuthSpawnWeapon(TSubclassOf<AWeapon> weaponClass, FWeaponConfig& Config)
+{
+	//LogMsgWithRole("UInventoryComp::ServerRPC_SpawnWeapon");
+	check(HasAuthority())
+
+	if (!GetWorld()) return nullptr;
+
+	const auto TF = Delegate->GetHandSocketTransform();// GetMesh()->GetSocketTransform(HandSocketName, RTS_World);
+
+
+	// Spawn the weapon at the weapon socket
+	AWeapon* Weapon = GetWorld()->SpawnActorDeferred<AWeapon>(
+		weaponClass,
+		TF,
+		GetOwner(),
+		(APawn*)GetOwner(), // TODO Fix this cast
+		ESpawnActorCollisionHandlingMethod::AlwaysSpawn);
+
+	if (!Weapon)
+	{
+		UE_LOG(LogTemp, Error, TEXT("UInventoryComp::AuthSpawnWeapon - Failed to spawn weapon"));
+		return nullptr;
+	}
+
+	Weapon->ConfigWeapon(Config);
+
+	UE_LOG(LogTemp, Warning, TEXT("AuthSpawnWeapon GetPlayerId"));
+	Weapon->SetHeroControllerId(Delegate->GetControllerId());
+
+	UGameplayStatics::FinishSpawningActor(Weapon, TF);
+
+	return Weapon;
+}
+EInventorySlots UInventoryComp::FindGoodWeaponSlot() const
+{
+	// Find an empty slot, if one exists
+	if (!PrimaryWeaponSlot) return EInventorySlots::Primary;
+	if (!SecondaryWeaponSlot) return EInventorySlots::Secondary;
+
+	// If we currently have a weapon selected, replace that.
+	if (CurrentInventorySlot == EInventorySlots::Primary || CurrentInventorySlot == EInventorySlots::Secondary)
+		return CurrentInventorySlot;
+
+	// If the last inventory slot was a weapon, use that
+	if (LastInventorySlot == EInventorySlots::Primary || LastInventorySlot == EInventorySlots::Secondary)
+		return LastInventorySlot;
+
+	return EInventorySlots::Primary; // just default to the first slot
+}
+AWeapon* UInventoryComp::AssignWeaponToInventorySlot(AWeapon* Weapon, EInventorySlots Slot)
+{
+	bool IsNotAWeaponSlot = Slot != EInventorySlots::Primary && Slot != EInventorySlots::Secondary;
+	if (IsNotAWeaponSlot)
+	{
+		UE_LOG(LogTemp, Error, TEXT("Attempting to equip a weapon into a non weapon slot: %d"), Slot);
+		return nullptr;
+	}
+
+	const auto ToRemove = GetWeapon(Slot);
+
+	//SetWeapon(Weapon, Slot);
+	// This does not free up resources by design! If needed, first get the weapon before overwriting it
+	if (Slot == EInventorySlots::Primary) PrimaryWeaponSlot = Weapon;
+	if (Slot == EInventorySlots::Secondary) SecondaryWeaponSlot = Weapon;
+	Weapon->EnterInventory();
+
+	//// Cleanup previous weapon // TODO Drop this on ground
+	//if (Removed) Removed->Destroy();
+	return ToRemove;
+}
+bool UInventoryComp::RemoveEquippableFromInventory(IEquippable* Equippable)
+{
+	check(Equippable);
+
+	// TODO Create a collection of items to be cleared out each tick after a second of chillin out. Just to give things a chance to settle
+
+	auto bMustChangeSlot = false;
+	bool WasRemoved = false;
+
+
+	if (Equippable->GetInventoryCategory() == EInventoryCategory::Health)
+	{
+		const auto Index = HealthSlot.IndexOfByPredicate([Equippable](AItemBase* Item)
+			{
+				return Item == Equippable;
+			});
+
+		if (Index != INDEX_NONE)
+		{
+			Equippable->ExitInventory();
+			HealthSlot.RemoveAt(Index);
+			WasRemoved = true;
+
+			bMustChangeSlot = HealthSlot.Num() == 0 && CurrentInventorySlot == EInventorySlots::Health;
+		}
+	}
+
+
+
+	if (Equippable->GetInventoryCategory() == EInventoryCategory::Armour)
+	{
+		const auto Index = ArmourSlot.IndexOfByPredicate([Equippable](AItemBase* Item)
+			{
+				return Item == Equippable;
+			});
+
+		if (Index != INDEX_NONE)
+		{
+			Equippable->ExitInventory();
+			ArmourSlot.RemoveAt(Index);
+			WasRemoved = true;
+
+			bMustChangeSlot = ArmourSlot.Num() == 0 && CurrentInventorySlot == EInventorySlots::Armour;
+		}
+	}
+
+	if (bMustChangeSlot)
+	{
+		const auto NewSlot = LastInventorySlot != CurrentInventorySlot ? LastInventorySlot : EInventorySlots::Primary;
+		EquipSlot(NewSlot);
+	}
+
+	return WasRemoved;
+}
+
+
+// Inventory - Equipping
+
+void UInventoryComp::EquipSlot(const EInventorySlots Slot)
+{
+	// Already selected?
+	if (CurrentInventorySlot == Slot) return;
+
+	// Desired slot is empty?
+	auto NewEquippable = GetEquippable(Slot);
+	if (!NewEquippable) return;
+
+
+	LastInventorySlot = CurrentInventorySlot;
+	CurrentInventorySlot = Slot;
+
+
+	// TODO Some delay on holster
+
+
+	// Clear any existing Equip timer
+	GetWorld()->GetTimerManager().ClearTimer(EquipTimerHandle);
+
+
+	// Unequip old 
+	auto OldEquippable = GetEquippable(LastInventorySlot);
+	if (OldEquippable)
+	{
+		//LogMsgWithRole("Un-equip new slot");
+		OldEquippable->Unequip();
+		OldEquippable->SetHidden(OldEquippable->ShouldHideWhenUnequipped());
+	}
+
+
+	// Equip new
+	if (NewEquippable)
+	{
+		//LogMsgWithRole("Equip new slot");
+		NewEquippable->Equip();
+		NewEquippable->SetHidden(true);
+
+		GetWorld()->GetTimerManager().SetTimer(EquipTimerHandle, this, &UInventoryComp::MakeEquippedItemVisible, NewEquippable->GetEquipDuration(), false);
+	}
+
+	Delegate->RefreshWeaponAttachments();
+}
+void UInventoryComp::MakeEquippedItemVisible() const
+{
+	//LogMsgWithRole("MakeEquippedItemVisible");
+	IEquippable* Item = GetEquippable(CurrentInventorySlot);
+
+	if (Item) Item->SetHidden(false);
+
+	Delegate->RefreshWeaponAttachments();
+}
+//void UInventoryComp::RefreshWeaponAttachments() const
+//{
+//return; // TODO Maybe refactor this weapon animation/visibility stuff to HeroCharacter?
+	//const FAttachmentTransformRules Rules{ EAttachmentRule::SnapToTarget, true };
+
+
+	//// Attach weapons to the correct locations
+	//auto W1 = GetWeapon(EInventorySlots::Primary);
+	//auto W2 = GetWeapon(EInventorySlots::Secondary);
+
+	//if (CurrentInventorySlot == EInventorySlots::Primary)
+	//{
+	//	if (W1) W1->AttachToComponent(GetMesh(), Rules, HandSocketName);
+	//	if (W2) W2->AttachToComponent(GetMesh(), Rules, Holster2SocketName);
+	//}
+	//else if (CurrentInventorySlot == EInventorySlots::Secondary)
+	//{
+	//	if (W1) W1->AttachToComponent(GetMesh(), Rules, Holster1SocketName);
+	//	if (W2) W2->AttachToComponent(GetMesh(), Rules, HandSocketName);
+	//}
+	//else
+	//{
+	//	if (W1) W1->AttachToComponent(GetMesh(), Rules, Holster1SocketName);
+	//	if (W2) W2->AttachToComponent(GetMesh(), Rules, Holster2SocketName);
+	//}
+
+	//if (CurrentInventorySlot == EInventorySlots::Health || CurrentInventorySlot == EInventorySlots::Armour)
+	//{
+	//	auto Item = GetItem(CurrentInventorySlot);
+	//	if (Item)
+	//	{
+	//		Item->AttachToComponent(GetMesh(), Rules, HandSocketName);
+	//		Item->SetHidden(false); // This means it'll be visible even it's mid equip. 
+	//	}
+	//}
+//}
+
+void UInventoryComp::NotifyItemIsExpended(AItemBase* Item)
+{
+	//LogMsgWithRole("UInventoryComp::NotifyEquippableIsExpended()");
+	check(HasAuthority())
+
+	const auto WasRemoved = RemoveEquippableFromInventory(Item);
+	if (WasRemoved)
+	{
+		Item->Destroy();
+		Delegate->RefreshWeaponAttachments();
+	}
+}
+
+
+// Inventory - Dropping
+
+void UInventoryComp::SpawnHeldWeaponsAsPickups() const
+{
+	check(GetOwnerRole() == ROLE_Authority);
+
+	// Gather all weapons to drop
+	TArray<AWeapon*> WeaponsToDrop{};
+	const auto W1 = GetWeapon(EInventorySlots::Primary);
+	const auto W2 = GetWeapon(EInventorySlots::Secondary);
+	if (W1) WeaponsToDrop.Add(W1);
+	if (W2) WeaponsToDrop.Add(W2);
+
+	SpawnWeaponPickups(WeaponsToDrop);
+}
+void UInventoryComp::SpawnWeaponPickups(TArray<AWeapon*>& Weapons) const
+{
+	// Gather the Pickup Class types to spawn
+	TArray<TTuple<TSubclassOf<AWeaponPickupBase>, FWeaponConfig>> PickupClassesToSpawn{};
+	int Count = 0;
+
+	for (auto W : Weapons)
+	{
+		if (W && W->PickupClass && W->HasAmmo())
+		{
+			// Spawn location algorithm: Alternative between in front and behind player location
+			const int FacingFactor = Count % 2 == 0 ? 1 : -1;
+			auto Loc = GetOwner()->GetActorLocation() + GetOwner()->GetActorForwardVector() * 30 * FacingFactor;
+
+			auto Params = FActorSpawnParameters{};
+			Params.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AdjustIfPossibleButAlwaysSpawn;
+
+			auto WeaponPickup = GetWorld()->SpawnActor<AWeaponPickupBase>(W->PickupClass, Loc, FRotator{}, Params);
+			if (WeaponPickup)
+			{
+				WeaponPickup->SetWeaponConfig(FWeaponConfig{ W->GetAmmoInClip(), W->GetAmmoInPool() });
+				WeaponPickup->bIsSingleUse = true;
+				WeaponPickup->SetLifeSpan(60);
+
+				Count++;
+			}
+		}
+	}
+}
+
+
+// Inventory - Lifecycle
+
+void UInventoryComp::InitInventory()
+{
+	// Randomly select a weapon
+	if (DefaultWeaponClass.Num() > 0)
+	{
+		if (HasAuthority())
+		{
+			const auto Choice = FMath::RandRange(0, DefaultWeaponClass.Num() - 1);
+			const auto WeaponClass = DefaultWeaponClass[Choice];
+			auto Config = FWeaponConfig{};
+
+			GiveWeaponToPlayer(WeaponClass, Config);
+		}
+	}
+}
+
+void UInventoryComp::DestroyInventory()
+{
+	if (bInventoryDestroyed)
+	{
+		//LogMsgWithRole("Attempted to destroy already destoryed inventory!");
+		UE_LOG(LogTemp, Error, TEXT("Attempted to destroy already destoryed inventory!"));
+		return;
+	}
+
+	LastInventorySlot = EInventorySlots::Undefined;
+	CurrentInventorySlot = EInventorySlots::Undefined;
+	if (PrimaryWeaponSlot)
+	{
+		PrimaryWeaponSlot->Destroy();
+		PrimaryWeaponSlot = nullptr;
+	}
+	if (SecondaryWeaponSlot)
+	{
+		SecondaryWeaponSlot->Destroy();
+		SecondaryWeaponSlot = nullptr;
+	}
+
+
+	for (auto* HP : HealthSlot)
+	{
+		if (HP)
+			HP->Destroy();
+		else
+			UE_LOG(LogTemp, Error, TEXT("Attempted to destroy HP slot item that's null"));
+	}
+
+	for (auto* AP : ArmourSlot)
+	{
+		if (AP)
+			AP->Destroy();
+		else
+			UE_LOG(LogTemp, Error, TEXT("Attempted to destroy HP slot item that's null"));
+	}
+
+	HealthSlot.Empty();
+	ArmourSlot.Empty();
+
+	bInventoryDestroyed = true;
+}
+
+
+
+AWeapon* UInventoryComp::FindWeaponToReceiveAmmo() const
+{
+	// Try give ammo to equipped weapon
+	AWeapon* CurrentWeapon = GetCurrentWeapon();
+	if (CurrentWeapon && CurrentWeapon->CanGiveAmmo())
+	{
+		return CurrentWeapon; // ammo given to main weapon
+	}
+
+	// TODO Give ammo to current weapon, if that fails give it to the other slot. If no weapon is equipped, give it to the first holstered gun found
+
+
+	// Try give ammo to alternate weapon!
+	AWeapon* AltWeap = nullptr;
+	if (CurrentInventorySlot == EInventorySlots::Primary) AltWeap = GetWeapon(EInventorySlots::Secondary);
+	if (CurrentInventorySlot == EInventorySlots::Secondary) AltWeap = GetWeapon(EInventorySlots::Primary);
+	if (AltWeap && AltWeap->CanGiveAmmo() && AltWeap->TryGiveAmmo())
+	{
+		return AltWeap; // ammo given to alt weapon
+	}
+
+	return nullptr;
+}

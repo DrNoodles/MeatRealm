@@ -11,6 +11,7 @@
 
 class AHeroCharacter;
 class IAffectableInterface;
+class UInventoryComp;
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FUsageDenied);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FUsageStarted);
@@ -49,7 +50,7 @@ private:
 	FDateTime UsageStartTime;
 	FTimerHandle UsageTimerHandle;
 	IAffectableInterface* Recipient = nullptr;
-	AHeroCharacter* Delegate = nullptr; // TODO This is a horrible coupling. Make it a UInventoryComponent. Using an interface is a fools errand in UE4
+	UInventoryComp* Delegate = nullptr; // TODO This is a horrible coupling. Make it a UInventoryComponent. Using an interface is a fools errand in UE4
 
 	UPROPERTY(EditAnywhere)
 		float UsageDuration = 2;
@@ -91,7 +92,7 @@ public:
 	void SetHidden(bool bIsHidden) override { SetActorHiddenInGame(bIsHidden); }
 	void EnterInventory() override;
 	void ExitInventory() override;
-	void SetDelegate(AHeroCharacter* Delegate) override;
+	void SetDelegate(UInventoryComp* Delegate) override;
 	virtual bool ShouldHideWhenUnequipped() override { return true; }
 	virtual EInventoryCategory GetInventoryCategory() override
 	{

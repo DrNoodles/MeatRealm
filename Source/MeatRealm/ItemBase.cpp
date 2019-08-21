@@ -7,6 +7,7 @@
 #include "Components/SkeletalMeshComponent.h"
 #include "HeroCharacter.h"
 #include "UnrealNetwork.h"
+#include "InventoryComp.h"
 
 AItemBase::AItemBase()
 {
@@ -37,7 +38,7 @@ void AItemBase::ExitInventory()
 	Delegate = nullptr;
 }
 
-void AItemBase::SetDelegate(AHeroCharacter* NewDelegate)
+void AItemBase::SetDelegate(UInventoryComp* NewDelegate)
 {
 	UE_LOG(LogTemp, Warning, TEXT("AItemBase::SetDelegate  Delegate set"));
 	check (HasAuthority())

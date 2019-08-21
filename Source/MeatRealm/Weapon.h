@@ -116,7 +116,7 @@ public:
 	void ExitInventory() override;
 	EInventoryCategory GetInventoryCategory() override { return EInventoryCategory::Weapon; }
 	virtual bool ShouldHideWhenUnequipped() override { return false; }
-	void SetDelegate(AHeroCharacter* Delegate) override { }
+	void SetDelegate(UInventoryComp* Delegate) override { }
 	/* End IEquippable */
 
 	void ConfigWeapon(FWeaponConfig& Config) const;

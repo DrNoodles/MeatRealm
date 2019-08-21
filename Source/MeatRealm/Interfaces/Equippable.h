@@ -7,6 +7,7 @@
 
 #include "Equippable.generated.h"
 
+class UInventoryComp;
 class AHeroCharacter;
 
 // This class does not need to be modified.
@@ -46,7 +47,7 @@ public:
 	UFUNCTION()
 		virtual bool ShouldHideWhenUnequipped() = 0;
 	UFUNCTION()
-		virtual void SetDelegate(AHeroCharacter* Delegate) = 0; // TODO Split out an inventory component in HeroCharacter and pass that in here instead as the delegate. UInventoryComponent. Mmmmmm hawt
+		virtual void SetDelegate(UInventoryComp* Delegate) = 0; 
 
 	// Below have Default implmenetations
 
