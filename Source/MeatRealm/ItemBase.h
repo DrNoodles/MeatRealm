@@ -5,7 +5,7 @@
 #include "CoreMinimal.h"
 #include "GameFramework/Actor.h"
 #include "TimerManager.h"
-#include "Interfaces/Equippable.h"
+#include "EquippableBase.h"
 
 #include "ItemBase.generated.h"
 
@@ -19,7 +19,7 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE(FUsageSuccess);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FUsageCancelled);
 
 UCLASS()
-class MEATREALM_API AItemBase : public AActor, public IEquippable
+class MEATREALM_API AItemBase : public AEquippableBase
 {
 	GENERATED_BODY()
 

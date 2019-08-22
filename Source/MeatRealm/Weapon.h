@@ -5,7 +5,7 @@
 #include "CoreMinimal.h"
 #include "GameFramework/Actor.h"
 #include "WeaponReceiverComponent.h"
-#include "Interfaces/Equippable.h"
+#include "EquippableBase.h"
 
 #include "Weapon.generated.h"
 
@@ -33,7 +33,7 @@ struct FWeaponConfig
 };
 
 UCLASS()
-class MEATREALM_API AWeapon : public AActor, public IReceiverComponentDelegate, public IEquippable
+class MEATREALM_API AWeapon : public AEquippableBase, public IReceiverComponentDelegate
 {
 	GENERATED_BODY()
 

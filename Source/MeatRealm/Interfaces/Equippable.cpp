@@ -3,8 +3,8 @@
 
 #include "Equippable.h"
 
-// Add default functionality here for any IEquippable functions that are not pure virtual.
-bool IEquippable::Is(EInventoryCategory Category)
-{
-	return GetInventoryCategory() == Category;
-}
+//// Add default functionality here for any IEquippable functions that are not pure virtual.
+//bool IEquippable::Is(EInventoryCategory Category)
+//{
+//	return GetInventoryCategory() == Category;
+//}

@@ -4,23 +4,53 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/Actor.h"
+#include "Interfaces/Equippable.h"
+
 #include "EquippableBase.generated.h"
 
 UCLASS(Abstract)
-class MEATREALM_API AEquippableBase : public AActor
+class MEATREALM_API AEquippableBase : public AActor, public IEquippable
 {
 	GENERATED_BODY()
 	
 public:	
-	// Sets default values for this actor's properties
 	AEquippableBase();
 
-protected:
-	// Called when the game starts or when spawned
-	virtual void BeginPlay() override;
+	
+	/* IEquippable */
+	UFUNCTION()
+		virtual void Equip() override { unimplemented(); }
+	UFUNCTION()
+		virtual void Unequip() override { unimplemented(); }
+	UFUNCTION()
+		virtual float GetEquipDuration() override { unimplemented(); return 0; }
+	UFUNCTION()
+		virtual void SetHidden(bool bIsHidden) override { unimplemented(); }
+	UFUNCTION()
+		virtual EInventoryCategory GetInventoryCategory() override
+	{
+		unimplemented(); return EInventoryCategory::Undefined;
+	}
+	UFUNCTION()
+		virtual void EnterInventory() override { unimplemented(); }
+	UFUNCTION()
+		virtual void ExitInventory()  override { unimplemented(); }
+	UFUNCTION()
+		virtual bool ShouldHideWhenUnequipped() override { unimplemented(); return false; }
+	UFUNCTION()
+		virtual void SetDelegate(UInventoryComp* Delegate) override { unimplemented(); }
 
-public:	
-	// Called every frame
+	// Below have Default implementations
+
+	UFUNCTION()
+		virtual bool Is(EInventoryCategory Category) override;
+	/* IEquippable End */
+
+	
+protected:
+	virtual void BeginPlay() override;
 	virtual void Tick(float DeltaTime) override;
+	
+private:
 
 };

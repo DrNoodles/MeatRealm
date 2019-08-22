@@ -8,7 +8,6 @@
 #include "Equippable.generated.h"
 
 class UInventoryComp;
-class AHeroCharacter;
 
 // This class does not need to be modified.
 UINTERFACE(MinimalAPI)
@@ -48,9 +47,6 @@ public:
 		virtual bool ShouldHideWhenUnequipped() = 0;
 	UFUNCTION()
 		virtual void SetDelegate(UInventoryComp* Delegate) = 0; 
-
-	// Below have Default implmenetations
-
 	UFUNCTION()
-		virtual bool Is(EInventoryCategory Category);
+		virtual bool Is(EInventoryCategory Category) = 0;
 };
