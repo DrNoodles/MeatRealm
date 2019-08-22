@@ -88,6 +88,7 @@ public:
 	bool IsEquipping() const { return EquippedStatus == EEquipState::Equipping; }
 	bool IsEquipped() const { return EquippedStatus == EEquipState::Equipped; }
 	bool IsUnEquipping() const { return EquippedStatus == EEquipState::UnEquipping; }
+
 	FString GetEquippableName() const { return EquippableName; }
 
 	

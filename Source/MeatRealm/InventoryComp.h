@@ -94,10 +94,12 @@ public:
 	void NotifyItemIsExpended(AItemBase* Item);
 
 	UFUNCTION(BlueprintCallable)
+		AEquippableBase* GetEquippable(EInventorySlots Slot) const;
+	UFUNCTION(BlueprintCallable)
 		AWeapon* GetWeapon(EInventorySlots Slot) const;
+	UFUNCTION(BlueprintCallable)
+		AItemBase* GetItem(EInventorySlots Slot) const;
 	
-	AItemBase* GetItem(EInventorySlots Slot) const;
-	AEquippableBase* GetEquippable(EInventorySlots Slot) const;
 
 	UFUNCTION(BlueprintCallable)
 		int GetHealthItemCount() const;
@@ -105,8 +107,9 @@ public:
 		int GetArmourItemCount() const;
 
 	UFUNCTION(BlueprintCallable)
+		AEquippableBase* GetCurrentEquippable() const;
+	UFUNCTION(BlueprintCallable)
 		AWeapon* GetCurrentWeapon() const;
-
 	UFUNCTION(BlueprintCallable)
 		AItemBase* GetCurrentItem() const;
 
@@ -121,7 +124,6 @@ public:
 	
 	EInventorySlots GetLastInventorySlot() const { return LastInventorySlot; }
 	
-	AEquippableBase* GetCurrentEquippable() const;
 	void SpawnHeldWeaponsAsPickups() const;
 	
 	AWeapon* FindWeaponToReceiveAmmo() const;
