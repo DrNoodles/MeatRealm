@@ -4,12 +4,19 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/Actor.h"
-#include "Interfaces/Equippable.h"
 
 #include "EquippableBase.generated.h"
 
+class UInventoryComp;
+
+UENUM()
+enum class EInventoryCategory : uint8
+{
+	Undefined = 0, Weapon, Health, Armour, Throwable
+};
+
 UCLASS(Abstract)
-class MEATREALM_API AEquippableBase : public AActor, public IEquippable
+class MEATREALM_API AEquippableBase : public AActor
 {
 	GENERATED_BODY()
 	
@@ -17,7 +24,6 @@ public:
 	AEquippableBase();
 
 	
-	/* IEquippable */
 	UFUNCTION()
 		virtual void Equip() { unimplemented(); }
 	UFUNCTION()
@@ -42,7 +48,6 @@ public:
 
 	UFUNCTION()
 		bool Is(EInventoryCategory Category);
-	/* IEquippable End */
 
 	
 protected:

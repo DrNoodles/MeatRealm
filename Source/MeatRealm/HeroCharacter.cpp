@@ -22,7 +22,6 @@
 #include "TimerManager.h"
 #include "Engine/World.h"
 #include "DrawDebugHelpers.h"
-#include "Interfaces/Equippable.h"
 #include "Projectile.h"
 
 /// Lifecycle

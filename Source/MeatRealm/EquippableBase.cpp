@@ -2,7 +2,7 @@
 
 
 #include "EquippableBase.h"
-
+#include "InventoryComp.h"
 
 AEquippableBase::AEquippableBase()
 {
