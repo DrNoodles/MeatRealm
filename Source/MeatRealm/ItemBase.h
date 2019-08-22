@@ -61,10 +61,6 @@ private:
 	UPROPERTY(EditAnywhere)
 		bool bIsAutoUseOnEquip = true;
 
-	UPROPERTY(EditAnywhere)
-		float EquipDuration = 0.3;
-
-
 	UPROPERTY(VisibleAnywhere)
 		USceneComponent* RootComp = nullptr;
 
@@ -89,8 +85,6 @@ public:
 	void OnEquipFinished() override;
 	void OnUnEquipStarted() override;
 	void OnUnEquipFinished() override;
-	
-	float GetEquipDuration() override { return EquipDuration; }
 	void EnterInventory() override;
 	void ExitInventory() override;
 	virtual bool ShouldHideWhenUnequipped() override { return true; }
@@ -101,13 +95,14 @@ public:
 	}
 	/* End AEquippableBase */
 
+	
+
 protected:
 	virtual bool CanApplyItem(IAffectableInterface* Affectable)
 	{
 		unimplemented();
 		return false;
 	}
-	//virtual void ApplyItem(IAffectableInterface* const Affectable) PURE_VIRTUAL(AItemBase::ApplyItem, );
 	virtual void ApplyItem(IAffectableInterface* Affectable)
 	{
 		unimplemented();

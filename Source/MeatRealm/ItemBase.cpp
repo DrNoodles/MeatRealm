@@ -160,6 +160,11 @@ void AItemBase::SetRecipient(IAffectableInterface* const TheRecipient)
 
 void AItemBase::OnEquipStarted()
 {
+	
+}
+
+void AItemBase::OnEquipFinished()
+{
 	if (!HasAuthority())
 	{
 		ServerEquip();
@@ -173,10 +178,6 @@ void AItemBase::OnEquipStarted()
 	{
 		UsePressed();
 	}
-}
-
-void AItemBase::OnEquipFinished()
-{
 }
 
 void AItemBase::OnUnEquipStarted()
@@ -223,7 +224,7 @@ bool AItemBase::ServerCancel_Validate()
 }
 void AItemBase::ServerEquip_Implementation()
 {
-	OnEquipStarted();
+	OnEquipFinished();
 }
 bool AItemBase::ServerEquip_Validate()
 {

@@ -130,18 +130,20 @@ void UWeaponReceiverComponent::TickComponent(float DeltaTime, ELevelTick TickTyp
 			if (InputState.DrawRequested)
 			{
 				InputState.DrawRequested = false;
-				ChangeState(EWeaponCommands::EquipStart, WeaponState);
+				ChangeState(EWeaponCommands::Equip, WeaponState);
 			}
 		}
 		break;
 
 		case EWeaponModes::Equipping:
 		{
-			if (InputState.HolsterRequested)
+			/*if (InputState.HolsterRequested)
 			{
 				InputState.HolsterRequested = false;
 				ChangeState(EWeaponCommands::UnEquip, WeaponState);
-			}
+			}*/
+			//ChangeState(EWeaponCommands::Equip, WeaponState);
+
 			break;
 		}
 
@@ -432,7 +434,7 @@ bool UWeaponReceiverComponent::ChangeState(EWeaponCommands Cmd, FWeaponState& We
 		WeapState.Mode = EWeaponModes::UnEquipped;
 	}
 
-	if (Cmd == EWeaponCommands::EquipStart) {
+	if (Cmd == EWeaponCommands::Equip) {
 		WeapState.Mode = EWeaponModes::Equipping;
 	}
 
@@ -453,11 +455,11 @@ bool UWeaponReceiverComponent::ChangeState(EWeaponCommands Cmd, FWeaponState& We
 
 	return bWeChangedStates;
 }
-void UWeaponReceiverComponent::EquipEnd()
-{
-	//LogMsgWithRole("EquipEnd()");
-	ChangeState(EWeaponCommands::EquipEnd, WeaponState);
-}
+//void UWeaponReceiverComponent::EquipEnd()
+//{
+//	//LogMsgWithRole("EquipEnd()");
+//	ChangeState(EWeaponCommands::EquipEnd, WeaponState);
+//}
 void UWeaponReceiverComponent::DoTransitionAction(const EWeaponModes OldMode, const EWeaponModes NewMode, FWeaponState& NewState)
 {
 	// Any > Equipping
@@ -479,8 +481,9 @@ void UWeaponReceiverComponent::DoTransitionAction(const EWeaponModes OldMode, co
 		NewState.BurstCount = 0;
 		ShotTimes.Empty();
 
+		ChangeState(EWeaponCommands::EquipEnd, WeaponState);
 
-		GetWorld()->GetTimerManager().SetTimer(BusyTimerHandle, this, &UWeaponReceiverComponent::EquipEnd, Delegate->GetDrawDuration(), false);
+	/*	GetWorld()->GetTimerManager().SetTimer(BusyTimerHandle, this, &UWeaponReceiverComponent::EquipEnd, Delegate->GetDrawDuration(), false);*/
 	}
 
 

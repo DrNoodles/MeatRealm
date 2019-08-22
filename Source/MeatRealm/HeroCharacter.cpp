@@ -244,14 +244,28 @@ void AHeroCharacter::Tick(float DeltaSeconds)
 	}
 
 
-	// Draw drawing weapon debug text
+	// Show drawing/holstering weapon debug text
 
-	AWeapon* CurrentWeapon = InventoryComp->GetCurrentWeapon();
-	if (CurrentWeapon && CurrentWeapon->IsEquipping())
+	const auto Held = InventoryComp->GetCurrentEquippable();
+	if (Held)
 	{
-		auto str = FString::Printf(TEXT("Equipping %s"), *CurrentWeapon->GetWeaponName());
-		const auto YOffset = -5.f * str.Len();
-		DrawDebugString(GetWorld(), FVector{ 70, YOffset, 50 }, str, this, FColor::White, DeltaSeconds * 0.7);
+		FString Str{};
+
+		if (Held->IsEquipping())
+		{
+			Str = FString::Printf(TEXT("Equipping %s"), *Held->GetEquippableName());
+		}
+
+		if (Held->IsUnEquipping())
+		{
+			Str = FString::Printf(TEXT("Un-equipping %s"), *Held->GetEquippableName());
+		}
+
+		if (Str.Len() > 0)
+		{
+			const auto YOffset = -5.f * Str.Len();
+			DrawDebugString(GetWorld(), FVector{ 70, YOffset, 50 }, Str, this, FColor::White, DeltaSeconds * 0.7);
+		}
 	}
 }
 
@@ -947,7 +961,14 @@ void AHeroCharacter::RefreshWeaponAttachments()
 		if (Item)
 		{
 			Item->AttachToComponent(GetMesh(), Rules, HandSocketName);
-			Item->SetActorHiddenInGame(false); // This means it'll be visible even it's mid equip. 
+			if (Item->IsEquipped())
+			{
+				Item->SetActorHiddenInGame(false); // This is here so items are visible after one in a stack of the same type is used. Eg, holding 2 armours. Use 1, this here makes the second one visible after the 1st is expended.
+			}
+			else
+			{
+				UE_LOG(LogTemp, Warning, TEXT("Item Status: %d"), Item->GetEquippedStatus())
+			}
 		}
 	}
 }

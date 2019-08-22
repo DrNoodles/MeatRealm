@@ -70,16 +70,8 @@ protected:
 
 	//// Configure the gun
 
-	// Time (seconds) to holster the weapon
-	//UPROPERTY(EditAnywhere)
-	//	float HolsterDuration = 0.5;
-
-	UPROPERTY(EditAnywhere)
-		float DrawDuration = 1;
-
 	UPROPERTY(EditAnywhere)
 		float AdsMovementScale = 0.70;
-
 
 	UPROPERTY(BlueprintAssignable, Category = "Event Dispatchers")
 		FShotFired OnShotFired;
@@ -94,8 +86,6 @@ protected:
 		FReloadEnded OnReloadEnded;
 
 protected:
-	UPROPERTY(EditAnywhere, BlueprintReadOnly)
-		FString WeaponName = "NoNameWeapon";
 
 private:
 	
@@ -111,7 +101,6 @@ public:
 	void OnEquipFinished() override;
 	void OnUnEquipStarted() override;
 	void OnUnEquipFinished() override;
-	float GetEquipDuration() override { return DrawDuration; }
 	void EnterInventory() override;
 	void ExitInventory() override;
 	EInventoryCategory GetInventoryCategory() override { return EInventoryCategory::Weapon; }
@@ -142,17 +131,13 @@ public:
 	FVector GetBarrelLocation() override;
 	const UArrowComponent* GetMuzzleComponent() const { return MuzzleLocationComp; }
 	float GetDrawDuration() override;
-
 	AActor* GetOwningPawn() override;
 	FString GetWeaponName() override;
-	bool IsEquipping() const { return ReceiverComp->IsEquipping(); }
 	bool IsReloading() const { return ReceiverComp->IsReloading(); }
 	void CancelAnyReload();
-
 	int GetAmmoInClip() const { return ReceiverComp->GetState().AmmoInClip; }
 	int GetAmmoInPool() const { return ReceiverComp->GetState().AmmoInPool; }
 	bool HasAmmo() const { return ReceiverComp->GetState().AmmoInClip + ReceiverComp->GetState().AmmoInPool > 0; }
-
 	/* End IReceiverComponentDelegate */
 
 

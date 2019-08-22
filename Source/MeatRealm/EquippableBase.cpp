@@ -3,6 +3,7 @@
 
 #include "EquippableBase.h"
 #include "InventoryComp.h"
+#include "Engine/World.h"
 
 AEquippableBase::AEquippableBase()
 {
@@ -11,37 +12,51 @@ AEquippableBase::AEquippableBase()
 
 void AEquippableBase::Equip()
 {
+	ClearTimers();
+
+	EquippedStatus = EEquipState::Equipping;
 	OnEquipStarted();
 	// TODO Call multicast event
 	// TODO Call blueprint implementable method
 
+	GetWorld()->GetTimerManager().SetTimer(EquipTimerHandle, this, &AEquippableBase::EquipFinish, EquipDuration, false);
+}
+void AEquippableBase::EquipFinish()
+{
+	EquippedStatus = EEquipState::Equipped;
 	OnEquipFinished();
-	// TODO Call multicast event
-	// TODO Call blueprint implementable method
+	// TODO Also Call multicast event
+	// TODO Also Call blueprint implementable method
 }
 
 void AEquippableBase::Unequip()
 {
+	ClearTimers();
+
+	EquippedStatus = EEquipState::UnEquipping;
 	OnUnEquipStarted();
 	// TODO Call multicast event
 	// TODO Call blueprint implementable method
 
+
+	GetWorld()->GetTimerManager().SetTimer(UnEquipTimerHandle, this, &AEquippableBase::UnEquipFinish, UnEquipDuration, false);
+	
+}
+void AEquippableBase::UnEquipFinish()
+{
+	EquippedStatus = EEquipState::UnEquipped;
 	OnUnEquipFinished();
 	// TODO Call multicast event
 	// TODO Call blueprint implementable method
 }
 
-void AEquippableBase::BeginPlay()
-{
-	Super::BeginPlay();
-}
-void AEquippableBase::Tick(float DeltaTime)
-{
-	Super::Tick(DeltaTime);
-}
-
-
 bool AEquippableBase::Is(EInventoryCategory Category)
 {
 	return GetInventoryCategory() == Category;
+}
+
+void AEquippableBase::ClearTimers()
+{
+	GetWorldTimerManager().ClearTimer(EquipTimerHandle);
+	GetWorldTimerManager().ClearTimer(UnEquipTimerHandle);
 }
