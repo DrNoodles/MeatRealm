@@ -4,7 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "Components/ActorComponent.h"
-#include "Interfaces/Equippable.h"
+
 #include "ItemArmour.h"
 
 
@@ -15,9 +15,8 @@ DECLARE_LOG_CATEGORY_EXTERN(LogInventory, Display, All);
 struct FWeaponConfig;
 class AItemBase;
 class AWeapon;
-class IEquippable;
 class AHeroCharacter;
-
+class AEquippableBase;
 
 class IInventoryCompDelegate
 {
@@ -98,7 +97,7 @@ public:
 		AWeapon* GetWeapon(EInventorySlots Slot) const;
 	
 	AItemBase* GetItem(EInventorySlots Slot) const;
-	IEquippable* GetEquippable(EInventorySlots Slot) const;
+	AEquippableBase* GetEquippable(EInventorySlots Slot) const;
 
 	UFUNCTION(BlueprintCallable)
 		int GetHealthItemCount() const;
@@ -122,7 +121,7 @@ public:
 	
 	EInventorySlots GetLastInventorySlot() const { return LastInventorySlot; }
 	
-	IEquippable* GetCurrentEquippable() const;
+	AEquippableBase* GetCurrentEquippable() const;
 	void SpawnHeldWeaponsAsPickups() const;
 	
 	AWeapon* FindWeaponToReceiveAmmo() const;
@@ -138,7 +137,7 @@ public:
 
 	bool CanGiveItem(const TSubclassOf<AItemBase>& Class);
 	void SetDelegate(IInventoryCompDelegate* Dgate) { Delegate = Dgate; }
-	bool RemoveEquippableFromInventory(IEquippable* Equippable);
+	bool RemoveEquippableFromInventory(AEquippableBase* Equippable);
 
 
 // Protected Methods //////////////////////////////////////////////////////////

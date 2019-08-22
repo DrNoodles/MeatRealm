@@ -85,7 +85,7 @@ public:
 	bool IsInUse() const { return bIsInUse; }
 	void SetRecipient(IAffectableInterface* const TheRecipient);
 
-	/* IEquippable */
+	/* AEquippableBase */
 	void Equip() override;
 	void Unequip() override;
 	float GetEquipDuration() override { return EquipDuration; }
@@ -99,7 +99,7 @@ public:
 		unimplemented();
 		return EInventoryCategory::Undefined;
 	}
-	/* End IEquippable */
+	/* End AEquippableBase */
 
 protected:
 	virtual bool CanApplyItem(IAffectableInterface* Affectable)

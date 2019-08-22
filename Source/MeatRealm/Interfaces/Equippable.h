@@ -29,7 +29,7 @@ class MEATREALM_API IEquippable
 	GENERATED_BODY()
 
 public:
-	UFUNCTION()
+	/*UFUNCTION()
 		virtual void Equip() = 0;
 	UFUNCTION()
 		virtual void Unequip() = 0;
@@ -48,5 +48,5 @@ public:
 	UFUNCTION()
 		virtual void SetDelegate(UInventoryComp* Delegate) = 0; 
 	UFUNCTION()
-		virtual bool Is(EInventoryCategory Category) = 0;
+		virtual bool Is(EInventoryCategory Category) = 0;*/
 };

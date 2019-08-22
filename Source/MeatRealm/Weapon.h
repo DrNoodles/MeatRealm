@@ -106,8 +106,7 @@ private:
 public:
 	AWeapon();
 
-	/// [Server, Local]
-	/* IEquippable */
+	/* AEquippableBase */
 	void Equip() override;
 	void Unequip() override;
 	float GetEquipDuration() override { return DrawDuration; }
@@ -117,7 +116,7 @@ public:
 	EInventoryCategory GetInventoryCategory() override { return EInventoryCategory::Weapon; }
 	virtual bool ShouldHideWhenUnequipped() override { return false; }
 	void SetDelegate(UInventoryComp* Delegate) override { }
-	/* End IEquippable */
+	/* End AEquippableBase */
 
 	void ConfigWeapon(FWeaponConfig& Config) const;
 

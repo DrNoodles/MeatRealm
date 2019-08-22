@@ -19,31 +19,29 @@ public:
 	
 	/* IEquippable */
 	UFUNCTION()
-		virtual void Equip() override { unimplemented(); }
+		virtual void Equip() { unimplemented(); }
 	UFUNCTION()
-		virtual void Unequip() override { unimplemented(); }
+		virtual void Unequip() { unimplemented(); }
 	UFUNCTION()
-		virtual float GetEquipDuration() override { unimplemented(); return 0; }
+		virtual float GetEquipDuration() { unimplemented(); return 0; }
 	UFUNCTION()
-		virtual void SetHidden(bool bIsHidden) override { unimplemented(); }
+		virtual void SetHidden(bool bIsHidden) { unimplemented(); }
 	UFUNCTION()
-		virtual EInventoryCategory GetInventoryCategory() override
-	{
-		unimplemented(); return EInventoryCategory::Undefined;
+		virtual EInventoryCategory GetInventoryCategory() { unimplemented(); return EInventoryCategory::Undefined;
 	}
 	UFUNCTION()
-		virtual void EnterInventory() override { unimplemented(); }
+		virtual void EnterInventory() { unimplemented(); }
 	UFUNCTION()
-		virtual void ExitInventory()  override { unimplemented(); }
+		virtual void ExitInventory() { unimplemented(); }
 	UFUNCTION()
-		virtual bool ShouldHideWhenUnequipped() override { unimplemented(); return false; }
+		virtual bool ShouldHideWhenUnequipped() { unimplemented(); return false; }
 	UFUNCTION()
-		virtual void SetDelegate(UInventoryComp* Delegate) override { unimplemented(); }
+		virtual void SetDelegate(UInventoryComp* Delegate) { unimplemented(); }
 
 	// Below have Default implementations
 
 	UFUNCTION()
-		virtual bool Is(EInventoryCategory Category) override;
+		bool Is(EInventoryCategory Category);
 	/* IEquippable End */
 
 	

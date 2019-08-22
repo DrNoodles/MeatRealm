@@ -5,14 +5,13 @@
 #include "CoreMinimal.h"
 #include "GameFramework/Character.h"
 #include "Interfaces/AffectableInterface.h"
-#include "InventoryComp.h"
+#include "InventoryComp.h" // For IInventoryCompDelegate - TODO Split that interface out of InventoryComp for leaner compiling
 
 #include "HeroCharacter.generated.h"
 
 class AHeroState;
 class AHeroController;
 class AWeapon;
-class IEquippable;
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FPlayerTintChanged);
 
