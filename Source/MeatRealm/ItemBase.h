@@ -85,8 +85,11 @@ public:
 	void SetRecipient(IAffectableInterface* const TheRecipient);
 
 	/* AEquippableBase */
-	void Equip() override;
-	void Unequip() override;
+	void OnEquipStarted() override;
+	void OnEquipFinished() override;
+	void OnUnEquipStarted() override;
+	void OnUnEquipFinished() override;
+	
 	float GetEquipDuration() override { return EquipDuration; }
 	void EnterInventory() override;
 	void ExitInventory() override;

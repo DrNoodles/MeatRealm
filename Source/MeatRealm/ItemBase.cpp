@@ -158,7 +158,7 @@ void AItemBase::SetRecipient(IAffectableInterface* const TheRecipient)
 	ClientSetRecipient(Cast<UObject>(TheRecipient));
 }
 
-void AItemBase::Equip()
+void AItemBase::OnEquipStarted()
 {
 	if (!HasAuthority())
 	{
@@ -175,7 +175,11 @@ void AItemBase::Equip()
 	}
 }
 
-void AItemBase::Unequip()
+void AItemBase::OnEquipFinished()
+{
+}
+
+void AItemBase::OnUnEquipStarted()
 {
 	if (!HasAuthority())
 	{
@@ -186,6 +190,9 @@ void AItemBase::Unequip()
 	StopAnyUsage();
 }
 
+void AItemBase::OnUnEquipFinished()
+{
+}
 
 
 
@@ -216,7 +223,7 @@ bool AItemBase::ServerCancel_Validate()
 }
 void AItemBase::ServerEquip_Implementation()
 {
-	Equip();
+	OnEquipStarted();
 }
 bool AItemBase::ServerEquip_Validate()
 {
@@ -224,7 +231,7 @@ bool AItemBase::ServerEquip_Validate()
 }
 void AItemBase::ServerUnequip_Implementation()
 {
-	Unequip();
+	OnUnEquipStarted();
 }
 bool AItemBase::ServerUnequip_Validate()
 {

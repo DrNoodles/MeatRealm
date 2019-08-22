@@ -37,8 +37,16 @@ private:
 public:
 	AEquippableBase();
 
-	virtual void Equip() { unimplemented(); }
-	virtual void Unequip() { unimplemented(); }
+	void Equip();
+	void Unequip();
+
+	virtual void OnEquipStarted() { unimplemented(); }
+	virtual void OnEquipFinished() { unimplemented(); }
+
+
+	virtual void OnUnEquipStarted() { unimplemented(); }
+	virtual void OnUnEquipFinished() { unimplemented(); }
+	
 	virtual void EnterInventory() { unimplemented(); }
 	virtual void ExitInventory() { unimplemented(); }
 

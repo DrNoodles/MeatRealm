@@ -107,8 +107,10 @@ public:
 	AWeapon();
 
 	/* AEquippableBase */
-	void Equip() override;
-	void Unequip() override;
+	void OnEquipStarted() override;
+	void OnEquipFinished() override;
+	void OnUnEquipStarted() override;
+	void OnUnEquipFinished() override;
 	float GetEquipDuration() override { return DrawDuration; }
 	void EnterInventory() override;
 	void ExitInventory() override;
