@@ -20,6 +20,7 @@ class MEATREALM_API ADeathmatchGameState : public AGameState
 	GENERATED_BODY()
 
 public:
+	virtual float GetPlayerRespawnDelay(AController* Controller) const override;
 	virtual bool ReplicateSubobjects(UActorChannel* Channel, FOutBunch* Bunch, FReplicationFlags* RepFlags) override;
 
 	UFUNCTION(BlueprintCallable)

@@ -5,6 +5,7 @@
 #include "CoreMinimal.h"
 #include "GameFramework/Character.h"
 #include "Interfaces/AffectableInterface.h"
+#include "InventoryComp.h"
 
 #include "HeroCharacter.generated.h"
 
@@ -15,21 +16,10 @@ class IEquippable;
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FPlayerTintChanged);
 
-UENUM(BlueprintType)
-enum class EInventorySlots : uint8
-{
-	Undefined = 0,
-	Primary = 1,
-	Secondary = 2,
-	Health = 3,
-	Armour = 4,
-};
-
 UCLASS()
-class MEATREALM_API AHeroCharacter : public ACharacter, public IAffectableInterface
+class MEATREALM_API AHeroCharacter : public ACharacter, public IAffectableInterface, public IInventoryCompDelegate
 {
 	GENERATED_BODY()
-
 
 public:
 	UPROPERTY(EditAnywhere, Category = Camera)
@@ -52,10 +42,6 @@ public:
 
 	UPROPERTY(EditAnywhere)
 	float InteractableSearchDistance = 150.f; //cm
-
-	// Projectile class to spawn.
-	UPROPERTY(EditDefaultsOnly, Category = Weapon)
-		TArray<TSubclassOf<class AWeapon>> DefaultWeaponClass;
 
 	UPROPERTY(BlueprintReadWrite, EditAnywhere)
 		float MaxHealth = 100.f;
@@ -136,19 +122,13 @@ protected:
 		UStaticMeshComponent* AimPosComp = nullptr;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
+		UInventoryComp* InventoryComp = nullptr;
+	
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
 		UArrowComponent* WeaponAnchor = nullptr;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
 		UArrowComponent* HolsteredweaponAnchor = nullptr;
-
-	UPROPERTY(Replicated, BlueprintReadOnly)
-		EInventorySlots CurrentInventorySlot = EInventorySlots::Undefined;
-
-	UPROPERTY(EditAnywhere, BlueprintReadOnly)
-	int32 HealthSlotLimit = 6;
-	
-	UPROPERTY(EditAnywhere, BlueprintReadOnly)
-	int32 ArmourSlotLimit = 6;
 
 private:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Camera, meta = (AllowPrivateAccess = "true"))
@@ -169,10 +149,6 @@ private:
 	FVector2D AimPos_ScreenSpace = FVector2D::ZeroVector;
 	FVector AimPos_WorldSpace = FVector::ZeroVector;
 
-	FTimerHandle EquipTimerHandle;
-
-	bool bIsEquipping;
-
 	bool bWantsToFire;
 
 
@@ -187,23 +163,8 @@ private:
 	const char* Holster2SocketName = "Holster2Socket";
 
 
-	UPROPERTY(Replicated)
-		EInventorySlots LastInventorySlot = EInventorySlots::Undefined;
-
-	
-	UPROPERTY(Replicated)
-		AWeapon* PrimaryWeaponSlot = nullptr;
-	UPROPERTY(Replicated)
-		AWeapon* SecondaryWeaponSlot = nullptr;
-	UPROPERTY(Replicated)
-		TArray<AItemBase*> HealthSlot{};
-	UPROPERTY(Replicated)
-		TArray<AItemBase*> ArmourSlot{};
-
-	
 public:
 	AHeroCharacter(const FObjectInitializer& ObjectInitializer);
-	void DestroyInventory();
 	void Restart() override;
 	void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
 	
@@ -219,14 +180,19 @@ public:
 	}
 	FColor GetTint() const { return TeamTint; }
 
-	void NotifyItemIsExpended(AItemBase* Item);
 	float GetHealingMovementSpeed() const { return HealingMovementSpeed; }
-	void SpawnHeldWeaponsAsPickups() const;
 
+	virtual void PostInitializeComponents() override;
+	
 	virtual bool ShouldTakeDamage(float Damage, FDamageEvent const& DamageEvent, AController* EventInstigator, AActor* DamageCauser) const override;
-	
-	
 	virtual float TakeDamage(float DamageAmount, FDamageEvent const& DamageEvent, AController* EventInstigator, AActor* DamageCauser) override;
+
+	/* IInventoryCompDelegate */
+	uint32 GetControllerId() override;
+	FTransform GetHandSocketTransform() override;
+	void RefreshWeaponAttachments() override;
+	/* End IInventoryCompDelegate */
+	
 
 	/* IAffectableInterface */
 	UFUNCTION()
@@ -283,13 +249,6 @@ public:
 	void Input_SecondaryPressed();
 	void Input_SecondaryReleased();
 	void Input_Reload() const;
-
-	UFUNCTION(BlueprintCallable)
-	AWeapon* GetWeapon(EInventorySlots Slot) const;
-
-	AItemBase* GetItem(EInventorySlots Slot) const;
-	IEquippable* GetEquippable(EInventorySlots Slot) const;
-
 	void Input_MoveUp(float Value) {	AxisMoveUp = Value; }
 	void Input_MoveRight(float Value) { AxisMoveRight = Value; }
 	void Input_FaceUp(float Value) { AxisFaceUp = Value; }
@@ -304,18 +263,6 @@ public:
 	void SetUseMouseAim(bool bUseMouseAimIn) { bUseMouseAim = bUseMouseAimIn; }
 
 
-	UFUNCTION(BlueprintCallable)
-		int GetHealthItemCount() const;
-	UFUNCTION(BlueprintCallable)
-		int GetArmourItemCount() const;
-
-	UFUNCTION(BlueprintCallable)
-	AWeapon* GetCurrentWeapon() const;
-
-	UFUNCTION(BlueprintCallable)
-	AItemBase* GetCurrentItem() const;
-
-	IEquippable* GetCurrentEquippable() const;
 
 	bool IsRunning() const { return bIsRunning; }
 	bool IsTargeting() const;
@@ -323,15 +270,16 @@ public:
 	
 	float GetRunningReloadSpeed() const { return RunningReloadSpeed; }
 
-
+	void AuthOnDeath();
 
 private:
 
+	UFUNCTION(NetMulticast, Reliable, WithValidation)
+	void MultiOnDeath();
+	
+	void OnDeathImpl();
+	
 	void SetRagdollPhysics();
-
-	bool RemoveEquippableFromInventory(IEquippable* Equippable);
-	void SpawnWeaponPickups(TArray<AWeapon*>& Weapons) const;
-	AWeapon* FindWeaponToReceiveAmmo() const;
 
 	void ScanForWeaponPickups(float DeltaSeconds);
 	virtual void Tick(float DeltaSeconds) override;
@@ -353,35 +301,14 @@ private:
 	UFUNCTION(Server, Reliable, WithValidation)
 		void ServerEquipArmour();
 
-	UFUNCTION(NetMulticast, Reliable, WithValidation)
-		void MultiOnDeath();
-
-
 	void OnRunToggle();
 	void OnStartRunning();
 	void OnStopRunning();
 	void SetRunning(bool bNewIsRunning);
 
-
 	void SetTargeting(bool bNewTargeting);
 
-
-	bool HasAnItemEquipped() const;
-	bool HasAWeaponEquipped() const;
-
-	AItemBase* GetFirstHealthItemOrNull() const;
-	AItemBase* GetFirstArmourItemOrNull() const;
 	
-	void GiveItemToPlayer(TSubclassOf<class AItemBase> ItemClass);
-	void GiveWeaponToPlayer(TSubclassOf<class AWeapon> WeaponClass, FWeaponConfig& Config);
-	AWeapon* AuthSpawnWeapon(TSubclassOf<AWeapon> weaponClass, FWeaponConfig& Config);
-	EInventorySlots FindGoodWeaponSlot() const;
-	AWeapon* AssignWeaponToInventorySlot(AWeapon* Weapon, EInventorySlots Slot);
-	void EquipSlot(EInventorySlots Slot);
-	void MakeEquippedItemVisible() const;
-	void RefreshWeaponAttachments() const;
-
-
 	static FVector2D GetGameViewportSize();
 	static FVector2D CalcLinearLeanVectorUnclipped(const FVector2D& CursorLoc, const FVector2D& ViewportSize);
 	void MoveCameraByOffsetVector(const FVector2D& Vector2D, float DeltaSeconds) const;
