@@ -10,6 +10,7 @@
 
 #include "InventoryComp.generated.h"
 
+DECLARE_LOG_CATEGORY_EXTERN(LogInventory, Display, All);
 
 struct FWeaponConfig;
 class AItemBase;
@@ -44,8 +45,10 @@ class MEATREALM_API UInventoryComp : public UActorComponent
 {
 	GENERATED_BODY()
 
+// Public Data ////////////////////////////////////////////////////////////////
 public:
 	
+// Protected Data /////////////////////////////////////////////////////////////
 protected:
 	UPROPERTY(EditDefaultsOnly, Category = Weapon)
 		TArray<TSubclassOf<class AWeapon>> DefaultWeaponClass;
@@ -58,7 +61,8 @@ protected:
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly)
 		int32 ArmourSlotLimit = 6;
-	
+
+// Private Data ///////////////////////////////////////////////////////////////
 private:
 	IInventoryCompDelegate* Delegate = nullptr;
 	
@@ -81,7 +85,7 @@ private:
 	const char* HandSocketName = "HandSocket"; // TODO remove this duplicated code from AHeroCharacter
 
 	
-	
+// Public Methods /////////////////////////////////////////////////////////////
 public:	
 	UInventoryComp();
 	
@@ -127,7 +131,6 @@ public:
 	bool HasAnItemEquipped() const;
 	bool HasAWeaponEquipped() const;
 	
-	//void RefreshWeaponAttachments() const;
 	void GiveItemToPlayer(TSubclassOf<class AItemBase> ItemClass);
 	void GiveWeaponToPlayer(TSubclassOf<class AWeapon> WeaponClass, FWeaponConfig& Config);
 
@@ -137,11 +140,12 @@ public:
 	void SetDelegate(IInventoryCompDelegate* Dgate) { Delegate = Dgate; }
 	bool RemoveEquippableFromInventory(IEquippable* Equippable);
 
+
+// Protected Methods //////////////////////////////////////////////////////////
+protected:
+
+// Private Methods ////////////////////////////////////////////////////////////
 private:
-
-	virtual void BeginPlay() override;
-	virtual void TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction) override;
-
 	AItemBase* GetFirstHealthItemOrNull() const;
 	AItemBase* GetFirstArmourItemOrNull() const;
 	

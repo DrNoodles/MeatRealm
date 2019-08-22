@@ -43,9 +43,6 @@ public:
 	UPROPERTY(EditAnywhere)
 	float InteractableSearchDistance = 150.f; //cm
 
-	//UPROPERTY(EditDefaultsOnly, Category = Weapon)
-	//	TArray<TSubclassOf<class AWeapon>> DefaultWeaponClass;
-
 	UPROPERTY(BlueprintReadWrite, EditAnywhere)
 		float MaxHealth = 100.f;
 
@@ -132,15 +129,6 @@ protected:
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
 		UArrowComponent* HolsteredweaponAnchor = nullptr;
-/*
-	UPROPERTY(Replicated, BlueprintReadOnly)
-		EInventorySlots CurrentInventorySlot = EInventorySlots::Undefined;
-
-	UPROPERTY(EditAnywhere, BlueprintReadOnly)
-	int32 HealthSlotLimit = 6;
-	
-	UPROPERTY(EditAnywhere, BlueprintReadOnly)
-	int32 ArmourSlotLimit = 6;*/
 
 private:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Camera, meta = (AllowPrivateAccess = "true"))
@@ -161,13 +149,7 @@ private:
 	FVector2D AimPos_ScreenSpace = FVector2D::ZeroVector;
 	FVector AimPos_WorldSpace = FVector::ZeroVector;
 
-	//FTimerHandle EquipTimerHandle;
-
-	//bool bIsEquipping;
-
 	bool bWantsToFire;
-
-	//bool bInventoryDestroyed = false;
 
 
 	UPROPERTY(Transient, Replicated)
@@ -204,8 +186,6 @@ public:
 	
 	virtual bool ShouldTakeDamage(float Damage, FDamageEvent const& DamageEvent, AController* EventInstigator, AActor* DamageCauser) const override;
 	virtual float TakeDamage(float DamageAmount, FDamageEvent const& DamageEvent, AController* EventInstigator, AActor* DamageCauser) override;
-
-	//void NotifyItemIsExpended(AItemBase* Item);
 
 	/* IInventoryCompDelegate */
 	uint32 GetControllerId() override;
@@ -269,41 +249,6 @@ public:
 	void Input_SecondaryPressed();
 	void Input_SecondaryReleased();
 	void Input_Reload() const;
-
-
-	
-
-	//// Inventory
-
-	//void InitInventory();
-	//void DestroyInventory();
-
-	//void NotifyItemIsExpended(AItemBase* Item);
-
-	//UFUNCTION(BlueprintCallable)
-	//	AWeapon* GetWeapon(EInventorySlots Slot) const;
-	//AItemBase* GetItem(EInventorySlots Slot) const;
-	//IEquippable* GetEquippable(EInventorySlots Slot) const;
-
-	//UFUNCTION(BlueprintCallable)
-	//	int GetHealthItemCount() const;
-	//UFUNCTION(BlueprintCallable)
-	//	int GetArmourItemCount() const;
-
-	//UFUNCTION(BlueprintCallable)
-	//	AWeapon* GetCurrentWeapon() const;
-
-	//UFUNCTION(BlueprintCallable)
-	//	AItemBase* GetCurrentItem() const;
-
-	//IEquippable* GetCurrentEquippable() const;
-	//void SpawnHeldWeaponsAsPickups() const;
-
-
-
-
-	
-	
 	void Input_MoveUp(float Value) {	AxisMoveUp = Value; }
 	void Input_MoveRight(float Value) { AxisMoveRight = Value; }
 	void Input_FaceUp(float Value) { AxisFaceUp = Value; }
@@ -336,8 +281,6 @@ private:
 	
 	void SetRagdollPhysics();
 
-	//AWeapon* FindWeaponToReceiveAmmo() const;
-
 	void ScanForWeaponPickups(float DeltaSeconds);
 	virtual void Tick(float DeltaSeconds) override;
 	void TickWalking(float DT);
@@ -358,42 +301,14 @@ private:
 	UFUNCTION(Server, Reliable, WithValidation)
 		void ServerEquipArmour();
 
-
-
 	void OnRunToggle();
 	void OnStartRunning();
 	void OnStopRunning();
 	void SetRunning(bool bNewIsRunning);
 
-
 	void SetTargeting(bool bNewTargeting);
 
-
-
 	
-	//// Inventory
-
-	//bool HasAnItemEquipped() const;
-	//bool HasAWeaponEquipped() const;
-
-	//AItemBase* GetFirstHealthItemOrNull() const;
-	//AItemBase* GetFirstArmourItemOrNull() const;
-
-	//void GiveItemToPlayer(TSubclassOf<class AItemBase> ItemClass);
-	//void GiveWeaponToPlayer(TSubclassOf<class AWeapon> WeaponClass, FWeaponConfig& Config);
-	//AWeapon* AuthSpawnWeapon(TSubclassOf<AWeapon> weaponClass, FWeaponConfig& Config);
-	//EInventorySlots FindGoodWeaponSlot() const;
-	//AWeapon* AssignWeaponToInventorySlot(AWeapon* Weapon, EInventorySlots Slot);
-	//void EquipSlot(EInventorySlots Slot);
-	//void MakeEquippedItemVisible() const;
-	//void RefreshWeaponAttachments() const;
-	//bool RemoveEquippableFromInventory(IEquippable* Equippable);
-
-	//void SpawnWeaponPickups(TArray<AWeapon*>& Weapons) const;
-
-
-	
-
 	static FVector2D GetGameViewportSize();
 	static FVector2D CalcLinearLeanVectorUnclipped(const FVector2D& CursorLoc, const FVector2D& ViewportSize);
 	void MoveCameraByOffsetVector(const FVector2D& Vector2D, float DeltaSeconds) const;
