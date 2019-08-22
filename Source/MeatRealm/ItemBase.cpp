@@ -38,13 +38,6 @@ void AItemBase::ExitInventory()
 	Delegate = nullptr;
 }
 
-void AItemBase::SetDelegate(UInventoryComp* NewDelegate)
-{
-	UE_LOG(LogTemp, Warning, TEXT("AItemBase::SetDelegate  Delegate set"));
-	check (HasAuthority())
-	Delegate = NewDelegate;
-}
-
 void AItemBase::BeginPlay()
 {
 	UE_LOG(LogTemp, Warning, TEXT("AItemBase::BeginPlay"));

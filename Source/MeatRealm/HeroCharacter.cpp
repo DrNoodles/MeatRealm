@@ -947,7 +947,7 @@ void AHeroCharacter::RefreshWeaponAttachments()
 		if (Item)
 		{
 			Item->AttachToComponent(GetMesh(), Rules, HandSocketName);
-			Item->SetHidden(false); // This means it'll be visible even it's mid equip. 
+			Item->SetActorHiddenInGame(false); // This means it'll be visible even it's mid equip. 
 		}
 	}
 }

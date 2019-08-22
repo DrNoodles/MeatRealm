@@ -50,7 +50,6 @@ private:
 	FDateTime UsageStartTime;
 	FTimerHandle UsageTimerHandle;
 	IAffectableInterface* Recipient = nullptr;
-	UInventoryComp* Delegate = nullptr; // TODO This is a horrible coupling. Make it a UInventoryComponent. Using an interface is a fools errand in UE4
 
 	UPROPERTY(EditAnywhere)
 		float UsageDuration = 2;
@@ -89,10 +88,8 @@ public:
 	void Equip() override;
 	void Unequip() override;
 	float GetEquipDuration() override { return EquipDuration; }
-	void SetHidden(bool bIsHidden) override { SetActorHiddenInGame(bIsHidden); }
 	void EnterInventory() override;
 	void ExitInventory() override;
-	void SetDelegate(UInventoryComp* Delegate) override;
 	virtual bool ShouldHideWhenUnequipped() override { return true; }
 	virtual EInventoryCategory GetInventoryCategory() override
 	{

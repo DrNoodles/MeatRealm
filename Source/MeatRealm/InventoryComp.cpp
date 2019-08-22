@@ -256,7 +256,7 @@ void UInventoryComp::GiveItemToPlayer(TSubclassOf<AItemBase> ItemClass)
 
 	UGameplayStatics::FinishSpawningActor(Item, TF);
 
-	Item->SetHidden(true);
+	Item->SetActorHiddenInGame(true);
 
 	// Find correct slot
 	auto Slot = EInventorySlots::Undefined;
@@ -510,7 +510,7 @@ void UInventoryComp::EquipSlot(const EInventorySlots Slot)
 	{
 		//LogMsgWithRole("Un-equip new slot");
 		OldEquippable->Unequip();
-		OldEquippable->SetHidden(OldEquippable->ShouldHideWhenUnequipped());
+		OldEquippable->SetActorHiddenInGame(OldEquippable->ShouldHideWhenUnequipped());
 	}
 
 
@@ -519,7 +519,7 @@ void UInventoryComp::EquipSlot(const EInventorySlots Slot)
 	{
 		//LogMsgWithRole("Equip new slot");
 		NewEquippable->Equip();
-		NewEquippable->SetHidden(true);
+		NewEquippable->SetActorHiddenInGame(true);
 
 		GetWorld()->GetTimerManager().SetTimer(EquipTimerHandle, this, &UInventoryComp::MakeEquippedItemVisible, NewEquippable->GetEquipDuration(), false);
 	}
@@ -533,7 +533,7 @@ void UInventoryComp::MakeEquippedItemVisible() const
 	//LogMsgWithRole("MakeEquippedItemVisible");
 	auto Item = GetEquippable(CurrentInventorySlot);
 
-	if (Item) Item->SetHidden(false);
+	if (Item) Item->SetActorHiddenInGame(false);
 
 	Delegate->RefreshWeaponAttachments();
 }

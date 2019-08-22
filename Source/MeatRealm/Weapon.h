@@ -110,12 +110,10 @@ public:
 	void Equip() override;
 	void Unequip() override;
 	float GetEquipDuration() override { return DrawDuration; }
-	void SetHidden(bool bIsHidden) override { SetActorHiddenInGame(bIsHidden); }
 	void EnterInventory() override;
 	void ExitInventory() override;
 	EInventoryCategory GetInventoryCategory() override { return EInventoryCategory::Weapon; }
 	virtual bool ShouldHideWhenUnequipped() override { return false; }
-	void SetDelegate(UInventoryComp* Delegate) override { }
 	/* End AEquippableBase */
 
 	void ConfigWeapon(FWeaponConfig& Config) const;

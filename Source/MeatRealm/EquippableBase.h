@@ -19,41 +19,49 @@ UCLASS(Abstract)
 class MEATREALM_API AEquippableBase : public AActor
 {
 	GENERATED_BODY()
+
 	
-public:	
+// Public Data ////////////////////////////////////////////////////////////////
+public:
+	
+// Protected Data /////////////////////////////////////////////////////////////
+protected: 
+	UInventoryComp* Delegate = nullptr;
+
+	
+// Private Data ///////////////////////////////////////////////////////////////
+private: 
+
+	
+// Public Methods /////////////////////////////////////////////////////////////
+public:
 	AEquippableBase();
 
+	virtual void Equip() { unimplemented(); }
+	virtual void Unequip() { unimplemented(); }
+	virtual void EnterInventory() { unimplemented(); }
+	virtual void ExitInventory() { unimplemented(); }
+
+	// TODO Just make these properties of the base class for the children to set
+	virtual float GetEquipDuration() { unimplemented(); return 0; }
+	virtual EInventoryCategory GetInventoryCategory() { unimplemented(); return EInventoryCategory::Undefined; }
+	virtual bool ShouldHideWhenUnequipped() { unimplemented(); return false; }
 	
-	UFUNCTION()
-		virtual void Equip() { unimplemented(); }
-	UFUNCTION()
-		virtual void Unequip() { unimplemented(); }
-	UFUNCTION()
-		virtual float GetEquipDuration() { unimplemented(); return 0; }
-	UFUNCTION()
-		virtual void SetHidden(bool bIsHidden) { unimplemented(); }
-	UFUNCTION()
-		virtual EInventoryCategory GetInventoryCategory() { unimplemented(); return EInventoryCategory::Undefined;
+	void SetDelegate(UInventoryComp* NewDelegate)
+	{
+		check(HasAuthority())
+		Delegate = NewDelegate;
 	}
-	UFUNCTION()
-		virtual void EnterInventory() { unimplemented(); }
-	UFUNCTION()
-		virtual void ExitInventory() { unimplemented(); }
-	UFUNCTION()
-		virtual bool ShouldHideWhenUnequipped() { unimplemented(); return false; }
-	UFUNCTION()
-		virtual void SetDelegate(UInventoryComp* Delegate) { unimplemented(); }
-
-	// Below have Default implementations
-
-	UFUNCTION()
-		bool Is(EInventoryCategory Category);
+	bool Is(EInventoryCategory Category);
 
 	
+// Protected Methods //////////////////////////////////////////////////////////
 protected:
 	virtual void BeginPlay() override;
 	virtual void Tick(float DeltaTime) override;
+
 	
+// Private Methods ////////////////////////////////////////////////////////////
 private:
 
 };
