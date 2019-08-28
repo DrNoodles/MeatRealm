@@ -17,7 +17,7 @@ bool AItemPickupBase::TryApplyAffect(IAffectableInterface* const Affectable)
 {
 	if (ItemClass == nullptr)
 	{
-		UE_LOG(LogTemp, Error, TEXT("Set the weapon class to spawn in a derived Blueprint"));
+		UE_LOG(LogTemp, Error, TEXT("Set the item pickup class to spawn in a derived Blueprint"));
 		return false;
 	}
 

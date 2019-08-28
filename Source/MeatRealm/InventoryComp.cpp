@@ -74,10 +74,19 @@ void UInventoryComp::DestroyInventory()
 		else
 			UE_LOG(LogInventory, Warning, TEXT("Attempted to destroy HP slot item that's null"));
 	}
-
+	
+	for (auto* Th : ThrowableSlot)
+	{
+		if (Th)
+			Th->Destroy();
+		else
+			UE_LOG(LogInventory, Warning, TEXT("Attempted to destroy throwable slot item that's null"));
+	}
+	
 	HealthSlot.Empty();
 	ArmourSlot.Empty();
-
+	ThrowableSlot.Empty();
+	
 	bInventoryDestroyed = true;
 }
 
@@ -95,6 +104,7 @@ void UInventoryComp::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLi
 	DOREPLIFETIME_CONDITION(UInventoryComp, SecondaryWeaponSlot, COND_OwnerOnly);
 	DOREPLIFETIME_CONDITION(UInventoryComp, HealthSlot, COND_OwnerOnly);
 	DOREPLIFETIME_CONDITION(UInventoryComp, ArmourSlot, COND_OwnerOnly);
+	DOREPLIFETIME_CONDITION(UInventoryComp, ThrowableSlot, COND_OwnerOnly);
 }
 
 
@@ -134,6 +144,7 @@ AEquippableBase* UInventoryComp::GetEquippable(EInventorySlots Slot) const
 	case EInventorySlots::Secondary: return SecondaryWeaponSlot;
 	case EInventorySlots::Health: return GetFirstHealthItemOrNull();
 	case EInventorySlots::Armour: return GetFirstArmourItemOrNull();
+	case EInventorySlots::Throwable: return GetFirstThrowableOrNull();
 
 	case EInventorySlots::Undefined:
 	default:;
@@ -151,6 +162,11 @@ int UInventoryComp::GetArmourItemCount() const
 {
 	UE_LOG(LogInventory, VeryVerbose, TEXT("UInventoryComp::GetArmourItemCount()"));
 	return ArmourSlot.Num();
+}
+int UInventoryComp::GetThrowableItemCount() const
+{
+	UE_LOG(LogInventory, VeryVerbose, TEXT("UInventoryComp::GetThrowableItemCount()"));
+	return ThrowableSlot.Num();
 }
 
 AWeapon* UInventoryComp::GetCurrentWeapon() const
@@ -303,6 +319,7 @@ void UInventoryComp::GiveItemToPlayer(TSubclassOf<AItemBase> ItemClass)
 	case EInventorySlots::Undefined: break;
 	case EInventorySlots::Primary: break;
 	case EInventorySlots::Secondary: break;
+	case EInventorySlots::Throwable: break;
 	default:;
 	}
 
@@ -312,6 +329,72 @@ void UInventoryComp::GiveItemToPlayer(TSubclassOf<AItemBase> ItemClass)
 
 	//LogMsgWithRole("UInventoryComp::GiveItemToPlayer2");
 }
+void UInventoryComp::GiveEquippable(const TSubclassOf<AEquippableBase>& Class)
+{
+	UE_LOG(LogInventory, Verbose, TEXT("UInventoryComp::GiveEquippable()"));
+	check(HasAuthority() && GetWorld() && Class)
+
+	AEquippableBase* E = SpawnEquippable(Class);
+	AddToSlot(E);
+}
+
+AEquippableBase* UInventoryComp::SpawnEquippable(const TSubclassOf<AEquippableBase>& Class) const
+{
+	// Spawn the thing at the hand socket
+	const auto TF = Delegate->GetHandSocketTransform();
+	auto Equippable = GetWorld()->SpawnActorDeferred<AEquippableBase>(
+		Class,
+		TF,
+		GetOwner(), // owner actor
+		(APawn*)GetOwner(), // instigator pawn // TODO Fix this cast to Pawn
+		ESpawnActorCollisionHandlingMethod::AlwaysSpawn);
+
+	UGameplayStatics::FinishSpawningActor(Equippable, TF);
+
+	Equippable->SetActorHiddenInGame(true);
+
+	return Equippable;
+}
+
+void UInventoryComp::AddToSlot(AEquippableBase* Equippable)
+{
+	// Find correct slot
+	auto Slot = EInventorySlots::Undefined;
+
+	switch (Equippable->GetInventoryCategory()) {
+	case EInventoryCategory::Health: Slot = EInventorySlots::Health; break;
+	case EInventoryCategory::Armour: Slot = EInventorySlots::Armour; break;
+	case EInventoryCategory::Weapon: Slot = FindGoodWeaponSlot(); break;
+	case EInventoryCategory::Throwable: Slot = EInventorySlots::Throwable; break;
+	default:
+		UE_LOG(LogInventory, Error, TEXT("Unsupported Inventory Category: %d"), Equippable->GetInventoryCategory());
+	}
+
+
+	switch (Slot)
+	{
+	case EInventorySlots::Primary: break;
+	case EInventorySlots::Secondary: break;
+	case EInventorySlots::Health: break;
+	case EInventorySlots::Armour: break;
+	case EInventorySlots::Throwable: ThrowableSlot.Add((AThrowable*)Equippable); break;
+	default: 
+		UE_LOG(LogInventory, Error, TEXT("Unsupported Inventory Slot: %d"), Slot);
+	}
+}
+
+bool UInventoryComp::CanGiveThrowable(const TSubclassOf<AThrowable>& ThrowableClass)
+{
+	UE_LOG(LogInventory, Verbose, TEXT("UInventoryComp::CanGiveThrowable()"));
+	return ThrowableSlot.Num() < ThrowableSlotLimit;
+}
+void UInventoryComp::GiveThrowableToPlayer(const TSubclassOf<AThrowable>& ThrowableClass)
+{
+	UE_LOG(LogInventory, Verbose, TEXT("UInventoryComp::GiveThrowableToPlayer()"));
+
+	GiveEquippable(ThrowableClass);
+}
+
 
 AItemBase* UInventoryComp::GetFirstHealthItemOrNull() const
 {
@@ -320,6 +403,10 @@ AItemBase* UInventoryComp::GetFirstHealthItemOrNull() const
 AItemBase* UInventoryComp::GetFirstArmourItemOrNull() const
 {
 	return ArmourSlot.Num() > 0 ? ArmourSlot[0] : nullptr;
+}
+AThrowable* UInventoryComp::GetFirstThrowableOrNull() const
+{
+	return ThrowableSlot.Num() > 0 ? ThrowableSlot[0] : nullptr;
 }
 
 void UInventoryComp::GiveWeaponToPlayer(TSubclassOf<class AWeapon> WeaponClass, FWeaponConfig& Config)
@@ -471,6 +558,27 @@ bool UInventoryComp::RemoveEquippableFromInventory(AEquippableBase* Equippable)
 		}
 	}
 
+
+
+	if (Equippable->GetInventoryCategory() == EInventoryCategory::Throwable)
+	{
+		const auto Index = ThrowableSlot.IndexOfByPredicate([Equippable](AThrowable* Item)
+			{
+				return Item == Equippable;
+			});
+
+		if (Index != INDEX_NONE)
+		{
+			Equippable->ExitInventory();
+			ThrowableSlot.RemoveAt(Index);
+			WasRemoved = true;
+
+			bMustChangeSlot = ThrowableSlot.Num() == 0 && CurrentInventorySlot == EInventorySlots::Throwable;
+		}
+	}
+
+
+	
 	if (bMustChangeSlot)
 	{
 		const auto NewSlot = LastInventorySlot != CurrentInventorySlot ? LastInventorySlot : EInventorySlots::Primary;

@@ -217,6 +217,11 @@ public:
 	bool CanGiveItem(const TSubclassOf<AItemBase>& Class, float& OutDelay) override;
 	UFUNCTION()
 	bool TryGiveItem(const TSubclassOf<AItemBase>& Class) override;
+
+	UFUNCTION()
+		bool CanGiveThrowable(const TSubclassOf<AThrowable>& Class, float& OutDelay) override;
+	UFUNCTION()
+		bool TryGiveThrowable(const TSubclassOf<AThrowable>& Class) override;
 	/* End IAffectableInterface */
 
 
@@ -301,6 +306,12 @@ private:
 	UFUNCTION(Server, Reliable, WithValidation)
 		void ServerEquipArmour();
 
+	void OnEquipThrowable();
+	void EquipThrowable();
+	UFUNCTION(Server, Reliable, WithValidation)
+		void ServerEquipThrowable();
+
+	
 	void OnRunToggle();
 	void OnStartRunning();
 	void OnStopRunning();

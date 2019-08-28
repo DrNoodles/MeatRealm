@@ -411,6 +411,7 @@ void AHeroCharacter::SetupPlayerInputComponent(class UInputComponent* PlayerInpu
 	PlayerInputComponent->BindAction("EquipHealth", IE_Pressed, this, &AHeroCharacter::OnEquipHealth);
 	PlayerInputComponent->BindAction("EquipArmour", IE_Pressed, this, &AHeroCharacter::OnEquipArmour);
 	PlayerInputComponent->BindAction("EquipSmartHeal", IE_Pressed, this, &AHeroCharacter::OnEquipSmartHeal);
+	PlayerInputComponent->BindAction("EquipThrowable", IE_Pressed, this, &AHeroCharacter::OnEquipThrowable);
 
 }
 
@@ -475,6 +476,28 @@ void AHeroCharacter::ServerEquipSmartHeal_Implementation()
 	EquipSmartHeal();
 }
 bool AHeroCharacter::ServerEquipSmartHeal_Validate()
+{
+	return true;
+}
+
+void AHeroCharacter::OnEquipThrowable()
+{
+	EquipThrowable();
+
+	if (Role < ROLE_Authority)
+	{
+		ServerEquipThrowable();
+	}
+}
+void AHeroCharacter::EquipThrowable()
+{
+	InventoryComp->EquipSlot(EInventorySlots::Throwable);
+}
+void AHeroCharacter::ServerEquipThrowable_Implementation()
+{
+	EquipThrowable();
+}
+bool AHeroCharacter::ServerEquipThrowable_Validate()
 {
 	return true;
 }
@@ -1433,6 +1456,28 @@ bool AHeroCharacter::TryGiveItem(const TSubclassOf<AItemBase>& Class)
 	if (!CanGiveItem(Class, OUT OutDelay)) return false;
 
 	InventoryComp->GiveItemToPlayer(Class);
+	return true;
+}
+
+bool AHeroCharacter::CanGiveThrowable(const TSubclassOf<AThrowable>& Class, float& OutDelay)
+{
+	OutDelay = 0;
+	return InventoryComp->CanGiveThrowable(Class);
+}
+
+bool AHeroCharacter::TryGiveThrowable(const TSubclassOf<AThrowable>& Class)
+{
+	LogMsgWithRole("AHeroCharacter::TryGiveThrowable");
+
+	check(HasAuthority());
+	check(Class != nullptr);
+
+	//LogMsgWithRole("AHeroCharacter::TryGiveWeapon");
+
+	float OutDelay;
+	if (!CanGiveThrowable(Class, OUT OutDelay)) return false;
+
+	InventoryComp->GiveThrowableToPlayer(Class);
 	return true;
 }
 
