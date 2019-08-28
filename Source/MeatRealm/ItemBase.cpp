@@ -106,11 +106,10 @@ void AItemBase::UseComplete()
 	if (HasAuthority())
 	{
 		ApplyItem(Recipient);
-		if (Delegate)
-		{
-			UE_LOG(LogTemp, Warning, TEXT("AItemBase::UseComplete - NotifyEquippableIsExpended"));
-			Delegate->NotifyItemIsExpended(this);
-		}
+
+		UE_LOG(LogTemp, Warning, TEXT("AItemBase::UseComplete - NotifyEquippableIsExpended"));
+		ensure(Delegate);
+		Delegate->NotifyItemIsExpended(this);
 	}
 }
 

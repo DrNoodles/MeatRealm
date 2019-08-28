@@ -476,6 +476,19 @@ bool UInventoryComp::RemoveEquippableFromInventory(AEquippableBase* Equippable)
 		const auto NewSlot = LastInventorySlot != CurrentInventorySlot ? LastInventorySlot : EInventorySlots::Primary;
 		EquipSlot(NewSlot);
 	}
+	else // Use a new item of the same type in the same slot without an equip time penalty
+	{
+		// We need to make sure the current item is properly in its equipped state
+		
+		// TODO Hacky! The item is NOT in any equipped state. A true solution is tricky because:
+		// - Can't just make it re-equip as that will replay the equip wait time.
+		// - Can't just make it re-equip as that will make auto use items (eg armour) continually auto use until depleted or can't use the item (eg full armour).
+		
+		// Work around: Make the item in the slot visible even though it's in an unknown equipping state
+		// This will break unequip timers when we get to it and is generally inconsistent and bad!
+		const auto Held = GetCurrentEquippable();
+		Held->SetActorHiddenInGame(false);
+	}
 
 	return WasRemoved;
 }
