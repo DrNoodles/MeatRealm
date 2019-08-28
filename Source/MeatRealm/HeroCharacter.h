@@ -217,6 +217,11 @@ public:
 	bool CanGiveItem(const TSubclassOf<AItemBase>& Class, float& OutDelay) override;
 	UFUNCTION()
 	bool TryGiveItem(const TSubclassOf<AItemBase>& Class) override;
+
+	UFUNCTION()
+		bool CanGiveThrowable(const TSubclassOf<AThrowable>& Class, float& OutDelay) override;
+	UFUNCTION()
+		bool TryGiveThrowable(const TSubclassOf<AThrowable>& Class) override;
 	/* End IAffectableInterface */
 
 

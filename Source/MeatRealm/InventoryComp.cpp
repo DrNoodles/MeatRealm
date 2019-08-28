@@ -313,6 +313,21 @@ void UInventoryComp::GiveItemToPlayer(TSubclassOf<AItemBase> ItemClass)
 	//LogMsgWithRole("UInventoryComp::GiveItemToPlayer2");
 }
 
+bool UInventoryComp::CanGiveThrowable(const TSubclassOf<AThrowable>& ThrowableClass)
+{
+	UE_LOG(LogInventory, Verbose, TEXT("UInventoryComp::CanGiveThrowable()"));
+
+	return true; // TODO  do zee logic!
+}
+
+void UInventoryComp::GiveThrowableToPlayer(const TSubclassOf<AThrowable>& ThrowableClass)
+{
+	UE_LOG(LogInventory, Verbose, TEXT("UInventoryComp::GiveThrowableToPlayer()"));
+
+	// TODO  do zee logic!
+}
+
+
 AItemBase* UInventoryComp::GetFirstHealthItemOrNull() const
 {
 	return HealthSlot.Num() > 0 ? HealthSlot[0] : nullptr;

@@ -5,6 +5,7 @@
 #include "CoreMinimal.h"
 #include "Components/ActorComponent.h"
 #include "ItemArmour.h"
+#include "Throwable.h"
 
 #include "InventoryComp.generated.h"
 
@@ -132,15 +133,19 @@ public:
 	
 	void GiveItemToPlayer(TSubclassOf<class AItemBase> ItemClass);
 	void GiveWeaponToPlayer(TSubclassOf<class AWeapon> WeaponClass, FWeaponConfig& Config);
-
+	
+	bool CanGiveThrowable(const TSubclassOf<AThrowable>& ThrowableClass);
+	void GiveThrowableToPlayer(const TSubclassOf<AThrowable>& ThrowableClass);
+	
 	EInventorySlots FindGoodWeaponSlot() const;
 
-	bool CanGiveItem(const TSubclassOf<AItemBase>& Class);
+	bool CanGiveItem(const TSubclassOf<AItemBase>& ItemClass);
 	void SetDelegate(IInventoryCompDelegate* Dgate) { Delegate = Dgate; }
 	bool RemoveEquippableFromInventory(AEquippableBase* Equippable);
 
 
-// Protected Methods //////////////////////////////////////////////////////////
+
+	// Protected Methods //////////////////////////////////////////////////////////
 protected:
 
 // Private Methods ////////////////////////////////////////////////////////////

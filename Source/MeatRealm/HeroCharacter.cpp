@@ -1436,6 +1436,28 @@ bool AHeroCharacter::TryGiveItem(const TSubclassOf<AItemBase>& Class)
 	return true;
 }
 
+bool AHeroCharacter::CanGiveThrowable(const TSubclassOf<AThrowable>& Class, float& OutDelay)
+{
+	OutDelay = 0;
+	return InventoryComp->CanGiveThrowable(Class);
+}
+
+bool AHeroCharacter::TryGiveThrowable(const TSubclassOf<AThrowable>& Class)
+{
+	LogMsgWithRole("AHeroCharacter::TryGiveThrowable");
+
+	check(HasAuthority());
+	check(Class != nullptr);
+
+	//LogMsgWithRole("AHeroCharacter::TryGiveWeapon");
+
+	float OutDelay;
+	if (!CanGiveThrowable(Class, OUT OutDelay)) return false;
+
+	InventoryComp->GiveThrowableToPlayer(Class);
+	return true;
+}
+
 FTransform AHeroCharacter::GetAimTransform() const
 {
 	const auto W = InventoryComp->GetCurrentWeapon();
