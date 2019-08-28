@@ -404,6 +404,7 @@ void UWeaponReceiverComponent::ReloadEnd()
 	const int AmmoReceived = (AmmoNeeded > WeaponState.AmmoInPool) ? WeaponState.AmmoInPool : AmmoNeeded;
 	WeaponState.AmmoInPool -= AmmoReceived;
 	WeaponState.AmmoInClip += AmmoReceived;
+	WeaponState.IsAdsing = InputState.AdsRequested;
 
 	ChangeState(EWeaponCommands::ReloadEnd, WeaponState);
 }
