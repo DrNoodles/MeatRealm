@@ -64,16 +64,17 @@ void AWeapon::ConfigWeapon(FWeaponConfig& Config) const
 
 void AWeapon::OnEquipStarted()
 {
-}
-
-void AWeapon::OnEquipFinished()
-{
 	if (!HasAuthority())
 	{
 		ServerRPC_Equip();
 		return; // TODO Remove return to enable client preditiction (currently broken)
 	}
 	ReceiverComp->DrawWeapon();
+}
+
+void AWeapon::OnEquipFinished()
+{
+
 }
 
 void AWeapon::OnUnEquipStarted()
@@ -92,7 +93,7 @@ void AWeapon::OnUnEquipFinished()
 
 void AWeapon::ServerRPC_Equip_Implementation()
 {
-	OnEquipFinished();
+	OnEquipStarted();
 }
 bool AWeapon::ServerRPC_Equip_Validate()
 {

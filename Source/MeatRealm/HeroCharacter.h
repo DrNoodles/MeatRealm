@@ -97,7 +97,8 @@ public:
 	// Not replicated cuz diff local vs server time;
 	FDateTime LastRunEnded;
 
-	FTimerHandle RunEndTimerHandle;
+	FTimerHandle FireAfterRunEndTimerHandle;
+	FTimerHandle AdsAfterRunEndTimerHandle;
 
 	UPROPERTY(EditAnywhere)
 	float Deadzone = 0.3;

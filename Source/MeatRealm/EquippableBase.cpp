@@ -4,11 +4,27 @@
 #include "EquippableBase.h"
 #include "InventoryComp.h"
 #include "Engine/World.h"
+#include "UnrealNetwork.h"
+
 
 AEquippableBase::AEquippableBase()
 {
 	PrimaryActorTick.bCanEverTick = true;
 }
+
+
+// Replication ////////////////////////////////////////////////////////////////
+
+void AEquippableBase::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
+{
+	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
+
+	// Just the owner
+	DOREPLIFETIME_CONDITION(AEquippableBase, EquippedStatus, COND_OwnerOnly);
+}
+
+
+
 
 void AEquippableBase::Equip()
 {

@@ -249,23 +249,17 @@ void AHeroCharacter::Tick(float DeltaSeconds)
 	const auto Held = InventoryComp->GetCurrentEquippable();
 	if (Held)
 	{
-		FString Str{};
+		FString Str = "Unhandled Equip State";
 
-		if (Held->IsEquipping())
-		{
-			Str = FString::Printf(TEXT("Equipping %s"), *Held->GetEquippableName());
-		}
+		if (Held->IsEquipping()) Str = "Equipping ";
+		if (Held->IsEquipped()) Str = "Equipped ";
+		if (Held->IsUnEquipping()) Str = "Un-equipping ";
+		if (Held->IsUnEquipped()) Str = "Un-equipped ";
 
-		if (Held->IsUnEquipping())
-		{
-			Str = FString::Printf(TEXT("Un-equipping %s"), *Held->GetEquippableName());
-		}
-
-		if (Str.Len() > 0)
-		{
-			const auto YOffset = -5.f * Str.Len();
-			DrawDebugString(GetWorld(), FVector{ 70, YOffset, 50 }, Str, this, FColor::White, DeltaSeconds * 0.7);
-		}
+		Str += Held->GetEquippableName();
+		
+		const auto YOffset = -5.f * Str.Len();
+		DrawDebugString(GetWorld(), FVector{ 70, YOffset, 50 }, Str, this, FColor::White, DeltaSeconds * 0.7);
 	}
 }
 
@@ -727,7 +721,6 @@ void AHeroCharacter::SetTargeting(bool bNewTargeting)
 			const FTimespan TimeSinceRun = FDateTime::Now() - LastRunEnded;
 			const FTimespan RemainingTime = FTimespan::FromSeconds(RunCooldown) - TimeSinceRun;
 			
-			
 			if (RemainingTime > 0)
 			{
 				// Delay fire!
@@ -740,7 +733,7 @@ void AHeroCharacter::SetTargeting(bool bNewTargeting)
 					}
 				};
 
-				GetWorld()->GetTimerManager().SetTimer(RunEndTimerHandle, DelayAds, RemainingTime.GetTotalSeconds(), false);
+				GetWorld()->GetTimerManager().SetTimer(AdsAfterRunEndTimerHandle, DelayAds, RemainingTime.GetTotalSeconds(), false);
 			}
 			else
 			{
@@ -750,6 +743,7 @@ void AHeroCharacter::SetTargeting(bool bNewTargeting)
 		else
 		{
 			CurrentWeapon->Input_AdsReleased();
+			GetWorld()->GetTimerManager().ClearTimer(AdsAfterRunEndTimerHandle);
 		}
 	}
 
@@ -893,7 +887,7 @@ void AHeroCharacter::StartWeaponFire()
 				}
 			};
 
-			GetWorld()->GetTimerManager().SetTimer(RunEndTimerHandle, DelayFire, RemainingTime.GetTotalSeconds(), false);
+			GetWorld()->GetTimerManager().SetTimer(FireAfterRunEndTimerHandle, DelayFire, RemainingTime.GetTotalSeconds(), false);
 			return;
 		}
 
@@ -913,7 +907,7 @@ void AHeroCharacter::StopWeaponFire()
 	{
 		bWantsToFire = false;
 
-		GetWorld()->GetTimerManager().ClearTimer(RunEndTimerHandle);
+		GetWorld()->GetTimerManager().ClearTimer(FireAfterRunEndTimerHandle);
 
 		if (InventoryComp->GetCurrentWeapon())
 		{
