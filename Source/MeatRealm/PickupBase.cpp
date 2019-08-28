@@ -30,6 +30,12 @@ APickupBase::APickupBase()
 	SkeletalMeshComp->SetGenerateOverlapEvents(false);
 	SkeletalMeshComp->SetCollisionProfileName(TEXT("NoCollision"));
 	SkeletalMeshComp->CanCharacterStepUpOn = ECB_No;
+
+	SkeletalMeshComp = CreateDefaultSubobject<USkeletalMeshComponent>(TEXT("BaseMesh"));
+	SkeletalMeshComp->SetupAttachment(RootComponent);
+	SkeletalMeshComp->SetGenerateOverlapEvents(false);
+	SkeletalMeshComp->SetCollisionProfileName(TEXT("NoCollision"));
+	SkeletalMeshComp->CanCharacterStepUpOn = ECB_No;
 }
 
 bool APickupBase::AuthTryInteract(IAffectableInterface* const Affectable)

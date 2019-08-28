@@ -609,7 +609,8 @@ void UInventoryComp::SpawnWeaponPickups(TArray<AWeapon*>& Weapons) const
 			{
 				WeaponPickup->SetWeaponConfig(FWeaponConfig{ W->GetAmmoInClip(), W->GetAmmoInPool() });
 				WeaponPickup->bIsSingleUse = true;
-				WeaponPickup->SetLifeSpan(60);
+				WeaponPickup->bHideBaseMesh = true;
+				WeaponPickup->SetLifeSpan(20);
 
 				Count++;
 			}

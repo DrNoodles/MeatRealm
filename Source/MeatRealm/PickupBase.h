@@ -32,6 +32,9 @@ public:
 		bool bIsSingleUse = false;
 
 	UPROPERTY(EditAnywhere)
+		bool bHideBaseMesh = false;
+
+	UPROPERTY(EditAnywhere)
 		float InitialDelay = 0;
 
 protected:
@@ -45,6 +48,9 @@ protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
 		USkeletalMeshComponent* SkeletalMeshComp = nullptr;
 
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
+		USkeletalMeshComponent* BaseMeshComp = nullptr;
+	
 private:
 
 	UPROPERTY(VisibleAnywhere)
