@@ -75,6 +75,7 @@ struct FWeaponInputState
 	bool DrawRequested = false;
 	void Reset()
 	{
+		//UE_LOG(LogTemp, Warning, TEXT("FWeaponInputState.Reset()"));
 		FireRequested = false;
 		AdsRequested = false;
 		ReloadRequested = false;
@@ -252,7 +253,7 @@ private:
 	void ReloadEnd();
 	void DoTransitionAction(const EWeaponModes OldMode, const EWeaponModes NewMode, FWeaponState& NewState);
 	bool ChangeState(EWeaponCommands Cmd, FWeaponState& WeapState);
-	/*void EquipEnd();*/
+	void EquipEnd();
 
 	float GetReloadTime() const { return ReloadTime; }
 	float GetAdsSpread() const { return  AdsSpread; }

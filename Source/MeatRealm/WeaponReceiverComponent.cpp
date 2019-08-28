@@ -48,6 +48,7 @@ void UWeaponReceiverComponent::HolsterWeapon()
 void UWeaponReceiverComponent::PullTrigger()
 {
 	InputState.FireRequested = true;
+	//LogMsgWithRole(FString::Printf(TEXT("InputState.FireRequested = true")));
 
 	WeaponState.BurstCount = 0;
 	ShotTimes.Empty();
@@ -56,6 +57,7 @@ void UWeaponReceiverComponent::PullTrigger()
 void UWeaponReceiverComponent::ReleaseTrigger()
 {
 	InputState.FireRequested = false;
+	//LogMsgWithRole(FString::Printf(TEXT("InputState.FireRequested = false")));
 
 	WeaponState.BurstCount = 0;
 	ShotTimes.Empty();
@@ -456,11 +458,11 @@ bool UWeaponReceiverComponent::ChangeState(EWeaponCommands Cmd, FWeaponState& We
 
 	return bWeChangedStates;
 }
-//void UWeaponReceiverComponent::EquipEnd()
-//{
-//	//LogMsgWithRole("EquipEnd()");
-//	ChangeState(EWeaponCommands::EquipEnd, WeaponState);
-//}
+void UWeaponReceiverComponent::EquipEnd()
+{
+	//LogMsgWithRole("EquipEnd()");
+	ChangeState(EWeaponCommands::EquipEnd, WeaponState);
+}
 void UWeaponReceiverComponent::DoTransitionAction(const EWeaponModes OldMode, const EWeaponModes NewMode, FWeaponState& NewState)
 {
 	// Any > Equipping
@@ -482,9 +484,9 @@ void UWeaponReceiverComponent::DoTransitionAction(const EWeaponModes OldMode, co
 		NewState.BurstCount = 0;
 		ShotTimes.Empty();
 
-		ChangeState(EWeaponCommands::EquipEnd, WeaponState);
+		//ChangeState(EWeaponCommands::EquipEnd, WeaponState);
 
-	/*	GetWorld()->GetTimerManager().SetTimer(BusyTimerHandle, this, &UWeaponReceiverComponent::EquipEnd, Delegate->GetDrawDuration(), false);*/
+		GetWorld()->GetTimerManager().SetTimer(BusyTimerHandle, this, &UWeaponReceiverComponent::EquipEnd, Delegate->GetDrawDuration(), false);
 	}
 
 
