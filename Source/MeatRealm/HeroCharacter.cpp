@@ -249,23 +249,17 @@ void AHeroCharacter::Tick(float DeltaSeconds)
 	const auto Held = InventoryComp->GetCurrentEquippable();
 	if (Held)
 	{
-		FString Str{};
+		FString Str = "Unhandled Equip State";
 
-		if (Held->IsEquipping())
-		{
-			Str = FString::Printf(TEXT("Equipping %s"), *Held->GetEquippableName());
-		}
+		if (Held->IsEquipping()) Str = "Equipping ";
+		if (Held->IsEquipped()) Str = "Equipped ";
+		if (Held->IsUnEquipping()) Str = "Un-equipping ";
+		if (Held->IsUnEquipped()) Str = "Un-equipped ";
 
-		if (Held->IsUnEquipping())
-		{
-			Str = FString::Printf(TEXT("Un-equipping %s"), *Held->GetEquippableName());
-		}
-
-		if (Str.Len() > 0)
-		{
-			const auto YOffset = -5.f * Str.Len();
-			DrawDebugString(GetWorld(), FVector{ 70, YOffset, 50 }, Str, this, FColor::White, DeltaSeconds * 0.7);
-		}
+		Str += Held->GetEquippableName();
+		
+		const auto YOffset = -5.f * Str.Len();
+		DrawDebugString(GetWorld(), FVector{ 70, YOffset, 50 }, Str, this, FColor::White, DeltaSeconds * 0.7);
 	}
 }
 

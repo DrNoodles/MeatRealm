@@ -325,6 +325,8 @@ AItemBase* UInventoryComp::GetFirstArmourItemOrNull() const
 void UInventoryComp::GiveWeaponToPlayer(TSubclassOf<class AWeapon> WeaponClass, FWeaponConfig& Config)
 {
 	UE_LOG(LogInventory, Verbose, TEXT("UInventoryComp::GiveWeaponToPlayer()"));
+	
+	check(HasAuthority())
 
 	const auto Weapon = AuthSpawnWeapon(WeaponClass, Config);
 	const auto Slot = FindGoodWeaponSlot();

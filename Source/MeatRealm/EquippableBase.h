@@ -49,6 +49,8 @@ protected:
 private:
 	FTimerHandle EquipTimerHandle;
 	FTimerHandle UnEquipTimerHandle;
+
+	UPROPERTY(Replicated) // TODO OnRep_ func. This func could broadcast Blueprint/Event's?
 	EEquipState EquippedStatus = EEquipState::Undefined;
 
 
@@ -88,6 +90,7 @@ public:
 	bool IsEquipping() const { return EquippedStatus == EEquipState::Equipping; }
 	bool IsEquipped() const { return EquippedStatus == EEquipState::Equipped; }
 	bool IsUnEquipping() const { return EquippedStatus == EEquipState::UnEquipping; }
+	bool IsUnEquipped() const { return EquippedStatus == EEquipState::UnEquipped; }
 
 	FString GetEquippableName() const { return EquippableName; }
 
