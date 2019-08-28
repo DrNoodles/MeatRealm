@@ -35,6 +35,7 @@ enum class EInventorySlots : uint8
 	Secondary = 2,
 	Health = 3,
 	Armour = 4,
+	Throwable = 5,
 };
 
 
@@ -60,6 +61,9 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly)
 		int32 ArmourSlotLimit = 6;
 
+	UPROPERTY(EditAnywhere, BlueprintReadOnly)
+		int32 ThrowableSlotLimit = 3;
+	
 // Private Data ///////////////////////////////////////////////////////////////
 private:
 	IInventoryCompDelegate* Delegate = nullptr;
@@ -74,9 +78,10 @@ private:
 		TArray<AItemBase*> HealthSlot{};
 	UPROPERTY(Replicated)
 		TArray<AItemBase*> ArmourSlot{};
-
+	UPROPERTY(Replicated)
+		TArray<AThrowable*> ThrowableSlot{};
+	
 	FTimerHandle EquipTimerHandle;
-	bool bIsEquipping = false;;
 	bool bInventoryDestroyed = false;
 
 	
@@ -104,7 +109,9 @@ public:
 		int GetHealthItemCount() const;
 	UFUNCTION(BlueprintCallable)
 		int GetArmourItemCount() const;
-
+	UFUNCTION(BlueprintCallable)
+		int GetThrowableItemCount() const;
+	
 	UFUNCTION(BlueprintCallable)
 		AEquippableBase* GetCurrentEquippable() const;
 	UFUNCTION(BlueprintCallable)
@@ -131,15 +138,22 @@ public:
 	bool HasAnItemEquipped() const;
 	bool HasAWeaponEquipped() const;
 	
+	bool CanGiveItem(const TSubclassOf<AItemBase>& ItemClass);
 	void GiveItemToPlayer(TSubclassOf<class AItemBase> ItemClass);
-	void GiveWeaponToPlayer(TSubclassOf<class AWeapon> WeaponClass, FWeaponConfig& Config);
-	
+
 	bool CanGiveThrowable(const TSubclassOf<AThrowable>& ThrowableClass);
 	void GiveThrowableToPlayer(const TSubclassOf<AThrowable>& ThrowableClass);
+
+	void GiveEquippable(const TSubclassOf<AEquippableBase>& Class);
+	AEquippableBase* SpawnEquippable(const TSubclassOf<AEquippableBase>& Class) const;
+	void AddToSlot(AEquippableBase* EquippableBase);
+
+	
+	void GiveWeaponToPlayer(TSubclassOf<class AWeapon> WeaponClass, FWeaponConfig& Config);
+
 	
 	EInventorySlots FindGoodWeaponSlot() const;
 
-	bool CanGiveItem(const TSubclassOf<AItemBase>& ItemClass);
 	void SetDelegate(IInventoryCompDelegate* Dgate) { Delegate = Dgate; }
 	bool RemoveEquippableFromInventory(AEquippableBase* Equippable);
 
@@ -152,6 +166,7 @@ protected:
 private:
 	AItemBase* GetFirstHealthItemOrNull() const;
 	AItemBase* GetFirstArmourItemOrNull() const;
+	AThrowable* GetFirstThrowableOrNull() const;
 	
 	AWeapon* AuthSpawnWeapon(TSubclassOf<AWeapon> weaponClass, FWeaponConfig& Config);
 	AWeapon* AssignWeaponToInventorySlot(AWeapon* Weapon, EInventorySlots Slot);
