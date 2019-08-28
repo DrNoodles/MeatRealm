@@ -306,6 +306,12 @@ private:
 	UFUNCTION(Server, Reliable, WithValidation)
 		void ServerEquipArmour();
 
+	void OnEquipThrowable();
+	void EquipThrowable();
+	UFUNCTION(Server, Reliable, WithValidation)
+		void ServerEquipThrowable();
+
+	
 	void OnRunToggle();
 	void OnStartRunning();
 	void OnStopRunning();

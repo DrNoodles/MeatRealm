@@ -144,6 +144,7 @@ AEquippableBase* UInventoryComp::GetEquippable(EInventorySlots Slot) const
 	case EInventorySlots::Secondary: return SecondaryWeaponSlot;
 	case EInventorySlots::Health: return GetFirstHealthItemOrNull();
 	case EInventorySlots::Armour: return GetFirstArmourItemOrNull();
+	case EInventorySlots::Throwable: return GetFirstThrowableOrNull();
 
 	case EInventorySlots::Undefined:
 	default:;

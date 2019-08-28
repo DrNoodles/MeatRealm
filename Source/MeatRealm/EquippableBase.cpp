@@ -9,6 +9,7 @@
 
 AEquippableBase::AEquippableBase()
 {
+	SetReplicates(true);
 	PrimaryActorTick.bCanEverTick = true;
 }
 
