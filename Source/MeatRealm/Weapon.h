@@ -177,6 +177,7 @@ private:
 
 
 	void LogMsgWithRole(FString message) const;
+	static FString GetEnumText(ENetRole role);
 	FString GetRoleText() const;
 };
 

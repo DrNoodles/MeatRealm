@@ -35,7 +35,7 @@ void AItemBase::ExitInventory()
 {
 	check(HasAuthority())
 	Recipient = nullptr;
-	Delegate = nullptr;
+	Delegate = nullptr; // TODO Test if this is necessary. It should probably be managed by the EquippableBase!
 }
 
 void AItemBase::BeginPlay()

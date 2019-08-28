@@ -378,7 +378,7 @@ void AWeapon::LogMsgWithRole(FString message) const
 	FString m = GetRoleText() + ": " + message;
 	UE_LOG(LogTemp, Warning, TEXT("%s"), *m);
 }
-FString GetEnumText(ENetRole role)
+FString AWeapon::GetEnumText(ENetRole role)
 {
 	switch (role) {
 	case ROLE_None:
