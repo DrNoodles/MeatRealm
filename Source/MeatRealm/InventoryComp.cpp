@@ -1,12 +1,12 @@
 // Fill out your copyright notice in the Description page of Project Settings.
 
 #include "InventoryComp.h"
-#include "Interfaces/Equippable.h"
 #include "Engine/World.h"
 #include "UnrealNetwork.h"
 #include "Kismet/GameplayStatics.h"
 #include "Weapon.h"
 #include "WeaponPickupBase.h"
+#include "EquippableBase.h"
 
 DEFINE_LOG_CATEGORY(LogInventory);
 
@@ -125,7 +125,7 @@ AItemBase* UInventoryComp::GetItem(EInventorySlots Slot) const
 		return nullptr;
 	}
 }
-IEquippable* UInventoryComp::GetEquippable(EInventorySlots Slot) const
+AEquippableBase* UInventoryComp::GetEquippable(EInventorySlots Slot) const
 {
 	UE_LOG(LogInventory, VeryVerbose, TEXT("UInventoryComp::GetEquippable()"));
 	switch (Slot)
@@ -163,7 +163,7 @@ AItemBase* UInventoryComp::GetCurrentItem() const
 	UE_LOG(LogInventory, VeryVerbose, TEXT("UInventoryComp::GetCurrentItem()"));
 	return GetItem(CurrentInventorySlot);
 }
-IEquippable* UInventoryComp::GetCurrentEquippable() const
+AEquippableBase* UInventoryComp::GetCurrentEquippable() const
 {
 	UE_LOG(LogInventory, VeryVerbose, TEXT("UInventoryComp::GetCurrentEquippable()"));
 	return GetEquippable(CurrentInventorySlot);
@@ -256,7 +256,7 @@ void UInventoryComp::GiveItemToPlayer(TSubclassOf<AItemBase> ItemClass)
 
 	UGameplayStatics::FinishSpawningActor(Item, TF);
 
-	Item->SetHidden(true);
+	Item->SetActorHiddenInGame(true);
 
 	// Find correct slot
 	auto Slot = EInventorySlots::Undefined;
@@ -422,7 +422,7 @@ AWeapon* UInventoryComp::AssignWeaponToInventorySlot(AWeapon* Weapon, EInventory
 	return ToRemove;
 }
 
-bool UInventoryComp::RemoveEquippableFromInventory(IEquippable* Equippable)
+bool UInventoryComp::RemoveEquippableFromInventory(AEquippableBase* Equippable)
 {
 	UE_LOG(LogInventory, Verbose, TEXT("UInventoryComp::RemoveEquippableFromInventory()"));
 	check(Equippable);
@@ -510,7 +510,7 @@ void UInventoryComp::EquipSlot(const EInventorySlots Slot)
 	{
 		//LogMsgWithRole("Un-equip new slot");
 		OldEquippable->Unequip();
-		OldEquippable->SetHidden(OldEquippable->ShouldHideWhenUnequipped());
+		OldEquippable->SetActorHiddenInGame(OldEquippable->ShouldHideWhenUnequipped());
 	}
 
 
@@ -519,7 +519,7 @@ void UInventoryComp::EquipSlot(const EInventorySlots Slot)
 	{
 		//LogMsgWithRole("Equip new slot");
 		NewEquippable->Equip();
-		NewEquippable->SetHidden(true);
+		NewEquippable->SetActorHiddenInGame(true);
 
 		GetWorld()->GetTimerManager().SetTimer(EquipTimerHandle, this, &UInventoryComp::MakeEquippedItemVisible, NewEquippable->GetEquipDuration(), false);
 	}
@@ -531,9 +531,9 @@ void UInventoryComp::MakeEquippedItemVisible() const
 	UE_LOG(LogInventory, Verbose, TEXT("UInventoryComp::MakeEquippedItemVisible()"));
 
 	//LogMsgWithRole("MakeEquippedItemVisible");
-	IEquippable* Item = GetEquippable(CurrentInventorySlot);
+	auto Item = GetEquippable(CurrentInventorySlot);
 
-	if (Item) Item->SetHidden(false);
+	if (Item) Item->SetActorHiddenInGame(false);
 
 	Delegate->RefreshWeaponAttachments();
 }

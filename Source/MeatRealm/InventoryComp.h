@@ -4,7 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "Components/ActorComponent.h"
-#include "Interfaces/Equippable.h"
+
 #include "ItemArmour.h"
 
 
@@ -15,9 +15,8 @@ DECLARE_LOG_CATEGORY_EXTERN(LogInventory, Display, All);
 struct FWeaponConfig;
 class AItemBase;
 class AWeapon;
-class IEquippable;
 class AHeroCharacter;
-
+class AEquippableBase;
 
 class IInventoryCompDelegate
 {
@@ -95,10 +94,12 @@ public:
 	void NotifyItemIsExpended(AItemBase* Item);
 
 	UFUNCTION(BlueprintCallable)
+		AEquippableBase* GetEquippable(EInventorySlots Slot) const;
+	UFUNCTION(BlueprintCallable)
 		AWeapon* GetWeapon(EInventorySlots Slot) const;
+	UFUNCTION(BlueprintCallable)
+		AItemBase* GetItem(EInventorySlots Slot) const;
 	
-	AItemBase* GetItem(EInventorySlots Slot) const;
-	IEquippable* GetEquippable(EInventorySlots Slot) const;
 
 	UFUNCTION(BlueprintCallable)
 		int GetHealthItemCount() const;
@@ -106,8 +107,9 @@ public:
 		int GetArmourItemCount() const;
 
 	UFUNCTION(BlueprintCallable)
+		AEquippableBase* GetCurrentEquippable() const;
+	UFUNCTION(BlueprintCallable)
 		AWeapon* GetCurrentWeapon() const;
-
 	UFUNCTION(BlueprintCallable)
 		AItemBase* GetCurrentItem() const;
 
@@ -122,7 +124,6 @@ public:
 	
 	EInventorySlots GetLastInventorySlot() const { return LastInventorySlot; }
 	
-	IEquippable* GetCurrentEquippable() const;
 	void SpawnHeldWeaponsAsPickups() const;
 	
 	AWeapon* FindWeaponToReceiveAmmo() const;
@@ -138,7 +139,7 @@ public:
 
 	bool CanGiveItem(const TSubclassOf<AItemBase>& Class);
 	void SetDelegate(IInventoryCompDelegate* Dgate) { Delegate = Dgate; }
-	bool RemoveEquippableFromInventory(IEquippable* Equippable);
+	bool RemoveEquippableFromInventory(AEquippableBase* Equippable);
 
 
 // Protected Methods //////////////////////////////////////////////////////////

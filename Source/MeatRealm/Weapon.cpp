@@ -47,6 +47,7 @@ AWeapon::AWeapon()
 	ReceiverComp->SetDelegate(this);
 	ReceiverComp->SetIsReplicated(true);
 }
+
 void AWeapon::ConfigWeapon(FWeaponConfig& Config) const
 {
 	check(HasAuthority());
@@ -60,7 +61,12 @@ void AWeapon::ConfigWeapon(FWeaponConfig& Config) const
 
 // INPUT //////////////////////
 
-void AWeapon::Equip()
+
+void AWeapon::OnEquipStarted()
+{
+}
+
+void AWeapon::OnEquipFinished()
 {
 	if (!HasAuthority())
 	{
@@ -69,16 +75,8 @@ void AWeapon::Equip()
 	}
 	ReceiverComp->DrawWeapon();
 }
-void AWeapon::ServerRPC_Equip_Implementation()
-{
-	Equip();
-}
-bool AWeapon::ServerRPC_Equip_Validate()
-{
-	return true;
-}
 
-void AWeapon::Unequip()
+void AWeapon::OnUnEquipStarted()
 {
 	if (!HasAuthority())
 	{
@@ -86,6 +84,19 @@ void AWeapon::Unequip()
 		return; // TODO Remove return to enable client preditiction (currently broken)
 	}
 	ReceiverComp->HolsterWeapon();
+}
+
+void AWeapon::OnUnEquipFinished()
+{
+}
+
+void AWeapon::ServerRPC_Equip_Implementation()
+{
+	OnEquipFinished();
+}
+bool AWeapon::ServerRPC_Equip_Validate()
+{
+	return true;
 }
 
 void AWeapon::EnterInventory()
@@ -97,7 +108,7 @@ void AWeapon::ExitInventory()
 
 void AWeapon::ServerRPC_Unequip_Implementation()
 {
-	Unequip();
+	OnUnEquipStarted();
 }
 bool AWeapon::ServerRPC_Unequip_Validate()
 {
@@ -347,7 +358,7 @@ AActor* AWeapon::GetOwningPawn()
 }
 FString AWeapon::GetWeaponName()
 {
-	return WeaponName;
+	return EquippableName;
 }
 
 void AWeapon::CancelAnyReload()

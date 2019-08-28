@@ -5,7 +5,7 @@
 #include "CoreMinimal.h"
 #include "GameFramework/Actor.h"
 #include "TimerManager.h"
-#include "Interfaces/Equippable.h"
+#include "EquippableBase.h"
 
 #include "ItemBase.generated.h"
 
@@ -19,7 +19,7 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE(FUsageSuccess);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FUsageCancelled);
 
 UCLASS()
-class MEATREALM_API AItemBase : public AActor, public IEquippable
+class MEATREALM_API AItemBase : public AEquippableBase
 {
 	GENERATED_BODY()
 
@@ -50,7 +50,6 @@ private:
 	FDateTime UsageStartTime;
 	FTimerHandle UsageTimerHandle;
 	IAffectableInterface* Recipient = nullptr;
-	UInventoryComp* Delegate = nullptr; // TODO This is a horrible coupling. Make it a UInventoryComponent. Using an interface is a fools errand in UE4
 
 	UPROPERTY(EditAnywhere)
 		float UsageDuration = 2;
@@ -61,10 +60,6 @@ private:
 
 	UPROPERTY(EditAnywhere)
 		bool bIsAutoUseOnEquip = true;
-
-	UPROPERTY(EditAnywhere)
-		float EquipDuration = 0.3;
-
 
 	UPROPERTY(VisibleAnywhere)
 		USceneComponent* RootComp = nullptr;
@@ -85,21 +80,22 @@ public:
 	bool IsInUse() const { return bIsInUse; }
 	void SetRecipient(IAffectableInterface* const TheRecipient);
 
-	/* IEquippable */
-	void Equip() override;
-	void Unequip() override;
-	float GetEquipDuration() override { return EquipDuration; }
-	void SetHidden(bool bIsHidden) override { SetActorHiddenInGame(bIsHidden); }
+	/* AEquippableBase */
+	void OnEquipStarted() override;
+	void OnEquipFinished() override;
+	void OnUnEquipStarted() override;
+	void OnUnEquipFinished() override;
 	void EnterInventory() override;
 	void ExitInventory() override;
-	void SetDelegate(UInventoryComp* Delegate) override;
 	virtual bool ShouldHideWhenUnequipped() override { return true; }
 	virtual EInventoryCategory GetInventoryCategory() override
 	{
 		unimplemented();
 		return EInventoryCategory::Undefined;
 	}
-	/* End IEquippable */
+	/* End AEquippableBase */
+
+	
 
 protected:
 	virtual bool CanApplyItem(IAffectableInterface* Affectable)
@@ -107,7 +103,6 @@ protected:
 		unimplemented();
 		return false;
 	}
-	//virtual void ApplyItem(IAffectableInterface* const Affectable) PURE_VIRTUAL(AItemBase::ApplyItem, );
 	virtual void ApplyItem(IAffectableInterface* Affectable)
 	{
 		unimplemented();

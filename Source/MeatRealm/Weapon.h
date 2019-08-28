@@ -5,7 +5,7 @@
 #include "CoreMinimal.h"
 #include "GameFramework/Actor.h"
 #include "WeaponReceiverComponent.h"
-#include "Interfaces/Equippable.h"
+#include "EquippableBase.h"
 
 #include "Weapon.generated.h"
 
@@ -33,7 +33,7 @@ struct FWeaponConfig
 };
 
 UCLASS()
-class MEATREALM_API AWeapon : public AActor, public IReceiverComponentDelegate, public IEquippable
+class MEATREALM_API AWeapon : public AEquippableBase, public IReceiverComponentDelegate
 {
 	GENERATED_BODY()
 
@@ -70,16 +70,8 @@ protected:
 
 	//// Configure the gun
 
-	// Time (seconds) to holster the weapon
-	//UPROPERTY(EditAnywhere)
-	//	float HolsterDuration = 0.5;
-
-	UPROPERTY(EditAnywhere)
-		float DrawDuration = 1;
-
 	UPROPERTY(EditAnywhere)
 		float AdsMovementScale = 0.70;
-
 
 	UPROPERTY(BlueprintAssignable, Category = "Event Dispatchers")
 		FShotFired OnShotFired;
@@ -94,8 +86,6 @@ protected:
 		FReloadEnded OnReloadEnded;
 
 protected:
-	UPROPERTY(EditAnywhere, BlueprintReadOnly)
-		FString WeaponName = "NoNameWeapon";
 
 private:
 	
@@ -106,18 +96,16 @@ private:
 public:
 	AWeapon();
 
-	/// [Server, Local]
-	/* IEquippable */
-	void Equip() override;
-	void Unequip() override;
-	float GetEquipDuration() override { return DrawDuration; }
-	void SetHidden(bool bIsHidden) override { SetActorHiddenInGame(bIsHidden); }
+	/* AEquippableBase */
+	void OnEquipStarted() override;
+	void OnEquipFinished() override;
+	void OnUnEquipStarted() override;
+	void OnUnEquipFinished() override;
 	void EnterInventory() override;
 	void ExitInventory() override;
 	EInventoryCategory GetInventoryCategory() override { return EInventoryCategory::Weapon; }
 	virtual bool ShouldHideWhenUnequipped() override { return false; }
-	void SetDelegate(UInventoryComp* Delegate) override { }
-	/* End IEquippable */
+	/* End AEquippableBase */
 
 	void ConfigWeapon(FWeaponConfig& Config) const;
 
@@ -143,17 +131,13 @@ public:
 	FVector GetBarrelLocation() override;
 	const UArrowComponent* GetMuzzleComponent() const { return MuzzleLocationComp; }
 	float GetDrawDuration() override;
-
 	AActor* GetOwningPawn() override;
 	FString GetWeaponName() override;
-	bool IsEquipping() const { return ReceiverComp->IsEquipping(); }
 	bool IsReloading() const { return ReceiverComp->IsReloading(); }
 	void CancelAnyReload();
-
 	int GetAmmoInClip() const { return ReceiverComp->GetState().AmmoInClip; }
 	int GetAmmoInPool() const { return ReceiverComp->GetState().AmmoInPool; }
 	bool HasAmmo() const { return ReceiverComp->GetState().AmmoInClip + ReceiverComp->GetState().AmmoInPool > 0; }
-
 	/* End IReceiverComponentDelegate */
 
 

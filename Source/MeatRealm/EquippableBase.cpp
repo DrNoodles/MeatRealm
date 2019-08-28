@@ -2,26 +2,61 @@
 
 
 #include "EquippableBase.h"
+#include "InventoryComp.h"
+#include "Engine/World.h"
 
-// Sets default values
 AEquippableBase::AEquippableBase()
 {
- 	// Set this actor to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
 	PrimaryActorTick.bCanEverTick = true;
-
 }
 
-// Called when the game starts or when spawned
-void AEquippableBase::BeginPlay()
+void AEquippableBase::Equip()
 {
-	Super::BeginPlay();
+	ClearTimers();
+
+	EquippedStatus = EEquipState::Equipping;
+	OnEquipStarted();
+	// TODO Call multicast event
+	// TODO Call blueprint implementable method
+
+	GetWorld()->GetTimerManager().SetTimer(EquipTimerHandle, this, &AEquippableBase::EquipFinish, EquipDuration, false);
+}
+void AEquippableBase::EquipFinish()
+{
+	EquippedStatus = EEquipState::Equipped;
+	OnEquipFinished();
+	// TODO Also Call multicast event
+	// TODO Also Call blueprint implementable method
+}
+
+void AEquippableBase::Unequip()
+{
+	ClearTimers();
+
+	EquippedStatus = EEquipState::UnEquipping;
+	OnUnEquipStarted();
+	// TODO Call multicast event
+	// TODO Call blueprint implementable method
+
+
+	GetWorld()->GetTimerManager().SetTimer(UnEquipTimerHandle, this, &AEquippableBase::UnEquipFinish, UnEquipDuration, false);
 	
 }
-
-// Called every frame
-void AEquippableBase::Tick(float DeltaTime)
+void AEquippableBase::UnEquipFinish()
 {
-	Super::Tick(DeltaTime);
-
+	EquippedStatus = EEquipState::UnEquipped;
+	OnUnEquipFinished();
+	// TODO Call multicast event
+	// TODO Call blueprint implementable method
 }
 
+bool AEquippableBase::Is(EInventoryCategory Category)
+{
+	return GetInventoryCategory() == Category;
+}
+
+void AEquippableBase::ClearTimers()
+{
+	GetWorldTimerManager().ClearTimer(EquipTimerHandle);
+	GetWorldTimerManager().ClearTimer(UnEquipTimerHandle);
+}

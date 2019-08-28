@@ -38,13 +38,6 @@ void AItemBase::ExitInventory()
 	Delegate = nullptr;
 }
 
-void AItemBase::SetDelegate(UInventoryComp* NewDelegate)
-{
-	UE_LOG(LogTemp, Warning, TEXT("AItemBase::SetDelegate  Delegate set"));
-	check (HasAuthority())
-	Delegate = NewDelegate;
-}
-
 void AItemBase::BeginPlay()
 {
 	UE_LOG(LogTemp, Warning, TEXT("AItemBase::BeginPlay"));
@@ -165,7 +158,12 @@ void AItemBase::SetRecipient(IAffectableInterface* const TheRecipient)
 	ClientSetRecipient(Cast<UObject>(TheRecipient));
 }
 
-void AItemBase::Equip()
+void AItemBase::OnEquipStarted()
+{
+	
+}
+
+void AItemBase::OnEquipFinished()
 {
 	if (!HasAuthority())
 	{
@@ -182,7 +180,7 @@ void AItemBase::Equip()
 	}
 }
 
-void AItemBase::Unequip()
+void AItemBase::OnUnEquipStarted()
 {
 	if (!HasAuthority())
 	{
@@ -193,6 +191,9 @@ void AItemBase::Unequip()
 	StopAnyUsage();
 }
 
+void AItemBase::OnUnEquipFinished()
+{
+}
 
 
 
@@ -223,7 +224,7 @@ bool AItemBase::ServerCancel_Validate()
 }
 void AItemBase::ServerEquip_Implementation()
 {
-	Equip();
+	OnEquipFinished();
 }
 bool AItemBase::ServerEquip_Validate()
 {
@@ -231,7 +232,7 @@ bool AItemBase::ServerEquip_Validate()
 }
 void AItemBase::ServerUnequip_Implementation()
 {
-	Unequip();
+	OnUnEquipStarted();
 }
 bool AItemBase::ServerUnequip_Validate()
 {
