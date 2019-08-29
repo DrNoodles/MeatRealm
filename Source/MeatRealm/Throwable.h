@@ -18,24 +18,37 @@ class MEATREALM_API AThrowable : public AEquippableBase
 	GENERATED_BODY()
 
 public: // Data ///////////////////////////////////////////////////////////////
+	
 protected: // Data ////////////////////////////////////////////////////////////
+	
 private: // Data //////////////////////////////////////////////////////////////
-		UPROPERTY(VisibleAnywhere)
+	UPROPERTY(VisibleAnywhere)
 		USceneComponent* RootComp = nullptr;
 
 	UPROPERTY(VisibleAnywhere)
 		USkeletalMeshComponent* SkeletalMeshComp = nullptr;
+	
+	bool bIsAiming;
 
 
-
-
-
+	
 public: // Methods ////////////////////////////////////////////////////////////
 	AThrowable();
 	
 protected: // Methods /////////////////////////////////////////////////////////
+	
 private: // Methods ///////////////////////////////////////////////////////////
 
+	// Throw Projectile
+	UFUNCTION(Server, Reliable, WithValidation)
+	void ServerRequestThrow();
+	UFUNCTION(NetMulticast, Reliable, WithValidation)
+	void MultiDoThrow();
+	// [Server]
+	void SpawnProjectile();
+	// [All Clients]
+	void ProjectileThrown();
+	
 	void BeginPlay() override;
 
 	// Input
@@ -57,7 +70,7 @@ private: // Methods ///////////////////////////////////////////////////////////
 
 	// Replication
 	UFUNCTION(Server, Reliable, WithValidation)
-	void ServerEquipStarted();
+		void ServerEquipStarted();
 	UFUNCTION(Server, Reliable, WithValidation)
 		void ServerEquipFinished();
 	UFUNCTION(Server, Reliable, WithValidation)

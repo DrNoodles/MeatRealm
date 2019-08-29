@@ -1,10 +1,8 @@
 // Fill out your copyright notice in the Description page of Project Settings.
 
-
 #include "Throwable.h"
 #include "UnrealNetwork.h"
 #include "Components/SkeletalMeshComponent.h"
-
 
 DEFINE_LOG_CATEGORY(LogThrowable);
 
@@ -27,6 +25,7 @@ AThrowable::AThrowable()
 	SkeletalMeshComp->SetCollisionProfileName(TEXT("NoCollision"));
 	SkeletalMeshComp->CanCharacterStepUpOn = ECB_No;
 }
+
 void AThrowable::BeginPlay()
 {
 	LogMsgWithRole("AThrowable::BeginPlay");
@@ -35,33 +34,47 @@ void AThrowable::BeginPlay()
 }
 
 
+// Throw Projectile ///////////////////////////////////////////////////////////
+
+void AThrowable::SpawnProjectile()
+{
+	LogMsgWithRole("AThrowable::SpawnProjectile()");
+}
+
+void AThrowable::ProjectileThrown()
+{
+	LogMsgWithRole("AThrowable::ProjectileThrown()");
+}
+
 
 // Input //////////////////////////////////////////////////////////////////////
 
 void AThrowable::OnPrimaryPressed()
 {
 	LogMsgWithRole("AThrowable::OnPrimaryPressed()");
-
+	bIsAiming = true;
 }
-
 void AThrowable::OnPrimaryReleased()
 {
 	LogMsgWithRole("AThrowable::OnPrimaryReleased()");
 
+	if (bIsAiming)
+	{
+		bIsAiming = false;
+		ServerRequestThrow();
+	}
 }
 
 void AThrowable::OnSecondaryPressed()
 {
 	LogMsgWithRole("AThrowable::OnSecondaryPressed()");
-
+	bIsAiming = false;
 }
-
 void AThrowable::OnSecondaryReleased()
 {
 	LogMsgWithRole("AThrowable::OnSecondaryReleased()");
 
 }
-
 
 
 // AEquippableBase ////////////////////////////////////////////////////////////
@@ -89,7 +102,6 @@ void AThrowable::OnEquipStarted()
 	LogMsgWithRole("AThrowable::OnEquipStarted");
 
 }
-
 void AThrowable::OnEquipFinished()
 {
 	// Only run on the authority - TODO Client side prediction, if needed.
@@ -113,7 +125,6 @@ void AThrowable::OnUnEquipStarted()
 
 	LogMsgWithRole("AThrowable::OnUnEquipStarted");
 }
-
 void AThrowable::OnUnEquipFinished()
 {
 	// Only run on the authority - TODO Client side prediction, if needed.
@@ -125,7 +136,6 @@ void AThrowable::OnUnEquipFinished()
 
 	LogMsgWithRole("AThrowable::OnUnEquipFinished");
 }
-
 
 
 // Replication ////////////////////////////////////////////////////////////////
@@ -163,6 +173,31 @@ bool AThrowable::ServerUnEquipFinished_Validate()
 	return true;
 }
 
+void AThrowable::ServerRequestThrow_Implementation()
+{
+	MultiDoThrow();
+}
+bool AThrowable::ServerRequestThrow_Validate()
+{
+	return true;
+}
+void AThrowable::MultiDoThrow_Implementation()
+{
+	if (HasAuthority())
+	{
+		// Throw the thing!
+		SpawnProjectile();
+	}
+	else
+	{
+		// Notify clients of throw for client side effects
+		ProjectileThrown();
+	}
+}
+bool AThrowable::MultiDoThrow_Validate()
+{
+	return true;
+}
 
 
 // Helpers ////////////////////////////////////////////////////////////////////
