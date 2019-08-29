@@ -691,7 +691,8 @@ void UInventoryComp::NotifyItemIsExpended(AEquippableBase* Item)
 	const auto WasRemoved = RemoveEquippableFromInventory(Item);
 	if (WasRemoved)
 	{
-		Item->SetLifeSpan(5); // Destroy this after some time has passed to let any effects and such finish
+		Item->SetActorHiddenInGame(true);
+		Item->SetLifeSpan(3); // Destroy this after some time has passed to let any effects and such finish
 		Delegate->RefreshWeaponAttachments();
 	}
 }

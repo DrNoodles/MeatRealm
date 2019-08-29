@@ -30,7 +30,7 @@ protected: // Data ////////////////////////////////////////////////////////////
 		float PitchAimOffset = 0;
 	
 	// Projectile class to spawn.
-	UPROPERTY(EditDefaultsOnly, Category = Weapon)
+	UPROPERTY(EditDefaultsOnly)
 		TSubclassOf<AProjectile> ProjectileClass;
 	
 private: // Data //////////////////////////////////////////////////////////////
