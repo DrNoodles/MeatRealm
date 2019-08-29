@@ -381,6 +381,9 @@ void UInventoryComp::AddToSlot(AEquippableBase* Equippable)
 	default: 
 		UE_LOG(LogInventory, Error, TEXT("Unsupported Inventory Slot: %d"), Slot);
 	}
+
+	Equippable->SetDelegate(this);
+	Equippable->EnterInventory();
 }
 
 bool UInventoryComp::CanGiveThrowable(const TSubclassOf<AThrowable>& ThrowableClass)
@@ -663,7 +666,7 @@ void UInventoryComp::MakeEquippedItemVisible() const
 	Delegate->RefreshWeaponAttachments();
 }
 
-void UInventoryComp::NotifyItemIsExpended(AItemBase* Item)
+void UInventoryComp::NotifyItemIsExpended(AEquippableBase* Item)
 {
 	UE_LOG(LogInventory, Verbose, TEXT("UInventoryComp::NotifyItemIsExpended()"));
 
@@ -672,7 +675,7 @@ void UInventoryComp::NotifyItemIsExpended(AItemBase* Item)
 	const auto WasRemoved = RemoveEquippableFromInventory(Item);
 	if (WasRemoved)
 	{
-		Item->Destroy();
+		Item->SetLifeSpan(5); // Destroy this after some time has passed to let any effects and such finish
 		Delegate->RefreshWeaponAttachments();
 	}
 }

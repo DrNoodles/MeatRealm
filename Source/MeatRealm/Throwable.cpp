@@ -1,6 +1,7 @@
 // Fill out your copyright notice in the Description page of Project Settings.
 
 #include "Throwable.h"
+#include "InventoryComp.h"
 #include "UnrealNetwork.h"
 #include "Components/SkeletalMeshComponent.h"
 
@@ -40,6 +41,9 @@ void AThrowable::BeginPlay()
 void AThrowable::SpawnProjectile()
 {
 	LogMsgWithRole("AThrowable::SpawnProjectile()");
+
+	ensure(Delegate);
+	Delegate->NotifyItemIsExpended(this);
 }
 
 void AThrowable::ProjectileThrown()

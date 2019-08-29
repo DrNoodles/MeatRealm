@@ -95,7 +95,7 @@ public:
 	void InitInventory();
 	void DestroyInventory();
 
-	void NotifyItemIsExpended(AItemBase* Item);
+	void NotifyItemIsExpended(AEquippableBase* Item);
 
 	UFUNCTION(BlueprintCallable)
 		AEquippableBase* GetEquippable(EInventorySlots Slot) const;
