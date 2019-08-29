@@ -391,7 +391,7 @@ bool UInventoryComp::CanGiveThrowable(const TSubclassOf<AThrowable>& ThrowableCl
 void UInventoryComp::GiveThrowableToPlayer(const TSubclassOf<AThrowable>& ThrowableClass)
 {
 	UE_LOG(LogInventory, Verbose, TEXT("UInventoryComp::GiveThrowableToPlayer()"));
-
+	check(HasAuthority())
 	GiveEquippable(ThrowableClass);
 }
 
@@ -654,9 +654,11 @@ void UInventoryComp::MakeEquippedItemVisible() const
 	UE_LOG(LogInventory, Verbose, TEXT("UInventoryComp::MakeEquippedItemVisible()"));
 
 	//LogMsgWithRole("MakeEquippedItemVisible");
-	auto Item = GetEquippable(CurrentInventorySlot);
 
-	if (Item) Item->SetActorHiddenInGame(false);
+	// Ensure the item is indeed visible as this might fire just before the actual Equipped state is registered in the Equippable. TODO Have the equippable fire an event to say it has changed to Equipped state and change visibility based on that.
+	auto Item = GetEquippable(CurrentInventorySlot);
+	if (Item) 
+		Item->SetActorHiddenInGame(false);
 
 	Delegate->RefreshWeaponAttachments();
 }

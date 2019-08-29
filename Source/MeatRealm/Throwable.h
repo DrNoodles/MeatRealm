@@ -12,7 +12,7 @@ DECLARE_LOG_CATEGORY_EXTERN(LogThrowable, Display, All);
 /**
  * 
  */
-UCLASS()
+UCLASS(Abstract)
 class MEATREALM_API AThrowable : public AEquippableBase
 {
 	GENERATED_BODY()

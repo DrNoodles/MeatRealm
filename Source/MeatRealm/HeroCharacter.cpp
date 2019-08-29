@@ -85,6 +85,12 @@ AHeroCharacter::AHeroCharacter(const FObjectInitializer& ObjectInitializer) : Su
 	LastRunEnded = FDateTime::Now();
 }
 
+void AHeroCharacter::PostInitializeComponents()
+{
+	Super::PostInitializeComponents();
+	InventoryComp->SetDelegate(this);
+}
+
 void AHeroCharacter::EndPlay(const EEndPlayReason::Type EndPlayReason)
 {
 	if (ROLE_Authority == Role)
@@ -813,6 +819,9 @@ void AHeroCharacter::ServerSetTargeting_Implementation(bool bNewTargeting)
 //	DrawDebugLine(GetWorld(), Start, End, Color, false, -1., 0, 2.f);
 //}
 
+
+
+
 void AHeroCharacter::Input_PrimaryPressed()
 {
 	auto* MyPC = Cast<AHeroController>(Controller);
@@ -888,6 +897,8 @@ void AHeroCharacter::Input_Reload() const
 }
 
 
+
+
 // TODO Make this handle both client/server requests to fire - like ads pressed etc.
 void AHeroCharacter::StartWeaponFire()
 {
@@ -946,52 +957,7 @@ bool AHeroCharacter::IsFiring() const
 
 
 
-void AHeroCharacter::RefreshWeaponAttachments()
-{
-	const FAttachmentTransformRules Rules{ EAttachmentRule::SnapToTarget, true };
-	const auto CurrentInventorySlot = InventoryComp->GetCurrentInventorySlot();
-
-	
-	// Attach weapons to the correct locations
-	auto W1 = InventoryComp->GetWeapon(EInventorySlots::Primary);
-	auto W2 = InventoryComp->GetWeapon(EInventorySlots::Secondary);
-
-	if (CurrentInventorySlot == EInventorySlots::Primary)
-	{
-		if (W1) W1->AttachToComponent(GetMesh(), Rules, HandSocketName);
-		if (W2) W2->AttachToComponent(GetMesh(), Rules, Holster2SocketName);
-	}
-	else if (CurrentInventorySlot == EInventorySlots::Secondary)
-	{
-		if (W1) W1->AttachToComponent(GetMesh(), Rules, Holster1SocketName);
-		if (W2) W2->AttachToComponent(GetMesh(), Rules, HandSocketName);
-	}
-	else
-	{
-		if (W1) W1->AttachToComponent(GetMesh(), Rules, Holster1SocketName);
-		if (W2) W2->AttachToComponent(GetMesh(), Rules, Holster2SocketName);
-	}
-
-	if (CurrentInventorySlot == EInventorySlots::Health || CurrentInventorySlot == EInventorySlots::Armour)
-	{
-		auto Item = InventoryComp->GetItem(CurrentInventorySlot);
-		if (Item)
-		{
-			Item->AttachToComponent(GetMesh(), Rules, HandSocketName);
-			if (Item->IsEquipped())
-			{
-				Item->SetActorHiddenInGame(false); // This is here so items are visible after one in a stack of the same type is used. Eg, holding 2 armours. Use 1, this here makes the second one visible after the 1st is expended.
-			}
-			else
-			{
-				UE_LOG(LogTemp, Warning, TEXT("Item Status: %d"), Item->GetEquippedStatus())
-			}
-		}
-	}
-}
-
-
-//// Camera tracks aim /////////////////////////////////////////////////////
+//// Camera tracks aim ////////////////////////////////////////////////////////
 
 void AHeroCharacter::MoveCameraByOffsetVector(const FVector2D& OffsetVec, float DeltaSeconds) const
 {
@@ -1167,7 +1133,6 @@ FVector2D AHeroCharacter::GetGameViewportSize()
 
 
 
-
 //// Affect the character /////////////////////////////////////////////////////
 
 void AHeroCharacter::AuthOnDeath()
@@ -1239,11 +1204,6 @@ void AHeroCharacter::OnDeathImpl()
 	GetWorldTimerManager().SetTimer(TimerHandle, fn, 10, false);
 }
 
-void AHeroCharacter::PostInitializeComponents()
-{
-	Super::PostInitializeComponents();
-	InventoryComp->SetDelegate(this);
-}
 
 bool AHeroCharacter::ShouldTakeDamage(float Damage, FDamageEvent const& DamageEvent, AController* EventInstigator,
 	AActor* DamageCauser) const
@@ -1508,7 +1468,6 @@ FTransform AHeroCharacter::GetAimTransform() const
 
 
 
-
 //// Interacting //////////////////////////////////////////////////////////////
 
 void AHeroCharacter::Input_Interact()
@@ -1581,7 +1540,44 @@ void AHeroCharacter::GetReachLine(OUT FVector& outStart, OUT FVector& outEnd) co
 }
 
 
-// Other
+
+// Other //////////////////////////////////////////////////////////////////////
+
+void AHeroCharacter::RefreshWeaponAttachments()
+{
+	const FAttachmentTransformRules Rules{ EAttachmentRule::SnapToTarget, true };
+	const auto CurrentInventorySlot = InventoryComp->GetCurrentInventorySlot();
+
+	// Show what's in the hand
+	auto Equippable = InventoryComp->GetEquippable(CurrentInventorySlot);
+	if (Equippable)
+	{
+		Equippable->AttachToComponent(GetMesh(), Rules, HandSocketName);
+		Equippable->SetActorHiddenInGame(!Equippable->IsEquipped());
+	}
+
+	// Holster Primary?
+	if (CurrentInventorySlot != EInventorySlots::Primary)
+	{
+		auto W = InventoryComp->GetWeapon(EInventorySlots::Primary);
+		if (W)
+		{
+			W->AttachToComponent(GetMesh(), Rules, Holster1SocketName);
+			W->SetActorHiddenInGame(false);
+		}
+	}
+
+	// Holster Secondary?
+	if (CurrentInventorySlot != EInventorySlots::Secondary)
+	{
+		auto W = InventoryComp->GetWeapon(EInventorySlots::Secondary);
+		if (W)
+		{
+			W->AttachToComponent(GetMesh(), Rules, Holster2SocketName);
+			W->SetActorHiddenInGame(false);
+		}
+	}
+}
 
 void AHeroCharacter::OnRep_TintChanged() const
 {
@@ -1640,7 +1636,8 @@ bool AHeroCharacter::IsBackpedaling(const FVector& MoveDir, const FVector& AimDi
 }
 
 
-// Debug logging
+
+// Debug logging //////////////////////////////////////////////////////////////
 
 void AHeroCharacter::LogMsgWithRole(FString message) const
 {
