@@ -6,6 +6,7 @@
 #include "UObject/Interface.h"
 #include "Weapon.h"
 #include "ItemBase.h"
+#include "Throwable.h"
 #include "AffectableInterface.generated.h"
 
 // This class does not need to be modified.
@@ -29,11 +30,13 @@ public: // NOTE This interface breaks the I in SOLID. But it'll do for now.
 	UFUNCTION()
 		virtual bool AuthTryGiveHealth(float Hp) = 0;
 
+	
 	UFUNCTION()
 		virtual bool CanGiveArmour() = 0;
 	UFUNCTION()
 		virtual bool AuthTryGiveArmour(float Delta) = 0;
 
+	
 	UFUNCTION()
 		virtual bool CanGiveAmmo() = 0;
 	UFUNCTION()
@@ -51,6 +54,11 @@ public: // NOTE This interface breaks the I in SOLID. But it'll do for now.
 	UFUNCTION()
 		virtual bool TryGiveItem(const TSubclassOf<AItemBase>& Class) = 0;
 
+	
+	UFUNCTION()
+		virtual bool CanGiveThrowable(const TSubclassOf<AThrowable>& Class, float& OutDelay) = 0;
+	UFUNCTION()
+		virtual bool TryGiveThrowable(const TSubclassOf<AThrowable>& Class) = 0;
 
 	//UFUNCTION()
 	//	virtual float GetGiveWeaponDelay() = 0;

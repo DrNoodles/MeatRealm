@@ -10,7 +10,7 @@ enum class EWeaponCommands : uint8
 {
 	FireStart, FireEnd,
 	ReloadStart, ReloadEnd,
-	EquipStart, EquipEnd,
+	Equip, EquipEnd,
 	UnEquip,
 };
 
@@ -75,6 +75,7 @@ struct FWeaponInputState
 	bool DrawRequested = false;
 	void Reset()
 	{
+		//UE_LOG(LogTemp, Warning, TEXT("FWeaponInputState.Reset()"));
 		FireRequested = false;
 		AdsRequested = false;
 		ReloadRequested = false;
@@ -109,7 +110,7 @@ inline FString EWeaponCommandsStr(const EWeaponCommands Cmd)
 	case EWeaponCommands::FireEnd: return "DoFireEnd";
 	case EWeaponCommands::ReloadStart: return "DoReloadStart";
 	case EWeaponCommands::ReloadEnd: return "DoReloadEnd";
-	case EWeaponCommands::EquipStart: return "DoEquipStart";
+	case EWeaponCommands::Equip: return "DoEquipStart";
 	case EWeaponCommands::EquipEnd: return "DoEquipEnd";
 	case EWeaponCommands::UnEquip: return "DoUnEquip";
 	default: return "Unknown";
@@ -229,7 +230,6 @@ public:
 	void AdsReleased();
 	bool CanGiveAmmo();
 	bool TryGiveAmmo();
-	bool IsEquipping() const { return WeaponState.Mode == EWeaponModes::Equipping; }
 	void CancelAnyReload();
 	bool IsReloading() const { return WeaponState.Mode == EWeaponModes::Reloading; }
 
@@ -247,7 +247,6 @@ private:
 
 	// All the states!
 	bool TickIdle(float DT);
-	//bool TickUnEquipped(float DeltaTime);
 	bool TickFiring(float DT);
 	void FireEnd();
 	bool TickReloading(float DT);

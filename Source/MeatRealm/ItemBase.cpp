@@ -7,6 +7,7 @@
 #include "Components/SkeletalMeshComponent.h"
 #include "HeroCharacter.h"
 #include "UnrealNetwork.h"
+#include "InventoryComp.h"
 
 AItemBase::AItemBase()
 {
@@ -34,14 +35,7 @@ void AItemBase::ExitInventory()
 {
 	check(HasAuthority())
 	Recipient = nullptr;
-	Delegate = nullptr;
-}
-
-void AItemBase::SetDelegate(AHeroCharacter* NewDelegate)
-{
-	UE_LOG(LogTemp, Warning, TEXT("AItemBase::SetDelegate  Delegate set"));
-	check (HasAuthority())
-	Delegate = NewDelegate;
+	Delegate = nullptr; // TODO Test if this is necessary. It should probably be managed by the EquippableBase!
 }
 
 void AItemBase::BeginPlay()
@@ -112,11 +106,10 @@ void AItemBase::UseComplete()
 	if (HasAuthority())
 	{
 		ApplyItem(Recipient);
-		if (Delegate)
-		{
-			UE_LOG(LogTemp, Warning, TEXT("AItemBase::UseComplete - NotifyEquippableIsExpended"));
-			Delegate->NotifyItemIsExpended(this);
-		}
+
+		UE_LOG(LogTemp, Warning, TEXT("AItemBase::UseComplete - NotifyEquippableIsExpended"));
+		ensure(Delegate);
+		Delegate->NotifyItemIsExpended(this);
 	}
 }
 
@@ -164,7 +157,12 @@ void AItemBase::SetRecipient(IAffectableInterface* const TheRecipient)
 	ClientSetRecipient(Cast<UObject>(TheRecipient));
 }
 
-void AItemBase::Equip()
+void AItemBase::OnEquipStarted()
+{
+	
+}
+
+void AItemBase::OnEquipFinished()
 {
 	if (!HasAuthority())
 	{
@@ -181,7 +179,7 @@ void AItemBase::Equip()
 	}
 }
 
-void AItemBase::Unequip()
+void AItemBase::OnUnEquipStarted()
 {
 	if (!HasAuthority())
 	{
@@ -192,6 +190,9 @@ void AItemBase::Unequip()
 	StopAnyUsage();
 }
 
+void AItemBase::OnUnEquipFinished()
+{
+}
 
 
 
@@ -222,7 +223,7 @@ bool AItemBase::ServerCancel_Validate()
 }
 void AItemBase::ServerEquip_Implementation()
 {
-	Equip();
+	OnEquipFinished();
 }
 bool AItemBase::ServerEquip_Validate()
 {
@@ -230,7 +231,7 @@ bool AItemBase::ServerEquip_Validate()
 }
 void AItemBase::ServerUnequip_Implementation()
 {
-	Unequip();
+	OnUnEquipStarted();
 }
 bool AItemBase::ServerUnequip_Validate()
 {
