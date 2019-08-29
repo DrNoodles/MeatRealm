@@ -263,9 +263,12 @@ void AHeroCharacter::Tick(float DeltaSeconds)
 		if (Held->IsUnEquipped()) Str = "Un-equipped ";
 
 		Str += Held->GetEquippableName();
-		
-		const auto YOffset = -5.f * Str.Len();
-		DrawDebugString(GetWorld(), FVector{ 70, YOffset, 50 }, Str, this, FColor::White, DeltaSeconds * 0.7);
+
+		if (!Held->IsEquipped()) // Don't spam screen when it's equipped
+		{
+			const auto YOffset = -5.f * Str.Len();
+			DrawDebugString(GetWorld(), FVector{ 70, YOffset, 50 }, Str, this, FColor::White, DeltaSeconds * 0.7);
+		}
 	}
 }
 
