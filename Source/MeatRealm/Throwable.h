@@ -22,6 +22,9 @@ class MEATREALM_API AThrowable : public AEquippableBase
 public: // Data ///////////////////////////////////////////////////////////////
 	
 protected: // Data ////////////////////////////////////////////////////////////
+	UPROPERTY(EditAnywhere)
+		float AdsMovementScale = 0.50;
+	
 	// How much the weapon should aim up or down in degrees. Eg 90 is up, 0 straight ahead, and -90 is down.
 	UPROPERTY(EditAnywhere, BlueprintReadOnly)
 		float PitchAimOffset = 0;
@@ -36,14 +39,17 @@ private: // Data //////////////////////////////////////////////////////////////
 
 	UPROPERTY(VisibleAnywhere)
 		USkeletalMeshComponent* SkeletalMeshComp = nullptr;
-	
+
+	UPROPERTY(Replicated)
 	bool bIsAiming;
 
 
 	
 public: // Methods ////////////////////////////////////////////////////////////
 	AThrowable();
-	
+	bool IsTargeting() const { return bIsAiming; }
+	float GetAdsMovementScale() const { return AdsMovementScale; }
+
 protected: // Methods /////////////////////////////////////////////////////////
 	
 private: // Methods ///////////////////////////////////////////////////////////
@@ -86,7 +92,10 @@ private: // Methods ///////////////////////////////////////////////////////////
 		void ServerUnEquipStarted();
 	UFUNCTION(Server, Reliable, WithValidation)
 		void ServerUnEquipFinished();
-	
+
+	UFUNCTION(Server, Reliable, WithValidation)
+	void ServerSetAiming(bool NewAiming);
+
 	// Helpers
 	void LogMsgWithRole(FString message) const;
 	static FString GetEnumText(ENetRole role);

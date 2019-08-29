@@ -13,6 +13,14 @@ DEFINE_LOG_CATEGORY(LogThrowable);
 
 // Lifecycle //////////////////////////////////////////////////////////////////
 
+
+void AThrowable::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
+{
+	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
+
+	// Just the owner
+	DOREPLIFETIME_CONDITION(AThrowable, bIsAiming, COND_OwnerOnly);
+}
 AThrowable::AThrowable()
 {
 	bAlwaysRelevant = true;
@@ -123,7 +131,9 @@ bool AThrowable::MultiDoThrow_Validate()
 void AThrowable::OnPrimaryPressed()
 {
 	LogMsgWithRole("AThrowable::OnPrimaryPressed()");
+
 	bIsAiming = true;
+	ServerSetAiming(true); 
 }
 void AThrowable::OnPrimaryReleased()
 {
@@ -132,6 +142,8 @@ void AThrowable::OnPrimaryReleased()
 	if (bIsAiming)
 	{
 		bIsAiming = false;
+		ServerSetAiming(false);
+
 		ServerRequestThrow();
 	}
 }
@@ -139,7 +151,11 @@ void AThrowable::OnPrimaryReleased()
 void AThrowable::OnSecondaryPressed()
 {
 	LogMsgWithRole("AThrowable::OnSecondaryPressed()");
-	bIsAiming = false;
+	if (bIsAiming)
+	{
+		bIsAiming = false;
+		ServerSetAiming(false);
+	}
 }
 void AThrowable::OnSecondaryReleased()
 {
@@ -240,6 +256,18 @@ void AThrowable::ServerUnEquipFinished_Implementation()
 	OnUnEquipFinished();
 }
 bool AThrowable::ServerUnEquipFinished_Validate()
+{
+	return true;
+}
+
+
+// Aiming /////////////////////////////////////////////////////////////////////
+
+void AThrowable::ServerSetAiming_Implementation(bool NewAiming)
+{
+	bIsAiming = NewAiming;
+}
+bool AThrowable::ServerSetAiming_Validate(bool NewAiming)
 {
 	return true;
 }

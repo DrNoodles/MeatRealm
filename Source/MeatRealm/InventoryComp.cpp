@@ -129,7 +129,17 @@ AItemBase* UInventoryComp::GetItem(EInventorySlots Slot) const
 	{
 	case EInventorySlots::Health: return GetFirstHealthItemOrNull();
 	case EInventorySlots::Armour: return GetFirstArmourItemOrNull();
-		//case EInventorySlots::Secondary: return SecondaryWeaponSlot;
+
+	default:
+		return nullptr;
+	}
+}
+AThrowable* UInventoryComp::GetThrowable(EInventorySlots Slot) const
+{
+	UE_LOG(LogInventory, VeryVerbose, TEXT("UInventoryComp::GetThrowable()"));
+	switch (Slot)
+	{
+	case EInventorySlots::Throwable: return GetFirstThrowableOrNull();
 
 	default:
 		return nullptr;
@@ -178,6 +188,11 @@ AItemBase* UInventoryComp::GetCurrentItem() const
 {
 	UE_LOG(LogInventory, VeryVerbose, TEXT("UInventoryComp::GetCurrentItem()"));
 	return GetItem(CurrentInventorySlot);
+}
+AThrowable* UInventoryComp::GetCurrentThrowable() const
+{
+	UE_LOG(LogInventory, VeryVerbose, TEXT("UInventoryComp::GetCurrentThrowable()"));
+	return GetThrowable(CurrentInventorySlot);
 }
 AEquippableBase* UInventoryComp::GetCurrentEquippable() const
 {

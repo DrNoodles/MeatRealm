@@ -129,6 +129,7 @@ public:
 	float GetDrawDuration() override;
 	AActor* GetOwningPawn() override;
 	FString GetWeaponName() override;
+	bool IsTargeting()  const { return ReceiverComp->IsAds(); }
 	bool IsReloading() const { return ReceiverComp->IsReloading(); }
 	void CancelAnyReload();
 	int GetAmmoInClip() const { return ReceiverComp->GetState().AmmoInClip; }
