@@ -27,7 +27,7 @@ class MEATREALM_API AEquippableBase : public AActor
 	GENERATED_BODY()
 
 
-		// Public Data ////////////////////////////////////////////////////////////////
+	// Public Data ////////////////////////////////////////////////////////////////
 public:
 
 
@@ -43,6 +43,7 @@ protected:
 		FString EquippableName = "NoNameThingy";
 
 	UInventoryComp* Delegate = nullptr;
+	uint32 InstigatingControllerId;
 
 
 	// Private Data ///////////////////////////////////////////////////////////////
@@ -81,6 +82,7 @@ public:
 	virtual EInventoryCategory GetInventoryCategory() { unimplemented(); return EInventoryCategory::Undefined; }
 	virtual bool ShouldHideWhenUnequipped() { unimplemented(); return false; }
 
+	void SetInstigatingControllerId(uint32 Id) { this->InstigatingControllerId = Id; }
 	void SetDelegate(UInventoryComp* NewDelegate)
 	{
 		check(HasAuthority())

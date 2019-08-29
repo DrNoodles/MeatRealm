@@ -9,6 +9,8 @@
 
 DECLARE_LOG_CATEGORY_EXTERN(LogThrowable, Display, All);
 
+class AProjectile;
+
 /**
  * 
  */
@@ -20,6 +22,13 @@ class MEATREALM_API AThrowable : public AEquippableBase
 public: // Data ///////////////////////////////////////////////////////////////
 	
 protected: // Data ////////////////////////////////////////////////////////////
+	// How much the weapon should aim up or down in degrees. Eg 90 is up, 0 straight ahead, and -90 is down.
+	UPROPERTY(EditAnywhere, BlueprintReadOnly)
+		float PitchAimOffset = 0;
+	
+	// Projectile class to spawn.
+	UPROPERTY(EditDefaultsOnly, Category = Weapon)
+		TSubclassOf<AProjectile> ProjectileClass;
 	
 private: // Data //////////////////////////////////////////////////////////////
 	UPROPERTY(VisibleAnywhere)

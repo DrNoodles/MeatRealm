@@ -1,9 +1,13 @@
 // Fill out your copyright notice in the Description page of Project Settings.
 
 #include "Throwable.h"
-#include "InventoryComp.h"
-#include "UnrealNetwork.h"
 #include "Components/SkeletalMeshComponent.h"
+#include "UnrealNetwork.h"
+#include "Kismet/GameplayStatics.h"
+#include "InventoryComp.h"
+#include "HeroCharacter.h"
+#include "Projectile.h"
+
 
 DEFINE_LOG_CATEGORY(LogThrowable);
 
@@ -42,8 +46,42 @@ void AThrowable::SpawnProjectile()
 {
 	LogMsgWithRole("AThrowable::SpawnProjectile()");
 
-	ensure(Delegate);
-	Delegate->NotifyItemIsExpended(this);
+	check(HasAuthority());
+
+	if (ProjectileClass == nullptr)
+	{
+		UE_LOG(LogTemp, Error, TEXT("Set a Projectile Class in your Throwable Blueprint to spawn it"));
+		return;
+	}
+
+	UWorld* World = GetWorld();
+	if (World == nullptr) { return; }
+
+	const auto Hero = Cast<AHeroCharacter>(GetOwner());
+	if (!Hero) return;
+
+
+	const auto AimDirection = Hero->GetAimTransform().GetRotation().Vector();
+	const auto AimLocation = Hero->GetAimTransform().GetLocation();
+	
+	// Offset the aim up or down
+	const FRotator DirectionWithPitch{ PitchAimOffset, FMath::RadiansToDegrees(AimDirection.HeadingAngle()), 0 };
+	
+	const FTransform SpawnTransform{ DirectionWithPitch,  AimLocation };
+
+	// Spawn the projectile at the muzzle.
+	auto Projectile = (AProjectile*)UGameplayStatics::BeginDeferredActorSpawnFromClass(this, ProjectileClass, SpawnTransform, ESpawnActorCollisionHandlingMethod::AlwaysSpawn);
+
+	if (Projectile == nullptr)
+	{
+		return;
+	}
+
+	Projectile->SetInstigatingControllerId(InstigatingControllerId);
+	Projectile->Instigator = Instigator;
+	Projectile->SetOwner(this);
+
+	UGameplayStatics::FinishSpawningActor(Projectile, SpawnTransform);
 }
 
 void AThrowable::ProjectileThrown()
@@ -65,6 +103,7 @@ void AThrowable::MultiDoThrow_Implementation()
 	{
 		// Throw the thing!
 		SpawnProjectile();
+		Delegate->NotifyItemIsExpended(this);
 	}
 	else
 	{

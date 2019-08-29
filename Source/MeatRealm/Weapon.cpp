@@ -336,7 +336,7 @@ bool AWeapon::SpawnAProjectile(const FVector& Direction)
 		return false;
 	}
 
-	Projectile->SetInstigatingControllerId(HeroControllerId);
+	Projectile->SetInstigatingControllerId(InstigatingControllerId);
 	Projectile->Instigator = Instigator;
 	Projectile->SetOwner(this);	//Projectile->SetOwner(GetOwner());
 	//Projectile->InitVelocity(Direction);

@@ -351,6 +351,7 @@ AEquippableBase* UInventoryComp::SpawnEquippable(const TSubclassOf<AEquippableBa
 
 	UGameplayStatics::FinishSpawningActor(Equippable, TF);
 
+	Equippable->SetInstigatingControllerId(Delegate->GetControllerId());
 	Equippable->SetActorHiddenInGame(true);
 
 	return Equippable;
@@ -464,7 +465,7 @@ AWeapon* UInventoryComp::AuthSpawnWeapon(TSubclassOf<AWeapon> weaponClass, FWeap
 	}
 
 	Weapon->ConfigWeapon(Config);
-	Weapon->SetHeroControllerId(Delegate->GetControllerId());
+	Weapon->SetInstigatingControllerId(Delegate->GetControllerId());
 
 	UGameplayStatics::FinishSpawningActor(Weapon, TF);
 

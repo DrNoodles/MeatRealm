@@ -88,8 +88,6 @@ protected:
 protected:
 
 private:
-	
-	uint32 HeroControllerId;
 
 
 
@@ -116,9 +114,7 @@ public:
 	void Input_Reload();
 	bool CanGiveAmmo();
 	bool TryGiveAmmo();
-	void SetHeroControllerId(uint32 HeroControllerUid) { this->HeroControllerId = HeroControllerUid; }
 	float GetAdsMovementScale() const { return AdsMovementScale; }
-	//float GetHolsterDuration() const { return HolsterDuration; }
 
 	/* IReceiverComponentDelegate */
 	void ShotFired() override;
