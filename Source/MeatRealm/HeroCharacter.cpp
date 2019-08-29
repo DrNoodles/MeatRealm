@@ -424,25 +424,6 @@ void AHeroCharacter::SetupPlayerInputComponent(class UInputComponent* PlayerInpu
 
 }
 
-void AHeroCharacter::UseItemPressed() const
-{
-	//LogMsgWithRole("AHeroCharacter::UseItemPressed");
-	auto Item = InventoryComp->GetCurrentItem();
-	if (Item) Item->UsePressed();
-}
-void AHeroCharacter::UseItemReleased() const
-{
-	//LogMsgWithRole("AHeroCharacter::UseItemReleased");
-	auto Item = InventoryComp->GetCurrentItem();
-	if (Item) Item->UseReleased();
-}
-void AHeroCharacter::UseItemCancelled() const
-{
-	//LogMsgWithRole("AHeroCharacter::UseItemCancelled");
-	auto Item = InventoryComp->GetCurrentItem();
-	if (Item) Item->Cancel();
-}
-
 void AHeroCharacter::OnEquipSmartHeal()
 {
 	if (Role < ROLE_Authority)
@@ -461,7 +442,7 @@ void AHeroCharacter::EquipSmartHeal()
 	{
 		if (Item && Item->IsAutoUseOnEquip() && Item->GetInventoryCategory() == EInventoryCategory::Armour)
 		{
-			Item->UsePressed();
+			Item->OnPrimaryPressed();
 		}
 		else
 		{
@@ -472,7 +453,7 @@ void AHeroCharacter::EquipSmartHeal()
 	{
 		if (Item && Item->IsAutoUseOnEquip() && Item->GetInventoryCategory() == EInventoryCategory::Health)
 		{
-			Item->UsePressed();
+			Item->OnPrimaryPressed();
 		}
 		else
 		{
@@ -525,7 +506,7 @@ void AHeroCharacter::EquipHealth()
 	auto Item = InventoryComp->GetCurrentItem();
 	if (Item && Item->IsAutoUseOnEquip() && Item->GetInventoryCategory() == EInventoryCategory::Health)
 	{
-		Item->UsePressed();
+		Item->OnPrimaryPressed();
 	}
 	else
 	{
@@ -555,7 +536,7 @@ void AHeroCharacter::EquipArmour()
 	auto Item = InventoryComp->GetCurrentItem();
 	if (Item && Item->IsAutoUseOnEquip() && Item->GetInventoryCategory() == EInventoryCategory::Armour)
 	{
-		Item->UsePressed();
+		Item->OnPrimaryPressed();
 	}
 	else
 	{
@@ -761,7 +742,7 @@ void AHeroCharacter::SetTargeting(bool bNewTargeting)
 					const auto CurrentWeapon1 = InventoryComp->GetCurrentWeapon();
 					if (bIsTargeting && CurrentWeapon1)
 					{
-						CurrentWeapon1->Input_AdsPressed();
+						CurrentWeapon1->OnSecondaryPressed();
 					}
 				};
 
@@ -769,12 +750,12 @@ void AHeroCharacter::SetTargeting(bool bNewTargeting)
 			}
 			else
 			{
-				CurrentWeapon->Input_AdsPressed();
+				CurrentWeapon->OnSecondaryPressed();
 			}
 		}
 		else
 		{
-			CurrentWeapon->Input_AdsReleased();
+			CurrentWeapon->OnSecondaryReleased();
 			GetWorld()->GetTimerManager().ClearTimer(AdsAfterRunEndTimerHandle);
 		}
 	}
@@ -830,30 +811,29 @@ void AHeroCharacter::Input_PrimaryPressed()
 	auto* MyPC = Cast<AHeroController>(Controller);
 	if (MyPC && MyPC->IsGameInputAllowed())
 	{
-		if (InventoryComp->HasAnItemEquipped())
+		if (InventoryComp->HasAWeaponEquipped())
 		{
-			UseItemPressed();
-		}
-		else if (InventoryComp->HasAWeaponEquipped())
-		{
-			if (bIsRunning || IsRunning())
-			{
-				SetRunning(false);
-			}
+			SetRunning(false);
 			StartWeaponFire();
+		}
+		else
+		{
+			auto E = InventoryComp->GetCurrentEquippable();
+			if (E) E->OnPrimaryPressed();
 		}
 	}
 }
 
 void AHeroCharacter::Input_PrimaryReleased()
 {
-	if (InventoryComp->HasAnItemEquipped())
-	{
-		UseItemReleased();
-	}
-	else if (InventoryComp->HasAWeaponEquipped())
+	if (InventoryComp->HasAWeaponEquipped())
 	{
 		StopWeaponFire();
+	}
+	else
+	{
+		auto E = InventoryComp->GetCurrentEquippable();
+		if (E) E->OnPrimaryReleased();
 	}
 }
 
@@ -862,17 +842,15 @@ void AHeroCharacter::Input_SecondaryPressed()
 	auto* MyPC = Cast<AHeroController>(Controller);
 	if (MyPC && MyPC->IsGameInputAllowed())
 	{
-		if (InventoryComp->HasAnItemEquipped())
+		if (InventoryComp->HasAWeaponEquipped())
 		{
-			UseItemCancelled();
-		}
-		else if (InventoryComp->HasAWeaponEquipped())
-		{
-			if (bIsRunning || IsRunning())
-			{
-				SetRunning(false);
-			}
+			SetRunning(false);
 			SetTargeting(true);
+		}
+		else
+		{
+			auto E = InventoryComp->GetCurrentEquippable();
+			if (E) E->OnSecondaryPressed();
 		}
 	}
 }
@@ -882,6 +860,11 @@ void AHeroCharacter::Input_SecondaryReleased()
 	if (InventoryComp->HasAWeaponEquipped())
 	{
 		SetTargeting(false);
+	}
+	else
+	{
+		auto E = InventoryComp->GetCurrentEquippable();
+		if (E) E->OnSecondaryReleased();
 	}
 }
 
@@ -920,7 +903,7 @@ void AHeroCharacter::StartWeaponFire()
 			{
 				if (bWantsToFire && InventoryComp->GetCurrentWeapon())
 				{
-					InventoryComp->GetCurrentWeapon()->Input_PullTrigger();
+					InventoryComp->GetCurrentWeapon()->OnPrimaryPressed();
 				}
 			};
 
@@ -931,7 +914,7 @@ void AHeroCharacter::StartWeaponFire()
 		// Fire now!
 		else if (InventoryComp->GetCurrentWeapon())
 		{
-			InventoryComp->GetCurrentWeapon()->Input_PullTrigger();
+			InventoryComp->GetCurrentWeapon()->OnPrimaryPressed();
 		}
 	}
 }
@@ -948,7 +931,7 @@ void AHeroCharacter::StopWeaponFire()
 
 		if (InventoryComp->GetCurrentWeapon())
 		{
-			InventoryComp->GetCurrentWeapon()->Input_ReleaseTrigger();
+			InventoryComp->GetCurrentWeapon()->OnPrimaryReleased();
 		}
 	}
 }

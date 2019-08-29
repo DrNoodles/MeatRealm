@@ -97,6 +97,10 @@ public:
 	AWeapon();
 
 	/* AEquippableBase */
+	void OnPrimaryPressed() override;
+	void OnPrimaryReleased() override;
+	void OnSecondaryPressed() override;
+	void OnSecondaryReleased() override;
 	void OnEquipStarted() override;
 	void OnEquipFinished() override;
 	void OnUnEquipStarted() override;
@@ -109,11 +113,7 @@ public:
 
 	void ConfigWeapon(FWeaponConfig& Config) const;
 
-	void Input_PullTrigger();
-	void Input_ReleaseTrigger();
 	void Input_Reload();
-	void Input_AdsPressed();
-	void Input_AdsReleased();
 	bool CanGiveAmmo();
 	bool TryGiveAmmo();
 	void SetHeroControllerId(uint32 HeroControllerUid) { this->HeroControllerId = HeroControllerUid; }
@@ -147,7 +147,11 @@ public:
 
 protected:
 private:
-
+	void Input_PullTrigger();
+	void Input_ReleaseTrigger();
+	void Input_AdsPressed();
+	void Input_AdsReleased();
+	
 	UFUNCTION(Server, Reliable, WithValidation)
 		void ServerRPC_Equip();
 	

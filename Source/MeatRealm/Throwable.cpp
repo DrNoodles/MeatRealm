@@ -40,18 +40,26 @@ void AThrowable::BeginPlay()
 
 void AThrowable::OnPrimaryPressed()
 {
+	LogMsgWithRole("AThrowable::OnPrimaryPressed()");
+
 }
 
 void AThrowable::OnPrimaryReleased()
 {
+	LogMsgWithRole("AThrowable::OnPrimaryReleased()");
+
 }
 
 void AThrowable::OnSecondaryPressed()
 {
+	LogMsgWithRole("AThrowable::OnSecondaryPressed()");
+
 }
 
 void AThrowable::OnSecondaryReleased()
 {
+	LogMsgWithRole("AThrowable::OnSecondaryReleased()");
+
 }
 
 

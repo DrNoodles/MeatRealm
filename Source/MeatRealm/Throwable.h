@@ -39,10 +39,10 @@ private: // Methods ///////////////////////////////////////////////////////////
 	void BeginPlay() override;
 
 	// Input
-	void OnPrimaryPressed();
-	void OnPrimaryReleased();
-	void OnSecondaryPressed();
-	void OnSecondaryReleased();
+	void OnPrimaryPressed() override;
+	void OnPrimaryReleased() override;
+	void OnSecondaryPressed() override;
+	void OnSecondaryReleased() override;
 	
 	/* AEquippableBase */
 	void EnterInventory() override;

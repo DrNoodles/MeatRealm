@@ -240,11 +240,6 @@ public:
 	/// Input
 	virtual void SetupPlayerInputComponent(class UInputComponent* InputComponent) override;
 
-	void UseItemPressed() const;
-	void UseItemReleased() const;
-	void UseItemCancelled() const;
-
-
 	void StartWeaponFire();
 	void StopWeaponFire();
 	bool IsFiring() const;

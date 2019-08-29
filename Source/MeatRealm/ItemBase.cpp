@@ -27,6 +27,25 @@ AItemBase::AItemBase()
 	SkeletalMeshComp->CanCharacterStepUpOn = ECB_No;
 }
 
+void AItemBase::OnPrimaryPressed()
+{
+	UsePressed();
+}
+
+void AItemBase::OnPrimaryReleased()
+{
+	UseReleased();
+}
+
+void AItemBase::OnSecondaryPressed()
+{
+	Cancel();
+}
+
+void AItemBase::OnSecondaryReleased()
+{
+}
+
 void AItemBase::EnterInventory()
 {
 	check(HasAuthority())

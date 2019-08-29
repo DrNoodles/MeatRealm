@@ -59,8 +59,28 @@ void AWeapon::ConfigWeapon(FWeaponConfig& Config) const
 }
 
 
+
 // INPUT //////////////////////
 
+void AWeapon::OnPrimaryPressed()
+{
+	Input_PullTrigger();
+}
+
+void AWeapon::OnPrimaryReleased()
+{
+	Input_ReleaseTrigger();
+}
+
+void AWeapon::OnSecondaryPressed()
+{
+	Input_AdsPressed();
+}
+
+void AWeapon::OnSecondaryReleased()
+{
+	Input_AdsReleased();
+}
 
 void AWeapon::OnEquipStarted()
 {

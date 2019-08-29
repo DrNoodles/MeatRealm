@@ -62,14 +62,20 @@ public:
 	void Equip();
 	void Unequip();
 
-	virtual void OnEquipStarted() { unimplemented(); }
-	virtual void OnEquipFinished() { unimplemented(); }
+	virtual void OnPrimaryPressed() PURE_VIRTUAL(AEquippableBase::OnPrimaryPressed, ;);
+	virtual void OnPrimaryReleased() PURE_VIRTUAL(AEquippableBase::OnPrimaryReleased, ;);
+	virtual void OnSecondaryPressed() PURE_VIRTUAL(AEquippableBase::OnSecondaryPressed, ;);
+	virtual void OnSecondaryReleased() PURE_VIRTUAL(AEquippableBase::OnSecondaryReleased, ;);
 
-	virtual void OnUnEquipStarted() { unimplemented(); }
-	virtual void OnUnEquipFinished() { unimplemented(); }
+	virtual void EnterInventory() PURE_VIRTUAL(AEquippableBase::EnterInventory, ;);
+	virtual void ExitInventory() PURE_VIRTUAL(AEquippableBase::ExitInventory, ;);
+	
+	virtual void OnEquipStarted() PURE_VIRTUAL(AEquippableBase::OnEquipStarted, ;);
+	virtual void OnEquipFinished() PURE_VIRTUAL(AEquippableBase::OnEquipFinished, ;);
 
-	virtual void EnterInventory() { unimplemented(); }
-	virtual void ExitInventory() { unimplemented(); }
+	virtual void OnUnEquipStarted() PURE_VIRTUAL(AEquippableBase::OnUnEquipStarted, ;);
+	virtual void OnUnEquipFinished() PURE_VIRTUAL(AEquippableBase::OnUnEquipFinished, ;);
+
 
 	// TODO Just make these properties of the base class for the children to set
 	virtual EInventoryCategory GetInventoryCategory() { unimplemented(); return EInventoryCategory::Undefined; }
