@@ -97,8 +97,8 @@ public:
 	// Not replicated cuz diff local vs server time;
 	FDateTime LastRunEnded;
 
-	FTimerHandle FireAfterRunEndTimerHandle;
-	FTimerHandle AdsAfterRunEndTimerHandle;
+	FTimerHandle QueuePrimaryAfterRunTimerHandle;
+	FTimerHandle QueueSecondaryAfterRunTimerHandle;
 
 	UPROPERTY(EditAnywhere)
 	float Deadzone = 0.3;
@@ -149,15 +149,13 @@ private:
 	FVector2D AimPos_ScreenSpace = FVector2D::ZeroVector;
 	FVector AimPos_WorldSpace = FVector::ZeroVector;
 
-	bool bWantsToFire;
+	bool bWantsToUsePrimary;
+	bool bWantsToUseSecondary;
 
 
 	UPROPERTY(Transient, Replicated)
 	bool bIsRunning = false;
 
-	UPROPERTY(Transient, Replicated)
-	bool bIsTargeting = false;
-	
 	const char* HandSocketName = "HandSocket";
 	const char* Holster1SocketName = "Holster1Socket";
 	const char* Holster2SocketName = "Holster2Socket";
@@ -231,6 +229,7 @@ public:
 	AHeroController* GetHeroController() const;
 	float GetTargetingSpeedModifier() const;
 	bool IsReloading() const;
+	bool IsTargeting() const;
 	bool IsUsingItem() const;
 
 
@@ -240,20 +239,17 @@ public:
 	/// Input
 	virtual void SetupPlayerInputComponent(class UInputComponent* InputComponent) override;
 
-	void UseItemPressed() const;
-	void UseItemReleased() const;
-	void UseItemCancelled() const;
-
-
-	void StartWeaponFire();
-	void StopWeaponFire();
-	bool IsFiring() const;
+	void StartPrimaryAction();
+	void StopPrimaryAction();
+	void StartSecondaryAction();
+	void StopSecondaryAction();
 
 	void Input_PrimaryPressed();
 	void Input_PrimaryReleased();
 	void Input_SecondaryPressed();
 	void Input_SecondaryReleased();
 	void Input_Reload() const;
+
 	void Input_MoveUp(float Value) {	AxisMoveUp = Value; }
 	void Input_MoveRight(float Value) { AxisMoveRight = Value; }
 	void Input_FaceUp(float Value) { AxisFaceUp = Value; }
@@ -270,7 +266,7 @@ public:
 
 
 	bool IsRunning() const { return bIsRunning; }
-	bool IsTargeting() const;
+	//bool IsTargeting() const;
 	float GetRunningSpeed() const { return RunningSpeed; }
 	
 	float GetRunningReloadSpeed() const { return RunningReloadSpeed; }
@@ -317,8 +313,6 @@ private:
 	void OnStopRunning();
 	void SetRunning(bool bNewIsRunning);
 
-	void SetTargeting(bool bNewTargeting);
-
 	
 	static FVector2D GetGameViewportSize();
 	static FVector2D CalcLinearLeanVectorUnclipped(const FVector2D& CursorLoc, const FVector2D& ViewportSize);
@@ -326,10 +320,6 @@ private:
 	FVector2D TrackCameraWithAimMouse() const;
 	FVector2D TrackCameraWithAimGamepad() const;
 	void ExperimentalMouseAimTracking(float DT);
-
-
-	UFUNCTION(Server, Reliable, WithValidation)
-		void ServerSetTargeting(bool bNewTargeting);
 
 	UFUNCTION(Server, Reliable, WithValidation)
 		void ServerSetRunning(bool bNewWantsToRun);

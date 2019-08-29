@@ -95,7 +95,7 @@ public:
 	void InitInventory();
 	void DestroyInventory();
 
-	void NotifyItemIsExpended(AItemBase* Item);
+	void NotifyItemIsExpended(AEquippableBase* Item);
 
 	UFUNCTION(BlueprintCallable)
 		AEquippableBase* GetEquippable(EInventorySlots Slot) const;
@@ -103,7 +103,9 @@ public:
 		AWeapon* GetWeapon(EInventorySlots Slot) const;
 	UFUNCTION(BlueprintCallable)
 		AItemBase* GetItem(EInventorySlots Slot) const;
-	
+	UFUNCTION(BlueprintCallable)
+		AThrowable* GetThrowable(EInventorySlots Slot) const;
+
 
 	UFUNCTION(BlueprintCallable)
 		int GetHealthItemCount() const;
@@ -118,7 +120,9 @@ public:
 		AWeapon* GetCurrentWeapon() const;
 	UFUNCTION(BlueprintCallable)
 		AItemBase* GetCurrentItem() const;
-
+	UFUNCTION(BlueprintCallable)
+		AThrowable* GetCurrentThrowable() const;
+	
 	UFUNCTION(BlueprintCallable)
 		int GetHealthSlotLimit() const { return HealthSlotLimit; }
 	

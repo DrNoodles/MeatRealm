@@ -129,7 +129,17 @@ AItemBase* UInventoryComp::GetItem(EInventorySlots Slot) const
 	{
 	case EInventorySlots::Health: return GetFirstHealthItemOrNull();
 	case EInventorySlots::Armour: return GetFirstArmourItemOrNull();
-		//case EInventorySlots::Secondary: return SecondaryWeaponSlot;
+
+	default:
+		return nullptr;
+	}
+}
+AThrowable* UInventoryComp::GetThrowable(EInventorySlots Slot) const
+{
+	UE_LOG(LogInventory, VeryVerbose, TEXT("UInventoryComp::GetThrowable()"));
+	switch (Slot)
+	{
+	case EInventorySlots::Throwable: return GetFirstThrowableOrNull();
 
 	default:
 		return nullptr;
@@ -178,6 +188,11 @@ AItemBase* UInventoryComp::GetCurrentItem() const
 {
 	UE_LOG(LogInventory, VeryVerbose, TEXT("UInventoryComp::GetCurrentItem()"));
 	return GetItem(CurrentInventorySlot);
+}
+AThrowable* UInventoryComp::GetCurrentThrowable() const
+{
+	UE_LOG(LogInventory, VeryVerbose, TEXT("UInventoryComp::GetCurrentThrowable()"));
+	return GetThrowable(CurrentInventorySlot);
 }
 AEquippableBase* UInventoryComp::GetCurrentEquippable() const
 {
@@ -351,6 +366,7 @@ AEquippableBase* UInventoryComp::SpawnEquippable(const TSubclassOf<AEquippableBa
 
 	UGameplayStatics::FinishSpawningActor(Equippable, TF);
 
+	Equippable->SetInstigatingControllerId(Delegate->GetControllerId());
 	Equippable->SetActorHiddenInGame(true);
 
 	return Equippable;
@@ -381,6 +397,9 @@ void UInventoryComp::AddToSlot(AEquippableBase* Equippable)
 	default: 
 		UE_LOG(LogInventory, Error, TEXT("Unsupported Inventory Slot: %d"), Slot);
 	}
+
+	Equippable->SetDelegate(this);
+	Equippable->EnterInventory();
 }
 
 bool UInventoryComp::CanGiveThrowable(const TSubclassOf<AThrowable>& ThrowableClass)
@@ -391,7 +410,7 @@ bool UInventoryComp::CanGiveThrowable(const TSubclassOf<AThrowable>& ThrowableCl
 void UInventoryComp::GiveThrowableToPlayer(const TSubclassOf<AThrowable>& ThrowableClass)
 {
 	UE_LOG(LogInventory, Verbose, TEXT("UInventoryComp::GiveThrowableToPlayer()"));
-
+	check(HasAuthority())
 	GiveEquippable(ThrowableClass);
 }
 
@@ -461,7 +480,7 @@ AWeapon* UInventoryComp::AuthSpawnWeapon(TSubclassOf<AWeapon> weaponClass, FWeap
 	}
 
 	Weapon->ConfigWeapon(Config);
-	Weapon->SetHeroControllerId(Delegate->GetControllerId());
+	Weapon->SetInstigatingControllerId(Delegate->GetControllerId());
 
 	UGameplayStatics::FinishSpawningActor(Weapon, TF);
 
@@ -654,14 +673,16 @@ void UInventoryComp::MakeEquippedItemVisible() const
 	UE_LOG(LogInventory, Verbose, TEXT("UInventoryComp::MakeEquippedItemVisible()"));
 
 	//LogMsgWithRole("MakeEquippedItemVisible");
-	auto Item = GetEquippable(CurrentInventorySlot);
 
-	if (Item) Item->SetActorHiddenInGame(false);
+	// Ensure the item is indeed visible as this might fire just before the actual Equipped state is registered in the Equippable. TODO Have the equippable fire an event to say it has changed to Equipped state and change visibility based on that.
+	auto Item = GetEquippable(CurrentInventorySlot);
+	if (Item) 
+		Item->SetActorHiddenInGame(false);
 
 	Delegate->RefreshWeaponAttachments();
 }
 
-void UInventoryComp::NotifyItemIsExpended(AItemBase* Item)
+void UInventoryComp::NotifyItemIsExpended(AEquippableBase* Item)
 {
 	UE_LOG(LogInventory, Verbose, TEXT("UInventoryComp::NotifyItemIsExpended()"));
 
@@ -670,7 +691,8 @@ void UInventoryComp::NotifyItemIsExpended(AItemBase* Item)
 	const auto WasRemoved = RemoveEquippableFromInventory(Item);
 	if (WasRemoved)
 	{
-		Item->Destroy();
+		Item->SetActorHiddenInGame(true);
+		Item->SetLifeSpan(3); // Destroy this after some time has passed to let any effects and such finish
 		Delegate->RefreshWeaponAttachments();
 	}
 }

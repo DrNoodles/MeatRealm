@@ -85,6 +85,12 @@ AHeroCharacter::AHeroCharacter(const FObjectInitializer& ObjectInitializer) : Su
 	LastRunEnded = FDateTime::Now();
 }
 
+void AHeroCharacter::PostInitializeComponents()
+{
+	Super::PostInitializeComponents();
+	InventoryComp->SetDelegate(this);
+}
+
 void AHeroCharacter::EndPlay(const EEndPlayReason::Type EndPlayReason)
 {
 	if (ROLE_Authority == Role)
@@ -113,7 +119,6 @@ void AHeroCharacter::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLi
 
 	// Everyone except local owner: flag change is locally instigated
 	DOREPLIFETIME_CONDITION(AHeroCharacter, bIsRunning, COND_SkipOwner);
-	DOREPLIFETIME_CONDITION(AHeroCharacter, bIsTargeting, COND_SkipOwner);
 
 	// Just the owner
 	DOREPLIFETIME_CONDITION(AHeroCharacter, Armour, COND_OwnerOnly);
@@ -257,9 +262,12 @@ void AHeroCharacter::Tick(float DeltaSeconds)
 		if (Held->IsUnEquipped()) Str = "Un-equipped ";
 
 		Str += Held->GetEquippableName();
-		
-		const auto YOffset = -5.f * Str.Len();
-		DrawDebugString(GetWorld(), FVector{ 70, YOffset, 50 }, Str, this, FColor::White, DeltaSeconds * 0.7);
+
+		if (!Held->IsEquipped()) // Don't print equipped state - spammy
+		{
+			const auto YOffset = -5.f * Str.Len();
+			DrawDebugString(GetWorld(), FVector{ 70, YOffset, 50 }, Str, this, FColor::White, DeltaSeconds * 0.7);
+		}
 	}
 }
 
@@ -415,25 +423,6 @@ void AHeroCharacter::SetupPlayerInputComponent(class UInputComponent* PlayerInpu
 
 }
 
-void AHeroCharacter::UseItemPressed() const
-{
-	//LogMsgWithRole("AHeroCharacter::UseItemPressed");
-	auto Item = InventoryComp->GetCurrentItem();
-	if (Item) Item->UsePressed();
-}
-void AHeroCharacter::UseItemReleased() const
-{
-	//LogMsgWithRole("AHeroCharacter::UseItemReleased");
-	auto Item = InventoryComp->GetCurrentItem();
-	if (Item) Item->UseReleased();
-}
-void AHeroCharacter::UseItemCancelled() const
-{
-	//LogMsgWithRole("AHeroCharacter::UseItemCancelled");
-	auto Item = InventoryComp->GetCurrentItem();
-	if (Item) Item->Cancel();
-}
-
 void AHeroCharacter::OnEquipSmartHeal()
 {
 	if (Role < ROLE_Authority)
@@ -452,7 +441,7 @@ void AHeroCharacter::EquipSmartHeal()
 	{
 		if (Item && Item->IsAutoUseOnEquip() && Item->GetInventoryCategory() == EInventoryCategory::Armour)
 		{
-			Item->UsePressed();
+			Item->OnPrimaryPressed();
 		}
 		else
 		{
@@ -463,7 +452,7 @@ void AHeroCharacter::EquipSmartHeal()
 	{
 		if (Item && Item->IsAutoUseOnEquip() && Item->GetInventoryCategory() == EInventoryCategory::Health)
 		{
-			Item->UsePressed();
+			Item->OnPrimaryPressed();
 		}
 		else
 		{
@@ -516,7 +505,7 @@ void AHeroCharacter::EquipHealth()
 	auto Item = InventoryComp->GetCurrentItem();
 	if (Item && Item->IsAutoUseOnEquip() && Item->GetInventoryCategory() == EInventoryCategory::Health)
 	{
-		Item->UsePressed();
+		Item->OnPrimaryPressed();
 	}
 	else
 	{
@@ -546,7 +535,7 @@ void AHeroCharacter::EquipArmour()
 	auto Item = InventoryComp->GetCurrentItem();
 	if (Item && Item->IsAutoUseOnEquip() && Item->GetInventoryCategory() == EInventoryCategory::Armour)
 	{
-		Item->UsePressed();
+		Item->OnPrimaryPressed();
 	}
 	else
 	{
@@ -658,11 +647,8 @@ void AHeroCharacter::OnStartRunning()
 	auto* MyPC = Cast<AHeroController>(Controller);
 	if (MyPC /*&& MyPC->IsGameInputAllowed()*/)
 	{
-		if (IsTargeting())
-		{
-			SetTargeting(false);
-		}
-		StopWeaponFire();
+		StopPrimaryAction();
+		StopSecondaryAction();
 		SetRunning(true);
 	}
 }
@@ -722,77 +708,6 @@ bool AHeroCharacter::ServerSetRunning_Validate(bool bNewWantsToRun)
 	return true;
 }
 
-
-
-
-// Ads mode
-bool AHeroCharacter::IsTargeting() const
-{
-	return bIsTargeting;
-}
-
-void AHeroCharacter::SetTargeting(bool bNewTargeting)
-{
-	bIsTargeting = bNewTargeting;
-
-
-	auto CurrentWeapon = InventoryComp->GetCurrentWeapon();
-	if (CurrentWeapon)
-	{
-		if (bNewTargeting)
-		{
-			const FTimespan TimeSinceRun = FDateTime::Now() - LastRunEnded;
-			const FTimespan RemainingTime = FTimespan::FromSeconds(RunCooldown) - TimeSinceRun;
-			
-			if (RemainingTime > 0)
-			{
-				// Delay fire!
-				auto DelayAds = [&]
-				{
-					const auto CurrentWeapon1 = InventoryComp->GetCurrentWeapon();
-					if (bIsTargeting && CurrentWeapon1)
-					{
-						CurrentWeapon1->Input_AdsPressed();
-					}
-				};
-
-				GetWorld()->GetTimerManager().SetTimer(AdsAfterRunEndTimerHandle, DelayAds, RemainingTime.GetTotalSeconds(), false);
-			}
-			else
-			{
-				CurrentWeapon->Input_AdsPressed();
-			}
-		}
-		else
-		{
-			CurrentWeapon->Input_AdsReleased();
-			GetWorld()->GetTimerManager().ClearTimer(AdsAfterRunEndTimerHandle);
-		}
-	}
-
-
-	//if (TargetingSound)
-	//{
-	//	UGameplayStatics::SpawnSoundAttached(TargetingSound, GetRootComponent());
-	//}
-
-
-	if (Role < ROLE_Authority)
-	{
-		ServerSetTargeting(bNewTargeting);
-	}
-}
-
-bool AHeroCharacter::ServerSetTargeting_Validate(bool bNewTargeting)
-{
-	return true;
-}
-
-void AHeroCharacter::ServerSetTargeting_Implementation(bool bNewTargeting)
-{
-	SetTargeting(bNewTargeting);
-}
-
 //void AHeroCharacter::DrawAdsLine(const FColor& Color, float LineLength) const
 //{
 //	const FVector Start = WeaponAnchor->GetComponentLocation();
@@ -813,35 +728,32 @@ void AHeroCharacter::ServerSetTargeting_Implementation(bool bNewTargeting)
 //	DrawDebugLine(GetWorld(), Start, End, Color, false, -1., 0, 2.f);
 //}
 
+
+
+
 void AHeroCharacter::Input_PrimaryPressed()
 {
 	auto* MyPC = Cast<AHeroController>(Controller);
 	if (MyPC && MyPC->IsGameInputAllowed())
 	{
-		if (InventoryComp->HasAnItemEquipped())
+		if (!bWantsToUsePrimary)
 		{
-			UseItemPressed();
-		}
-		else if (InventoryComp->HasAWeaponEquipped())
-		{
-			if (bIsRunning || IsRunning())
-			{
-				SetRunning(false);
-			}
-			StartWeaponFire();
+			bWantsToUsePrimary = true;
+			SetRunning(false);
+			StartPrimaryAction();
 		}
 	}
 }
-
 void AHeroCharacter::Input_PrimaryReleased()
 {
-	if (InventoryComp->HasAnItemEquipped())
+	auto* MyPC = Cast<AHeroController>(Controller);
+	if (MyPC && MyPC->IsGameInputAllowed())
 	{
-		UseItemReleased();
-	}
-	else if (InventoryComp->HasAWeaponEquipped())
-	{
-		StopWeaponFire();
+		if (bWantsToUsePrimary)
+		{
+			bWantsToUsePrimary = false;
+			StopPrimaryAction();
+		}
 	}
 }
 
@@ -850,26 +762,24 @@ void AHeroCharacter::Input_SecondaryPressed()
 	auto* MyPC = Cast<AHeroController>(Controller);
 	if (MyPC && MyPC->IsGameInputAllowed())
 	{
-		if (InventoryComp->HasAnItemEquipped())
+		if (!bWantsToUseSecondary)
 		{
-			UseItemCancelled();
-		}
-		else if (InventoryComp->HasAWeaponEquipped())
-		{
-			if (bIsRunning || IsRunning())
-			{
-				SetRunning(false);
-			}
-			SetTargeting(true);
+			bWantsToUseSecondary = true;
+			SetRunning(false);
+			StartSecondaryAction();
 		}
 	}
 }
-
 void AHeroCharacter::Input_SecondaryReleased()
 {
-	if (InventoryComp->HasAWeaponEquipped())
+	auto* MyPC = Cast<AHeroController>(Controller);
+	if (MyPC && MyPC->IsGameInputAllowed())
 	{
-		SetTargeting(false);
+		if (bWantsToUseSecondary)
+		{
+			bWantsToUseSecondary = false;
+			StopSecondaryAction();
+		}
 	}
 }
 
@@ -888,110 +798,87 @@ void AHeroCharacter::Input_Reload() const
 }
 
 
-// TODO Make this handle both client/server requests to fire - like ads pressed etc.
-void AHeroCharacter::StartWeaponFire()
+void AHeroCharacter::StartPrimaryAction()
 {
-	//LogMsgWithRole("AHeroCharacter::StartWeaponFire");
-	if (!bWantsToFire)
+	LogMsgWithRole("AHeroCharacter::StartPrimaryAction");
+
+	const FTimespan TimeSinceRun = FDateTime::Now() - LastRunEnded;
+	const FTimespan RemainingTime = FTimespan::FromSeconds(RunCooldown) - TimeSinceRun;
+
+	if (RemainingTime > 0)
 	{
-		bWantsToFire = true;
-
-
-		const FTimespan TimeSinceRun = FDateTime::Now() - LastRunEnded;
-		const FTimespan RemainingTime = FTimespan::FromSeconds(RunCooldown) - TimeSinceRun;
-		if (RemainingTime > 0)
+		// Delay fire!
+		auto DelayFire = [&]
 		{
-			// Delay fire!
-			auto DelayFire = [&]
+			if (bWantsToUsePrimary && InventoryComp->GetCurrentEquippable())
 			{
-				if (bWantsToFire && InventoryComp->GetCurrentWeapon())
-				{
-					InventoryComp->GetCurrentWeapon()->Input_PullTrigger();
-				}
-			};
-
-			GetWorld()->GetTimerManager().SetTimer(FireAfterRunEndTimerHandle, DelayFire, RemainingTime.GetTotalSeconds(), false);
-			return;
-		}
-
-		// Fire now!
-		else if (InventoryComp->GetCurrentWeapon())
-		{
-			InventoryComp->GetCurrentWeapon()->Input_PullTrigger();
-		}
-	}
-}
-
-void AHeroCharacter::StopWeaponFire()
-{
-	//LogMsgWithRole("AHeroCharacter::StopWeaponFire");
-
-	if (bWantsToFire)
-	{
-		bWantsToFire = false;
-
-		GetWorld()->GetTimerManager().ClearTimer(FireAfterRunEndTimerHandle);
-
-		if (InventoryComp->GetCurrentWeapon())
-		{
-			InventoryComp->GetCurrentWeapon()->Input_ReleaseTrigger();
-		}
-	}
-}
-
-bool AHeroCharacter::IsFiring() const
-{
-	return bWantsToFire;
-};
-
-
-
-void AHeroCharacter::RefreshWeaponAttachments()
-{
-	const FAttachmentTransformRules Rules{ EAttachmentRule::SnapToTarget, true };
-	const auto CurrentInventorySlot = InventoryComp->GetCurrentInventorySlot();
-
-	
-	// Attach weapons to the correct locations
-	auto W1 = InventoryComp->GetWeapon(EInventorySlots::Primary);
-	auto W2 = InventoryComp->GetWeapon(EInventorySlots::Secondary);
-
-	if (CurrentInventorySlot == EInventorySlots::Primary)
-	{
-		if (W1) W1->AttachToComponent(GetMesh(), Rules, HandSocketName);
-		if (W2) W2->AttachToComponent(GetMesh(), Rules, Holster2SocketName);
-	}
-	else if (CurrentInventorySlot == EInventorySlots::Secondary)
-	{
-		if (W1) W1->AttachToComponent(GetMesh(), Rules, Holster1SocketName);
-		if (W2) W2->AttachToComponent(GetMesh(), Rules, HandSocketName);
-	}
-	else
-	{
-		if (W1) W1->AttachToComponent(GetMesh(), Rules, Holster1SocketName);
-		if (W2) W2->AttachToComponent(GetMesh(), Rules, Holster2SocketName);
-	}
-
-	if (CurrentInventorySlot == EInventorySlots::Health || CurrentInventorySlot == EInventorySlots::Armour)
-	{
-		auto Item = InventoryComp->GetItem(CurrentInventorySlot);
-		if (Item)
-		{
-			Item->AttachToComponent(GetMesh(), Rules, HandSocketName);
-			if (Item->IsEquipped())
-			{
-				Item->SetActorHiddenInGame(false); // This is here so items are visible after one in a stack of the same type is used. Eg, holding 2 armours. Use 1, this here makes the second one visible after the 1st is expended.
+				InventoryComp->GetCurrentEquippable()->OnPrimaryPressed();
 			}
-			else
-			{
-				UE_LOG(LogTemp, Warning, TEXT("Item Status: %d"), Item->GetEquippedStatus())
-			}
-		}
+		};
+
+		GetWorld()->GetTimerManager().SetTimer(QueuePrimaryAfterRunTimerHandle, DelayFire, RemainingTime.GetTotalSeconds(), false);
+	}
+
+	// Fire now!
+	else if (InventoryComp->GetCurrentEquippable())
+	{
+		InventoryComp->GetCurrentEquippable()->OnPrimaryPressed();
+	}
+}
+void AHeroCharacter::StopPrimaryAction()
+{
+	LogMsgWithRole("AHeroCharacter::StopPrimaryAction");
+
+	GetWorld()->GetTimerManager().ClearTimer(QueuePrimaryAfterRunTimerHandle);
+
+	if (InventoryComp->GetCurrentEquippable())
+	{
+		InventoryComp->GetCurrentEquippable()->OnPrimaryReleased();
 	}
 }
 
 
-//// Camera tracks aim /////////////////////////////////////////////////////
+void AHeroCharacter::StartSecondaryAction()
+{
+	LogMsgWithRole("AHeroCharacter::StartSecondaryAction");
+
+	const FTimespan TimeSinceRun = FDateTime::Now() - LastRunEnded;
+	const FTimespan RemainingTime = FTimespan::FromSeconds(RunCooldown) - TimeSinceRun;
+
+	if (RemainingTime > 0)
+	{
+		// Delay fire!
+		auto DelayFire = [&]
+		{
+			if (bWantsToUseSecondary && InventoryComp->GetCurrentEquippable())
+			{
+				InventoryComp->GetCurrentEquippable()->OnSecondaryPressed();
+			}
+		};
+
+		GetWorld()->GetTimerManager().SetTimer(QueueSecondaryAfterRunTimerHandle, DelayFire, RemainingTime.GetTotalSeconds(), false);
+	}
+
+	// Fire now!
+	else if (InventoryComp->GetCurrentEquippable())
+	{
+		InventoryComp->GetCurrentEquippable()->OnSecondaryPressed();
+	}
+}
+void AHeroCharacter::StopSecondaryAction()
+{
+	LogMsgWithRole("AHeroCharacter::StopSecondaryAction");
+
+	GetWorld()->GetTimerManager().ClearTimer(QueueSecondaryAfterRunTimerHandle);
+
+	if (InventoryComp->GetCurrentEquippable())
+	{
+		InventoryComp->GetCurrentEquippable()->OnSecondaryReleased();
+	}
+}
+
+
+//// Camera tracks aim ////////////////////////////////////////////////////////
 
 void AHeroCharacter::MoveCameraByOffsetVector(const FVector2D& OffsetVec, float DeltaSeconds) const
 {
@@ -1167,7 +1054,6 @@ FVector2D AHeroCharacter::GetGameViewportSize()
 
 
 
-
 //// Affect the character /////////////////////////////////////////////////////
 
 void AHeroCharacter::AuthOnDeath()
@@ -1239,11 +1125,6 @@ void AHeroCharacter::OnDeathImpl()
 	GetWorldTimerManager().SetTimer(TimerHandle, fn, 10, false);
 }
 
-void AHeroCharacter::PostInitializeComponents()
-{
-	Super::PostInitializeComponents();
-	InventoryComp->SetDelegate(this);
-}
 
 bool AHeroCharacter::ShouldTakeDamage(float Damage, FDamageEvent const& DamageEvent, AController* EventInstigator,
 	AActor* DamageCauser) const
@@ -1508,7 +1389,6 @@ FTransform AHeroCharacter::GetAimTransform() const
 
 
 
-
 //// Interacting //////////////////////////////////////////////////////////////
 
 void AHeroCharacter::Input_Interact()
@@ -1581,7 +1461,44 @@ void AHeroCharacter::GetReachLine(OUT FVector& outStart, OUT FVector& outEnd) co
 }
 
 
-// Other
+
+// Other //////////////////////////////////////////////////////////////////////
+
+void AHeroCharacter::RefreshWeaponAttachments()
+{
+	const FAttachmentTransformRules Rules{ EAttachmentRule::SnapToTarget, true };
+	const auto CurrentInventorySlot = InventoryComp->GetCurrentInventorySlot();
+
+	// Show what's in the hand
+	auto Equippable = InventoryComp->GetEquippable(CurrentInventorySlot);
+	if (Equippable)
+	{
+		Equippable->AttachToComponent(GetMesh(), Rules, HandSocketName);
+		Equippable->SetActorHiddenInGame(!Equippable->IsEquipped());
+	}
+
+	// Holster Primary?
+	if (CurrentInventorySlot != EInventorySlots::Primary)
+	{
+		auto W = InventoryComp->GetWeapon(EInventorySlots::Primary);
+		if (W)
+		{
+			W->AttachToComponent(GetMesh(), Rules, Holster1SocketName);
+			W->SetActorHiddenInGame(false);
+		}
+	}
+
+	// Holster Secondary?
+	if (CurrentInventorySlot != EInventorySlots::Secondary)
+	{
+		auto W = InventoryComp->GetWeapon(EInventorySlots::Secondary);
+		if (W)
+		{
+			W->AttachToComponent(GetMesh(), Rules, Holster2SocketName);
+			W->SetActorHiddenInGame(false);
+		}
+	}
+}
 
 void AHeroCharacter::OnRep_TintChanged() const
 {
@@ -1603,8 +1520,24 @@ AHeroController* AHeroCharacter::GetHeroController() const
 
 float AHeroCharacter::GetTargetingSpeedModifier() const
 {
-	const auto CurrentWeapon = InventoryComp->GetCurrentWeapon();	
-	return CurrentWeapon ? CurrentWeapon->GetAdsMovementScale() : 1;
+	const auto W = InventoryComp->GetCurrentWeapon();
+	if (W) return W->GetAdsMovementScale();
+
+	const auto T = InventoryComp->GetCurrentThrowable();
+	if (T) return T->GetAdsMovementScale();
+
+	return 1;
+}
+
+bool AHeroCharacter::IsTargeting() const
+{
+	const auto W = InventoryComp->GetCurrentWeapon();
+	if (W && W->IsTargeting()) return true;
+
+	const auto T = InventoryComp->GetCurrentThrowable();
+	if (T && T->IsTargeting()) return true;
+
+	return false;
 }
 
 bool AHeroCharacter::IsReloading() const
@@ -1640,7 +1573,8 @@ bool AHeroCharacter::IsBackpedaling(const FVector& MoveDir, const FVector& AimDi
 }
 
 
-// Debug logging
+
+// Debug logging //////////////////////////////////////////////////////////////
 
 void AHeroCharacter::LogMsgWithRole(FString message) const
 {

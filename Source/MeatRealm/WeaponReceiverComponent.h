@@ -232,6 +232,7 @@ public:
 	bool TryGiveAmmo();
 	void CancelAnyReload();
 	bool IsReloading() const { return WeaponState.Mode == EWeaponModes::Reloading; }
+	bool IsAds() const { return WeaponState.IsAdsing; }
 
 	FWeaponState GetState() const { return WeaponState; }
 protected:

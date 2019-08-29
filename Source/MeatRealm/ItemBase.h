@@ -71,11 +71,12 @@ private:
 public:
 	AItemBase();
 
-	void UsePressed();
-	void UseComplete();
-	void UseReleased();
-	void Cancel();
 
+	void OnPrimaryPressed() override;
+	void OnPrimaryReleased() override;
+	void OnSecondaryPressed() override;
+	void OnSecondaryReleased() override;
+	
 	bool IsAutoUseOnEquip() const { return bIsAutoUseOnEquip; }
 	bool IsInUse() const { return bIsInUse; }
 	void SetRecipient(IAffectableInterface* const TheRecipient);
@@ -118,6 +119,11 @@ private:
 
 	void Tick(float DeltaSeconds) override;
 
+
+	void UsePressed();
+	void UseReleased();
+	void Cancel();
+	void UseComplete();
 	void StopAnyUsage();
 
 	UFUNCTION(Server, Reliable, WithValidation)
