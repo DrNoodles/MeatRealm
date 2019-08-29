@@ -34,7 +34,8 @@ void AThrowable::BeginPlay()
 }
 
 
-// Throw Projectile ///////////////////////////////////////////////////////////
+
+// Throwing Projectile ///////////////////////////////////////////////////////////
 
 void AThrowable::SpawnProjectile()
 {
@@ -45,6 +46,33 @@ void AThrowable::ProjectileThrown()
 {
 	LogMsgWithRole("AThrowable::ProjectileThrown()");
 }
+
+void AThrowable::ServerRequestThrow_Implementation()
+{
+	MultiDoThrow();
+}
+bool AThrowable::ServerRequestThrow_Validate()
+{
+	return true;
+}
+void AThrowable::MultiDoThrow_Implementation()
+{
+	if (HasAuthority())
+	{
+		// Throw the thing!
+		SpawnProjectile();
+	}
+	else
+	{
+		// Notify clients of throw for client side effects
+		ProjectileThrown();
+	}
+}
+bool AThrowable::MultiDoThrow_Validate()
+{
+	return true;
+}
+
 
 
 // Input //////////////////////////////////////////////////////////////////////
@@ -77,6 +105,7 @@ void AThrowable::OnSecondaryReleased()
 }
 
 
+
 // AEquippableBase ////////////////////////////////////////////////////////////
 
 void AThrowable::EnterInventory()
@@ -84,6 +113,7 @@ void AThrowable::EnterInventory()
 	LogMsgWithRole("AThrowable::EnterInventory");
 	check(HasAuthority())
 }
+
 void AThrowable::ExitInventory()
 {
 	LogMsgWithRole("AThrowable::ExitInventory");
@@ -102,6 +132,15 @@ void AThrowable::OnEquipStarted()
 	LogMsgWithRole("AThrowable::OnEquipStarted");
 
 }
+void AThrowable::ServerEquipStarted_Implementation()
+{
+	OnEquipStarted();
+}
+bool AThrowable::ServerEquipStarted_Validate()
+{
+	return true;
+}
+
 void AThrowable::OnEquipFinished()
 {
 	// Only run on the authority - TODO Client side prediction, if needed.
@@ -112,6 +151,14 @@ void AThrowable::OnEquipFinished()
 	}
 
 	LogMsgWithRole("AThrowable::OnEquipFinished");
+}
+void AThrowable::ServerEquipFinished_Implementation()
+{
+	OnEquipFinished();
+}
+bool AThrowable::ServerEquipFinished_Validate()
+{
+	return true;
 }
 
 void AThrowable::OnUnEquipStarted()
@@ -125,6 +172,15 @@ void AThrowable::OnUnEquipStarted()
 
 	LogMsgWithRole("AThrowable::OnUnEquipStarted");
 }
+void AThrowable::ServerUnEquipStarted_Implementation()
+{
+	OnUnEquipStarted();
+}
+bool AThrowable::ServerUnEquipStarted_Validate()
+{
+	return true;
+}
+
 void AThrowable::OnUnEquipFinished()
 {
 	// Only run on the authority - TODO Client side prediction, if needed.
@@ -136,34 +192,6 @@ void AThrowable::OnUnEquipFinished()
 
 	LogMsgWithRole("AThrowable::OnUnEquipFinished");
 }
-
-
-// Replication ////////////////////////////////////////////////////////////////
-
-void AThrowable::ServerEquipStarted_Implementation()
-{
-	OnEquipStarted();
-}
-bool AThrowable::ServerEquipStarted_Validate()
-{
-	return true;
-}
-void AThrowable::ServerEquipFinished_Implementation()
-{
-	OnEquipFinished();
-}
-bool AThrowable::ServerEquipFinished_Validate()
-{
-	return true;
-}
-void AThrowable::ServerUnEquipStarted_Implementation()
-{
-	OnUnEquipStarted();
-}
-bool AThrowable::ServerUnEquipStarted_Validate()
-{
-	return true;
-}
 void AThrowable::ServerUnEquipFinished_Implementation()
 {
 	OnUnEquipFinished();
@@ -173,31 +201,6 @@ bool AThrowable::ServerUnEquipFinished_Validate()
 	return true;
 }
 
-void AThrowable::ServerRequestThrow_Implementation()
-{
-	MultiDoThrow();
-}
-bool AThrowable::ServerRequestThrow_Validate()
-{
-	return true;
-}
-void AThrowable::MultiDoThrow_Implementation()
-{
-	if (HasAuthority())
-	{
-		// Throw the thing!
-		SpawnProjectile();
-	}
-	else
-	{
-		// Notify clients of throw for client side effects
-		ProjectileThrown();
-	}
-}
-bool AThrowable::MultiDoThrow_Validate()
-{
-	return true;
-}
 
 
 // Helpers ////////////////////////////////////////////////////////////////////
@@ -227,4 +230,3 @@ FString AThrowable::GetRoleText() const
 {
 	return GetEnumText(Role) + " " + GetEnumText(GetRemoteRole());
 }
-
