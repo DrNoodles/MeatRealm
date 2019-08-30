@@ -10,6 +10,7 @@
 DECLARE_LOG_CATEGORY_EXTERN(LogThrowable, Display, All);
 
 class AProjectile;
+class UStaticMeshComponent;
 
 /**
  * 
@@ -40,6 +41,9 @@ private: // Data //////////////////////////////////////////////////////////////
 	UPROPERTY(VisibleAnywhere)
 		USkeletalMeshComponent* SkeletalMeshComp = nullptr;
 
+	UPROPERTY(VisibleAnywhere)
+		UStaticMeshComponent* HitPreviewMeshComp = nullptr;
+	
 	UPROPERTY(Replicated)
 	bool bIsAiming;
 
@@ -57,7 +61,7 @@ private: // Methods ///////////////////////////////////////////////////////////
 	void BeginPlay() override;
 	void Tick(float DeltaSeconds) override;
 
-
+	
 	// Throw Projectile
 	UFUNCTION(Server, Reliable, WithValidation)
 	void ServerRequestThrow();

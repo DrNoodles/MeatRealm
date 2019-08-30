@@ -7,6 +7,7 @@
 #include "InventoryComp.h"
 #include "HeroCharacter.h"
 #include "Projectile.h"
+#include "Components/StaticMeshComponent.h"
 
 
 DEFINE_LOG_CATEGORY(LogThrowable);
@@ -37,6 +38,13 @@ AThrowable::AThrowable()
 	SkeletalMeshComp->SetGenerateOverlapEvents(false);
 	SkeletalMeshComp->SetCollisionProfileName(TEXT("NoCollision"));
 	SkeletalMeshComp->CanCharacterStepUpOn = ECB_No;
+
+	HitPreviewMeshComp = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("HitPreviewMesh"));
+	HitPreviewMeshComp->SetupAttachment(RootComponent);
+	HitPreviewMeshComp->SetGenerateOverlapEvents(false);
+	HitPreviewMeshComp->SetCollisionProfileName(TEXT("NoCollision"));
+	HitPreviewMeshComp->CanCharacterStepUpOn = ECB_No;
+	HitPreviewMeshComp->SetVisibility(false);
 }
 
 void AThrowable::BeginPlay()
@@ -45,7 +53,6 @@ void AThrowable::BeginPlay()
 	Super::BeginPlay();
 	SetActorTickEnabled(false);
 }
-
 void AThrowable::Tick(float DeltaSeconds)
 {
 	LogMsgWithRole("AThrowable::Tick");
@@ -309,7 +316,8 @@ void AThrowable::VisualiseProjectile() const
 	Params.bTraceWithChannel = true;
 	Params.bTraceWithCollision = true;
 	Params.TraceChannel = ECollisionChannel::ECC_Visibility;
-	Params.SimFrequency = 30;
+	Params.SimFrequency = 15;
+	Params.MaxSimTime = 3;
 
 	Params.ActorsToIgnore.Add((AActor*)GetOwner()); // Don't hit big daddy
 
@@ -324,13 +332,13 @@ void AThrowable::VisualiseProjectile() const
 	LogMsgWithRole(DidHit ? "Proj Hit" : "Proj Miss");
 	LogMsgWithRole(FString::Printf(TEXT("PathData Count %d"), OutResult.PathData.Num()));
 
+	
+	// Visualise point of contact
 	if (DidHit)
 	{
-		// TODO Visualise point of contact
-		
+		HitPreviewMeshComp->SetVisibility(true);
+		HitPreviewMeshComp->SetWorldLocation(OutResult.HitResult.ImpactPoint);
 	}
-	
-	// TODO Visualise path
 
 	
 	// Cleanup - TODO Remove need to build one of these each tick. Insanity!
@@ -347,6 +355,12 @@ void AThrowable::SetAiming(bool NewAiming)
 
 		// Tick on owning client to enable arc visualisation
 		SetActorTickEnabled(NewAiming);
+
+		// Make sure preview mesh is hidden
+		if (!NewAiming)
+		{
+			HitPreviewMeshComp->SetVisibility(false);
+		}
 	}
 }
 void AThrowable::ServerSetAiming_Implementation(bool NewAiming)

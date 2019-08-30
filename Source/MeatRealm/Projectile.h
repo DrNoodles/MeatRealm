@@ -17,47 +17,47 @@ class MEATREALM_API AProjectile : public AActor
 	GENERATED_BODY()
 
 public:
-	AProjectile();
-
-	void SetInstigatingControllerId(uint32 Id) { InstigatingControllerId = Id; }
-	uint32 GetInstigatingControllerId() const { return InstigatingControllerId; }
-	
-	float GetCollisionRadius() const;
-	float GetGravityZ() const;
-	float GetInitialSpeed() const;
-
 	UPROPERTY(EditAnywhere, BlueprintReadOnly)
 	TSubclassOf<AActor> EffectClass;
-
+	
+	UPROPERTY(EditAnywhere, BlueprintReadOnly)
+		float ShotDamage = 1.0f;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly)
-	float ShotDamage = 1.0f;
-
-	UPROPERTY(EditAnywhere, BlueprintReadOnly)
-	bool bIsAoe = false;
+		bool bIsAoe = false;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly)
 		bool bDetonateOnPlayerImpact;
 	
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, meta = (EditCondition = "bIsAoe"))
-	float FuseTime = -1;
+		float FuseTime = -1;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, meta = (EditCondition = "bIsAoe"))
-	float InnerRadius = 0;
+		float InnerRadius = 0;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, meta = (EditCondition = "bIsAoe"))
-	float OuterRadius = 100;
+		float OuterRadius = 100;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, meta = (EditCondition = "bIsAoe"))
-	float Falloff = 1;
+		float Falloff = 1;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, meta = (EditCondition = "bIsAoe"))
-	bool bDebugVisualiseAoe = false;
+		bool bDebugVisualiseAoe = false;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, meta = (EditCondition = "bDebugVisualiseAoe"))
-	TSubclassOf<AActor> DebugVisClass;
+		TSubclassOf<AActor> DebugVisClass;
+	
 	FTimerHandle DetonationTimerHandle;
 
+
+	AProjectile();
+
+	void SetInstigatingControllerId(uint32 Id) { InstigatingControllerId = Id; }
+	uint32 GetInstigatingControllerId() const { return InstigatingControllerId; }
+
+	float GetCollisionRadius() const;
+	float GetGravityZ() const;
+	float GetInitialSpeed() const;
 
 	// Function that initializes the projectile's velocity in the shoot direction.
 	void InitVelocity(const FVector& ShootDirection);
@@ -70,22 +70,23 @@ public:
 	void OnCompBeginOverlap(UPrimitiveComponent* OverlappedComp, AActor* OtherActor, UPrimitiveComponent* OtherComp,
 	                        int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult);
 
+
 private:
+	UPROPERTY(VisibleAnywhere)
+		UStaticMeshComponent* MeshComp = nullptr;
+
+	UPROPERTY(VisibleAnywhere, Category = Projectile)
+		USphereComponent* CollisionComp = nullptr;
+
+	UPROPERTY(VisibleAnywhere, Category = Movement)
+		UProjectileMovementComponent* ProjectileMovementComp;
+
+	uint32 InstigatingControllerId;
+
+	void BeginPlay() override;
+
 	void AoeDamage(const FVector& Location);
 	void PointDamage(AActor* OtherActor, const FHitResult& Hit);
 	void DisableAndDestroy();
 	void Detonate();
-
-	void BeginPlay() override;
-
-	UPROPERTY(VisibleAnywhere)
-	UStaticMeshComponent* MeshComp = nullptr;
-
-	UPROPERTY(VisibleAnywhere, Category = Projectile)
-	USphereComponent* CollisionComp = nullptr;
-
-	UPROPERTY(VisibleAnywhere, Category = Movement)
-	UProjectileMovementComponent* ProjectileMovementComp;
-
-	uint32 InstigatingControllerId;
 };
