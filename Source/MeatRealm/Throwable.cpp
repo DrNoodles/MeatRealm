@@ -46,7 +46,31 @@ void AThrowable::BeginPlay()
 	SetActorTickEnabled(false);
 }
 
+void AThrowable::Tick(float DeltaSeconds)
+{
+	LogMsgWithRole("AThrowable::Tick");
+	VisualiseProjectile();
+}
 
+FVector AThrowable::GetAimLocation() const
+{
+	const auto Hero = Cast<AHeroCharacter>(GetOwner());
+	if (!Hero)
+		return FVector::ZeroVector;
+
+	return Hero->GetAimTransform().GetLocation();
+}
+FRotator AThrowable::GetAimRotator() const
+{
+	const auto Hero = Cast<AHeroCharacter>(GetOwner());
+	if (!Hero) 
+		return FRotator::ZeroRotator;
+
+	const auto AimDirection = Hero->GetAimTransform().GetRotation().Vector();
+	const FRotator DirectionWithPitch{ PitchAimOffset, FMath::RadiansToDegrees(AimDirection.HeadingAngle()), 0 };
+
+	return DirectionWithPitch;
+}
 
 // Throwing Projectile ///////////////////////////////////////////////////////////
 
@@ -69,13 +93,7 @@ void AThrowable::SpawnProjectile()
 	if (!Hero) return;
 
 
-	const auto AimDirection = Hero->GetAimTransform().GetRotation().Vector();
-	const auto AimLocation = Hero->GetAimTransform().GetLocation();
-	
-	// Offset the aim up or down
-	const FRotator DirectionWithPitch{ PitchAimOffset, FMath::RadiansToDegrees(AimDirection.HeadingAngle()), 0 };
-	
-	const FTransform SpawnTransform{ DirectionWithPitch,  AimLocation };
+	const FTransform SpawnTransform{ GetAimRotator(),  GetAimLocation() };
 
 	// Spawn the projectile at the muzzle.
 	auto Projectile = (AProjectile*)UGameplayStatics::BeginDeferredActorSpawnFromClass(this, ProjectileClass, SpawnTransform, ESpawnActorCollisionHandlingMethod::AlwaysSpawn);
@@ -131,9 +149,7 @@ bool AThrowable::MultiDoThrow_Validate()
 void AThrowable::OnPrimaryPressed()
 {
 	LogMsgWithRole("AThrowable::OnPrimaryPressed()");
-
-	bIsAiming = true;
-	ServerSetAiming(true); 
+	SetAiming(true);
 }
 void AThrowable::OnPrimaryReleased()
 {
@@ -141,9 +157,7 @@ void AThrowable::OnPrimaryReleased()
 
 	if (bIsAiming)
 	{
-		bIsAiming = false;
-		ServerSetAiming(false);
-
+		SetAiming(false);
 		ServerRequestThrow();
 	}
 }
@@ -153,8 +167,7 @@ void AThrowable::OnSecondaryPressed()
 	LogMsgWithRole("AThrowable::OnSecondaryPressed()");
 	if (bIsAiming)
 	{
-		bIsAiming = false;
-		ServerSetAiming(false);
+		SetAiming(false);
 	}
 }
 void AThrowable::OnSecondaryReleased()
@@ -263,9 +276,82 @@ bool AThrowable::ServerUnEquipFinished_Validate()
 
 // Aiming /////////////////////////////////////////////////////////////////////
 
-void AThrowable::ServerSetAiming_Implementation(bool NewAiming)
+void AThrowable::VisualiseProjectile() const
+{
+	// TODO In:  AimGoal
+	// TODO Out: AimActual, Arc Path Points.
+
+	const auto World = GetWorld();
+	if (!World)
+	{
+		return;
+	}
+
+	FPredictProjectilePathParams Params;
+	FPredictProjectilePathResult OutResult;
+
+	// TODO Optimise! Singleton? Statically cache one of these for the life of the throwable.
+	const auto ProjectileInstance = (AProjectile*)UGameplayStatics::BeginDeferredActorSpawnFromClass(World, ProjectileClass, FTransform::Identity);
+
+
+	// Inputs
+	float InitialSpeed = ProjectileInstance->GetInitialSpeed();
+	float GravityZ = ProjectileInstance->GetGravityZ();
+	float CollisionRadius = ProjectileInstance->GetCollisionRadius();
+	Params.StartLocation = GetAimLocation();
+	Params.LaunchVelocity = GetAimRotator().Vector() * InitialSpeed;
+	Params.OverrideGravityZ = GravityZ;
+	Params.ProjectileRadius = CollisionRadius;
+	//LogMsgWithRole(FString::Printf(TEXT("InitSpeed %f, Grav %f, Radius: %f"), InitialSpeed, GravityZ, CollisionRadius));
+
+	
+	// Config
+	Params.bTraceWithChannel = true;
+	Params.bTraceWithCollision = true;
+	Params.TraceChannel = ECollisionChannel::ECC_Visibility;
+	Params.SimFrequency = 30;
+
+	Params.ActorsToIgnore.Add((AActor*)GetOwner()); // Don't hit big daddy
+
+	Params.DrawDebugType = EDrawDebugTrace::ForOneFrame;
+
+	
+	// Trace
+	auto DidHit = UGameplayStatics::PredictProjectilePath(World, Params, OUT OutResult);
+
+	
+	// Results
+	LogMsgWithRole(DidHit ? "Proj Hit" : "Proj Miss");
+	LogMsgWithRole(FString::Printf(TEXT("PathData Count %d"), OutResult.PathData.Num()));
+
+	if (DidHit)
+	{
+		// TODO Visualise point of contact
+		
+	}
+	
+	// TODO Visualise path
+
+	
+	// Cleanup - TODO Remove need to build one of these each tick. Insanity!
+	ProjectileInstance->Destroy();
+}
+
+void AThrowable::SetAiming(bool NewAiming)
 {
 	bIsAiming = NewAiming;
+	
+	if (!HasAuthority())
+	{
+		ServerSetAiming(NewAiming);
+
+		// Tick on owning client to enable arc visualisation
+		SetActorTickEnabled(NewAiming);
+	}
+}
+void AThrowable::ServerSetAiming_Implementation(bool NewAiming)
+{
+	SetAiming(NewAiming);
 }
 bool AThrowable::ServerSetAiming_Validate(bool NewAiming)
 {

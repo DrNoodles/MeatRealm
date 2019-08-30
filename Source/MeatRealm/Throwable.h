@@ -54,6 +54,10 @@ protected: // Methods /////////////////////////////////////////////////////////
 	
 private: // Methods ///////////////////////////////////////////////////////////
 
+	void BeginPlay() override;
+	void Tick(float DeltaSeconds) override;
+
+
 	// Throw Projectile
 	UFUNCTION(Server, Reliable, WithValidation)
 	void ServerRequestThrow();
@@ -64,8 +68,6 @@ private: // Methods ///////////////////////////////////////////////////////////
 	// [All Clients]
 	void ProjectileThrown();
 	
-	void BeginPlay() override;
-
 	// Input
 	void OnPrimaryPressed() override;
 	void OnPrimaryReleased() override;
@@ -93,6 +95,12 @@ private: // Methods ///////////////////////////////////////////////////////////
 	UFUNCTION(Server, Reliable, WithValidation)
 		void ServerUnEquipFinished();
 
+	// Aiming
+	void VisualiseProjectile() const;
+	FVector GetAimLocation() const;
+	FRotator GetAimRotator() const;
+
+	void SetAiming(bool NewAiming);
 	UFUNCTION(Server, Reliable, WithValidation)
 	void ServerSetAiming(bool NewAiming);
 

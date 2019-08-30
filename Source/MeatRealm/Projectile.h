@@ -21,6 +21,10 @@ public:
 
 	void SetInstigatingControllerId(uint32 Id) { InstigatingControllerId = Id; }
 	uint32 GetInstigatingControllerId() const { return InstigatingControllerId; }
+	
+	float GetCollisionRadius() const;
+	float GetGravityZ() const;
+	float GetInitialSpeed() const;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly)
 	TSubclassOf<AActor> EffectClass;

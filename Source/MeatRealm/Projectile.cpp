@@ -45,6 +45,18 @@ AProjectile::AProjectile()
 	// TODO Show a billboard if by default on the placeholder
 }
 
+float AProjectile::GetCollisionRadius() const
+{
+	return CollisionComp->GetScaledSphereRadius();
+}
+float AProjectile::GetGravityZ() const
+{
+	return ProjectileMovementComp->GetGravityZ();
+}
+float AProjectile::GetInitialSpeed() const
+{
+	return ProjectileMovementComp->InitialSpeed;
+}
 void AProjectile::InitVelocity(const FVector& ShootDirection)
 {
 	ProjectileMovementComp->Velocity	= ShootDirection * ProjectileMovementComp->InitialSpeed;
