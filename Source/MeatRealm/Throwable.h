@@ -10,6 +10,7 @@
 DECLARE_LOG_CATEGORY_EXTERN(LogThrowable, Display, All);
 
 class AProjectile;
+class UStaticMeshComponent;
 
 /**
  * 
@@ -22,6 +23,16 @@ class MEATREALM_API AThrowable : public AEquippableBase
 public: // Data ///////////////////////////////////////////////////////////////
 	
 protected: // Data ////////////////////////////////////////////////////////////
+
+	UPROPERTY(EditAnywhere)
+		bool bUseChargeShot = false;
+
+	UPROPERTY(EditAnywhere)
+		float MinCharge = 0.25;
+	
+	UPROPERTY(EditAnywhere)
+		float TimeToCharge = 1;
+
 	UPROPERTY(EditAnywhere)
 		float AdsMovementScale = 0.50;
 	
@@ -40,6 +51,9 @@ private: // Data //////////////////////////////////////////////////////////////
 	UPROPERTY(VisibleAnywhere)
 		USkeletalMeshComponent* SkeletalMeshComp = nullptr;
 
+	UPROPERTY(VisibleAnywhere)
+		UStaticMeshComponent* HitPreviewMeshComp = nullptr;
+	
 	UPROPERTY(Replicated)
 	bool bIsAiming;
 
@@ -54,6 +68,12 @@ protected: // Methods /////////////////////////////////////////////////////////
 	
 private: // Methods ///////////////////////////////////////////////////////////
 
+	float Charge = 0;
+	
+	void BeginPlay() override;
+	void Tick(float DeltaSeconds) override;
+
+	
 	// Throw Projectile
 	UFUNCTION(Server, Reliable, WithValidation)
 	void ServerRequestThrow();
@@ -64,8 +84,6 @@ private: // Methods ///////////////////////////////////////////////////////////
 	// [All Clients]
 	void ProjectileThrown();
 	
-	void BeginPlay() override;
-
 	// Input
 	void OnPrimaryPressed() override;
 	void OnPrimaryReleased() override;
@@ -93,6 +111,12 @@ private: // Methods ///////////////////////////////////////////////////////////
 	UFUNCTION(Server, Reliable, WithValidation)
 		void ServerUnEquipFinished();
 
+	// Aiming
+	void VisualiseProjectile() const;
+	FVector GetAimLocation() const;
+	FRotator GetAimRotator() const;
+
+	void SetAiming(bool NewAiming);
 	UFUNCTION(Server, Reliable, WithValidation)
 	void ServerSetAiming(bool NewAiming);
 

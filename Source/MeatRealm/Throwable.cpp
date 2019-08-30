@@ -7,6 +7,7 @@
 #include "InventoryComp.h"
 #include "HeroCharacter.h"
 #include "Projectile.h"
+#include "Components/StaticMeshComponent.h"
 
 
 DEFINE_LOG_CATEGORY(LogThrowable);
@@ -37,6 +38,13 @@ AThrowable::AThrowable()
 	SkeletalMeshComp->SetGenerateOverlapEvents(false);
 	SkeletalMeshComp->SetCollisionProfileName(TEXT("NoCollision"));
 	SkeletalMeshComp->CanCharacterStepUpOn = ECB_No;
+
+	HitPreviewMeshComp = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("HitPreviewMesh"));
+	HitPreviewMeshComp->SetupAttachment(RootComponent);
+	HitPreviewMeshComp->SetGenerateOverlapEvents(false);
+	HitPreviewMeshComp->SetCollisionProfileName(TEXT("NoCollision"));
+	HitPreviewMeshComp->CanCharacterStepUpOn = ECB_No;
+	HitPreviewMeshComp->SetVisibility(false);
 }
 
 void AThrowable::BeginPlay()
@@ -45,8 +53,42 @@ void AThrowable::BeginPlay()
 	Super::BeginPlay();
 	SetActorTickEnabled(false);
 }
+void AThrowable::Tick(float DeltaSeconds)
+{
+	LogMsgWithRole("AThrowable::Tick");
 
+	if (IsEquipped())
+	{
+		const float Delta = 1 - MinCharge;
+		const auto ChargePerSecond = Delta/ TimeToCharge;
+		Charge = FMath::Min<float>(1, Charge + ChargePerSecond * DeltaSeconds);
 
+		auto Str = FString::Printf(TEXT("Charge: %f"), Charge);
+		LogMsgWithRole(Str);
+		
+		VisualiseProjectile();
+	}
+}
+
+FVector AThrowable::GetAimLocation() const
+{
+	const auto Hero = Cast<AHeroCharacter>(GetOwner());
+	if (!Hero)
+		return FVector::ZeroVector;
+
+	return Hero->GetAimTransform().GetLocation();
+}
+FRotator AThrowable::GetAimRotator() const
+{
+	const auto Hero = Cast<AHeroCharacter>(GetOwner());
+	if (!Hero) 
+		return FRotator::ZeroRotator;
+
+	const auto AimDirection = Hero->GetAimTransform().GetRotation().Vector();
+	const FRotator DirectionWithPitch{ PitchAimOffset, FMath::RadiansToDegrees(AimDirection.HeadingAngle()), 0 };
+
+	return DirectionWithPitch;
+}
 
 // Throwing Projectile ///////////////////////////////////////////////////////////
 
@@ -69,13 +111,7 @@ void AThrowable::SpawnProjectile()
 	if (!Hero) return;
 
 
-	const auto AimDirection = Hero->GetAimTransform().GetRotation().Vector();
-	const auto AimLocation = Hero->GetAimTransform().GetLocation();
-	
-	// Offset the aim up or down
-	const FRotator DirectionWithPitch{ PitchAimOffset, FMath::RadiansToDegrees(AimDirection.HeadingAngle()), 0 };
-	
-	const FTransform SpawnTransform{ DirectionWithPitch,  AimLocation };
+	const FTransform SpawnTransform{ GetAimRotator(),  GetAimLocation() };
 
 	// Spawn the projectile at the muzzle.
 	auto Projectile = (AProjectile*)UGameplayStatics::BeginDeferredActorSpawnFromClass(this, ProjectileClass, SpawnTransform, ESpawnActorCollisionHandlingMethod::AlwaysSpawn);
@@ -84,11 +120,17 @@ void AThrowable::SpawnProjectile()
 	{
 		return;
 	}
-
+	
 	Projectile->SetInstigatingControllerId(InstigatingControllerId);
 	Projectile->Instigator = Instigator;
 	Projectile->SetOwner(this);
 
+
+	
+	const float InitialSpeed = Projectile->GetInitialSpeed() * (bUseChargeShot ? Charge : 1);
+	Projectile->SetInitialSpeed(/*GetAimRotator().Vector() * */InitialSpeed);
+	LogMsgWithRole(FString::Printf(TEXT("Setting Speed: %f"), InitialSpeed));
+	
 	UGameplayStatics::FinishSpawningActor(Projectile, SpawnTransform);
 }
 
@@ -131,9 +173,7 @@ bool AThrowable::MultiDoThrow_Validate()
 void AThrowable::OnPrimaryPressed()
 {
 	LogMsgWithRole("AThrowable::OnPrimaryPressed()");
-
-	bIsAiming = true;
-	ServerSetAiming(true); 
+	SetAiming(true);
 }
 void AThrowable::OnPrimaryReleased()
 {
@@ -141,10 +181,10 @@ void AThrowable::OnPrimaryReleased()
 
 	if (bIsAiming)
 	{
-		bIsAiming = false;
-		ServerSetAiming(false);
+		SetAiming(false);
 
-		ServerRequestThrow();
+		if (IsEquipped())
+			ServerRequestThrow();
 	}
 }
 
@@ -153,8 +193,7 @@ void AThrowable::OnSecondaryPressed()
 	LogMsgWithRole("AThrowable::OnSecondaryPressed()");
 	if (bIsAiming)
 	{
-		bIsAiming = false;
-		ServerSetAiming(false);
+		SetAiming(false);
 	}
 }
 void AThrowable::OnSecondaryReleased()
@@ -181,6 +220,8 @@ void AThrowable::ExitInventory()
 
 void AThrowable::OnEquipStarted()
 {
+	SetAiming(false);
+	
 	// Only run on the authority - TODO Client side prediction, if needed.
 	if (!HasAuthority())
 	{
@@ -222,6 +263,8 @@ bool AThrowable::ServerEquipFinished_Validate()
 
 void AThrowable::OnUnEquipStarted()
 {
+	SetAiming(false);
+
 	// Only run on the authority - TODO Client side prediction, if needed.
 	if (!HasAuthority())
 	{
@@ -242,6 +285,8 @@ bool AThrowable::ServerUnEquipStarted_Validate()
 
 void AThrowable::OnUnEquipFinished()
 {
+	SetAiming(false);
+	
 	// Only run on the authority - TODO Client side prediction, if needed.
 	if (!HasAuthority())
 	{
@@ -263,9 +308,91 @@ bool AThrowable::ServerUnEquipFinished_Validate()
 
 // Aiming /////////////////////////////////////////////////////////////////////
 
-void AThrowable::ServerSetAiming_Implementation(bool NewAiming)
+void AThrowable::VisualiseProjectile() const
+{
+	const auto World = GetWorld();
+	if (!World)
+	{
+		return;
+	}
+
+	FPredictProjectilePathParams Params;
+	FPredictProjectilePathResult OutResult;
+
+	// TODO Optimise! Singleton? Statically cache one of these for the life of the throwable.
+	const auto ProjectileInstance = (AProjectile*)UGameplayStatics::BeginDeferredActorSpawnFromClass(World, ProjectileClass, FTransform::Identity);
+
+
+	// Inputs
+	float InitialSpeed = ProjectileInstance->GetInitialSpeed() * (bUseChargeShot ? Charge : 1);
+	float GravityZ = ProjectileInstance->GetGravityZ();
+	float CollisionRadius = ProjectileInstance->GetCollisionRadius();
+	Params.StartLocation = GetAimLocation();
+	Params.LaunchVelocity = GetAimRotator().Vector() * InitialSpeed;
+	Params.OverrideGravityZ = GravityZ;
+	Params.ProjectileRadius = CollisionRadius;
+	//LogMsgWithRole(FString::Printf(TEXT("InitSpeed %f, Grav %f, Radius: %f"), InitialSpeed, GravityZ, CollisionRadius));
+
+	
+	// Config
+	Params.bTraceWithChannel = true;
+	Params.bTraceWithCollision = true;
+	Params.TraceChannel = ECollisionChannel::ECC_Visibility;
+	Params.SimFrequency = 30;
+	Params.MaxSimTime = 3;
+
+	Params.ActorsToIgnore.Add((AActor*)GetOwner()); // Don't hit big daddy
+
+	Params.DrawDebugType = EDrawDebugTrace::ForOneFrame;
+
+	
+	// Trace
+	auto DidHit = UGameplayStatics::PredictProjectilePath(World, Params, OUT OutResult);
+
+	
+	// Results
+	LogMsgWithRole(DidHit ? "Proj Hit" : "Proj Miss");
+	LogMsgWithRole(FString::Printf(TEXT("PathData Count %d"), OutResult.PathData.Num()));
+
+	
+	// Visualise point of contact
+	if (DidHit)
+	{
+		HitPreviewMeshComp->SetVisibility(true);
+		HitPreviewMeshComp->SetWorldLocation(OutResult.HitResult.ImpactPoint);
+	}
+
+	
+	// Cleanup - TODO Remove need to build one of these each tick. Insanity!
+	ProjectileInstance->Destroy();
+}
+
+void AThrowable::SetAiming(bool NewAiming)
 {
 	bIsAiming = NewAiming;
+	if (NewAiming) 
+		Charge = MinCharge;
+
+	// Tick on owning client to enable arc visualisation
+	SetActorTickEnabled(NewAiming);
+
+
+	// Make sure preview mesh is hidden
+	if (!NewAiming)
+	{
+		HitPreviewMeshComp->SetVisibility(false);
+	}
+
+	
+	// Run on server too
+	if (!HasAuthority())
+	{
+		ServerSetAiming(NewAiming);
+	}
+}
+void AThrowable::ServerSetAiming_Implementation(bool NewAiming)
+{
+	SetAiming(NewAiming);
 }
 bool AThrowable::ServerSetAiming_Validate(bool NewAiming)
 {

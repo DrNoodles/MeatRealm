@@ -27,23 +27,35 @@ void AEquippableBase::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutL
 
 
 
-void AEquippableBase::Equip()
+void AEquippableBase::Equip(float DurationOverride)
 {
 	ClearTimers();
 
 	EquippedStatus = EEquipState::Equipping;
 	OnEquipStarted();
-	// TODO Call multicast event
-	// TODO Call blueprint implementable method
 
-	GetWorld()->GetTimerManager().SetTimer(EquipTimerHandle, this, &AEquippableBase::EquipFinish, EquipDuration, false);
+	
+	const float EquipTime = DurationOverride >= 0 ? DurationOverride : EquipDuration;
+	
+	if (EquipTime > SMALL_NUMBER)
+	{
+		GetWorld()->GetTimerManager().SetTimer(
+			EquipTimerHandle, this, &AEquippableBase::EquipFinish, EquipTime, false);
+
+		OnEquipping.Broadcast(this);
+	}
+	else
+	{
+		OnEquipping.Broadcast(this);
+		EquipFinish();
+	}
 }
+
 void AEquippableBase::EquipFinish()
 {
 	EquippedStatus = EEquipState::Equipped;
 	OnEquipFinished();
-	// TODO Also Call multicast event
-	// TODO Also Call blueprint implementable method
+	OnEquipped.Broadcast(this);
 }
 
 void AEquippableBase::Unequip()
@@ -52,19 +64,26 @@ void AEquippableBase::Unequip()
 
 	EquippedStatus = EEquipState::UnEquipping;
 	OnUnEquipStarted();
-	// TODO Call multicast event
-	// TODO Call blueprint implementable method
-
-
-	GetWorld()->GetTimerManager().SetTimer(UnEquipTimerHandle, this, &AEquippableBase::UnEquipFinish, UnEquipDuration, false);
 	
+	if (UnEquipDuration > SMALL_NUMBER)
+	{
+		GetWorld()->GetTimerManager().SetTimer(
+			UnEquipTimerHandle, this, &AEquippableBase::UnEquipFinish, UnEquipDuration, false);
+
+		OnUnEquipping.Broadcast(this);
+	}
+	else
+	{
+		OnUnEquipping.Broadcast(this);
+		UnEquipFinish();
+	}
 }
+
 void AEquippableBase::UnEquipFinish()
 {
 	EquippedStatus = EEquipState::UnEquipped;
 	OnUnEquipFinished();
-	// TODO Call multicast event
-	// TODO Call blueprint implementable method
+	OnUnEquipped.Broadcast(this);
 }
 
 bool AEquippableBase::Is(EInventoryCategory Category)

@@ -12,6 +12,33 @@ DEFINE_LOG_CATEGORY(LogInventory);
 
 // Lifecycle //////////////////////////////////////////////////////////////////
 
+void UInventoryComp::OnEquipping(AEquippableBase* E)
+{
+	UE_LOG(LogInventory, Verbose, TEXT("UInventoryComp::OnEquipping(%s)"), *E->GetEquippableName());
+	E->SetActorHiddenInGame(true);
+	Delegate->RefreshWeaponAttachments();
+}
+
+void UInventoryComp::OnEquipped(AEquippableBase* E)
+{
+	UE_LOG(LogInventory, Verbose, TEXT("UInventoryComp::OnEquipped(%s)"), *E->GetEquippableName());
+	E->SetActorHiddenInGame(false);
+	Delegate->RefreshWeaponAttachments();
+}
+
+void UInventoryComp::OnUnEquipping(AEquippableBase* E)
+{
+	UE_LOG(LogInventory, Verbose, TEXT("UInventoryComp::OnUnEquipping(%s)"), *E->GetEquippableName());
+	E->SetActorHiddenInGame(E->ShouldHideWhenUnequipped());
+	Delegate->RefreshWeaponAttachments();
+}
+
+void UInventoryComp::OnUnEquipped(AEquippableBase* E)
+{
+	UE_LOG(LogInventory, Verbose, TEXT("UInventoryComp::OnUnEquipped(%s)"), *E->GetEquippableName());
+	Delegate->RefreshWeaponAttachments();
+}
+
 UInventoryComp::UInventoryComp()
 {
 //	PrimaryComponentTick.bCanEverTick = true;
@@ -49,11 +76,13 @@ void UInventoryComp::DestroyInventory()
 	CurrentInventorySlot = EInventorySlots::Undefined;
 	if (PrimaryWeaponSlot)
 	{
+		UnbindEventHandlers(PrimaryWeaponSlot);
 		PrimaryWeaponSlot->Destroy();
 		PrimaryWeaponSlot = nullptr;
 	}
 	if (SecondaryWeaponSlot)
 	{
+		UnbindEventHandlers(SecondaryWeaponSlot);
 		SecondaryWeaponSlot->Destroy();
 		SecondaryWeaponSlot = nullptr;
 	}
@@ -62,7 +91,10 @@ void UInventoryComp::DestroyInventory()
 	for (auto* HP : HealthSlot)
 	{
 		if (HP)
+		{
+			UnbindEventHandlers(HP);
 			HP->Destroy();
+		}
 		else
 			UE_LOG(LogInventory, Warning, TEXT("Attempted to destroy HP slot item that's null"));
 	}
@@ -70,7 +102,10 @@ void UInventoryComp::DestroyInventory()
 	for (auto* AP : ArmourSlot)
 	{
 		if (AP)
+		{
+			UnbindEventHandlers(AP);
 			AP->Destroy();
+		}
 		else
 			UE_LOG(LogInventory, Warning, TEXT("Attempted to destroy HP slot item that's null"));
 	}
@@ -78,7 +113,10 @@ void UInventoryComp::DestroyInventory()
 	for (auto* Th : ThrowableSlot)
 	{
 		if (Th)
+		{
+			UnbindEventHandlers(Th);
 			Th->Destroy();
+		}
 		else
 			UE_LOG(LogInventory, Warning, TEXT("Attempted to destroy throwable slot item that's null"));
 	}
@@ -316,6 +354,7 @@ void UInventoryComp::GiveItemToPlayer(TSubclassOf<AItemBase> ItemClass)
 		// Add to inv
 		HealthSlot.Add(Item);
 		Item->EnterInventory();
+		BindEventHandlers(Item);
 		Item->SetRecipient(Recipient);
 		Item->SetDelegate(this);
 	}
@@ -326,6 +365,7 @@ void UInventoryComp::GiveItemToPlayer(TSubclassOf<AItemBase> ItemClass)
 		// Add to inv
 		ArmourSlot.Add(Item);
 		Item->EnterInventory();
+		BindEventHandlers(Item);
 		Item->SetRecipient(Recipient); 
 		Item->SetDelegate(this);
 	}
@@ -386,20 +426,54 @@ void UInventoryComp::AddToSlot(AEquippableBase* Equippable)
 		UE_LOG(LogInventory, Error, TEXT("Unsupported Inventory Category: %d"), Equippable->GetInventoryCategory());
 	}
 
+	
 
 	switch (Slot)
 	{
-	case EInventorySlots::Primary: break;
-	case EInventorySlots::Secondary: break;
-	case EInventorySlots::Health: break;
-	case EInventorySlots::Armour: break;
+	case EInventorySlots::Primary:
+	case EInventorySlots::Secondary:
+	{
+
+	}
+	break;
+
+	case EInventorySlots::Health:
+	case EInventorySlots::Armour:
+	{
+		const auto Recipient = Cast<IAffectableInterface>(GetOwner());
+		if (!Recipient)
+		{
+			UE_LOG(LogInventory, Error, TEXT("Failed to cast inventory owner to IAffectableInterface!"));
+		}
+	}
+	break;
+
 	case EInventorySlots::Throwable: ThrowableSlot.Add((AThrowable*)Equippable); break;
-	default: 
+		
+	default:
 		UE_LOG(LogInventory, Error, TEXT("Unsupported Inventory Slot: %d"), Slot);
 	}
 
 	Equippable->SetDelegate(this);
 	Equippable->EnterInventory();
+	BindEventHandlers(Equippable);
+}
+void UInventoryComp::BindEventHandlers(AEquippableBase* E) const
+{
+	check(E);
+	E->OnEquipping.AddDynamic(this, &UInventoryComp::OnEquipping);
+	E->OnEquipped.AddDynamic(this, &UInventoryComp::OnEquipped);
+	E->OnUnEquipping.AddDynamic(this, &UInventoryComp::OnUnEquipping);
+	E->OnUnEquipped.AddDynamic(this, &UInventoryComp::OnUnEquipped);
+}
+
+void UInventoryComp::UnbindEventHandlers(AEquippableBase* E) const
+{
+	check(E);
+	E->OnEquipping.RemoveAll(this);
+	E->OnEquipped.RemoveAll(this);
+	E->OnUnEquipping.RemoveAll(this);
+	E->OnUnEquipped.RemoveAll(this);
 }
 
 bool UInventoryComp::CanGiveThrowable(const TSubclassOf<AThrowable>& ThrowableClass)
@@ -442,7 +516,8 @@ void UInventoryComp::GiveWeaponToPlayer(TSubclassOf<class AWeapon> WeaponClass, 
 	{
 		// If it's the same slot, replay the equip weapon
 		RemovedWeapon->ExitInventory();
-
+		UnbindEventHandlers(RemovedWeapon);
+		
 		// Drop weapon on ground
 		TArray<AWeapon*> WeaponArray{ RemovedWeapon };
 		SpawnWeaponPickups(WeaponArray);
@@ -524,6 +599,7 @@ AWeapon* UInventoryComp::AssignWeaponToInventorySlot(AWeapon* Weapon, EInventory
 	if (Slot == EInventorySlots::Primary) PrimaryWeaponSlot = Weapon;
 	if (Slot == EInventorySlots::Secondary) SecondaryWeaponSlot = Weapon;
 	Weapon->EnterInventory();
+	BindEventHandlers(Weapon);
 
 	//// Cleanup previous weapon // TODO Drop this on ground
 	//if (Removed) Removed->Destroy();
@@ -551,6 +627,8 @@ bool UInventoryComp::RemoveEquippableFromInventory(AEquippableBase* Equippable)
 		if (Index != INDEX_NONE)
 		{
 			Equippable->ExitInventory();
+			UnbindEventHandlers(Equippable);
+
 			HealthSlot.RemoveAt(Index);
 			WasRemoved = true;
 
@@ -570,6 +648,8 @@ bool UInventoryComp::RemoveEquippableFromInventory(AEquippableBase* Equippable)
 		if (Index != INDEX_NONE)
 		{
 			Equippable->ExitInventory();
+			UnbindEventHandlers(Equippable);
+
 			ArmourSlot.RemoveAt(Index);
 			WasRemoved = true;
 
@@ -589,6 +669,8 @@ bool UInventoryComp::RemoveEquippableFromInventory(AEquippableBase* Equippable)
 		if (Index != INDEX_NONE)
 		{
 			Equippable->ExitInventory();
+			UnbindEventHandlers(Equippable);
+
 			ThrowableSlot.RemoveAt(Index);
 			WasRemoved = true;
 
@@ -614,7 +696,7 @@ bool UInventoryComp::RemoveEquippableFromInventory(AEquippableBase* Equippable)
 		// Work around: Make the item in the slot visible even though it's in an unknown equipping state
 		// This will break unequip timers when we get to it and is generally inconsistent and bad!
 		const auto Held = GetCurrentEquippable();
-		Held->SetActorHiddenInGame(false);
+		Held->Equip(0);
 	}
 
 	return WasRemoved;
@@ -652,7 +734,7 @@ void UInventoryComp::EquipSlot(const EInventorySlots Slot)
 	{
 		//LogMsgWithRole("Un-equip new slot");
 		OldEquippable->Unequip();
-		OldEquippable->SetActorHiddenInGame(OldEquippable->ShouldHideWhenUnequipped());
+	//	OldEquippable->SetActorHiddenInGame(OldEquippable->ShouldHideWhenUnequipped());
 	}
 
 
@@ -661,25 +743,25 @@ void UInventoryComp::EquipSlot(const EInventorySlots Slot)
 	{
 		//LogMsgWithRole("Equip new slot");
 		NewEquippable->Equip();
-		NewEquippable->SetActorHiddenInGame(true);
+		//NewEquippable->SetActorHiddenInGame(true);
 
-		GetWorld()->GetTimerManager().SetTimer(EquipTimerHandle, this, &UInventoryComp::MakeEquippedItemVisible, NewEquippable->GetEquipDuration(), false);
+	/*	GetWorld()->GetTimerManager().SetTimer(EquipTimerHandle, this, &UInventoryComp::MakeEquippedItemVisible, NewEquippable->GetEquipDuration(), false);*/
 	}
 
-	Delegate->RefreshWeaponAttachments();
+	//Delegate->RefreshWeaponAttachments();
 }
 void UInventoryComp::MakeEquippedItemVisible() const
 {
-	UE_LOG(LogInventory, Verbose, TEXT("UInventoryComp::MakeEquippedItemVisible()"));
+//	UE_LOG(LogInventory, Verbose, TEXT("UInventoryComp::MakeEquippedItemVisible()"));
 
 	//LogMsgWithRole("MakeEquippedItemVisible");
 
 	// Ensure the item is indeed visible as this might fire just before the actual Equipped state is registered in the Equippable. TODO Have the equippable fire an event to say it has changed to Equipped state and change visibility based on that.
-	auto Item = GetEquippable(CurrentInventorySlot);
-	if (Item) 
-		Item->SetActorHiddenInGame(false);
+	//auto Item = GetEquippable(CurrentInventorySlot);
+	//if (Item) 
+	//	Item->SetActorHiddenInGame(false);
 
-	Delegate->RefreshWeaponAttachments();
+	//Delegate->RefreshWeaponAttachments();
 }
 
 void UInventoryComp::NotifyItemIsExpended(AEquippableBase* Item)

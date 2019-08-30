@@ -45,9 +45,23 @@ AProjectile::AProjectile()
 	// TODO Show a billboard if by default on the placeholder
 }
 
-void AProjectile::InitVelocity(const FVector& ShootDirection)
+float AProjectile::GetCollisionRadius() const
 {
-	ProjectileMovementComp->Velocity	= ShootDirection * ProjectileMovementComp->InitialSpeed;
+	return CollisionComp->GetScaledSphereRadius();
+}
+float AProjectile::GetGravityZ() const
+{
+	return ProjectileMovementComp->GetGravityZ();
+}
+float AProjectile::GetInitialSpeed() const
+{
+	return ProjectileMovementComp->InitialSpeed;
+}
+
+void AProjectile::SetInitialSpeed(float Speed)
+{
+	//ProjectileMovementComp->Velocity	= Velocity/* *
+	ProjectileMovementComp->InitialSpeed = Speed;
 }
 
 void AProjectile::OnCompHit(UPrimitiveComponent* HitComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp,
@@ -63,7 +77,7 @@ void AProjectile::OnCompHit(UPrimitiveComponent* HitComponent, AActor* OtherActo
 	{
 		UE_LOG(LogTemp, Error, TEXT("AProjectile::OnCompHit() - WASTED HIT, OPTIMISE ME OUT WITH CHANNEL"));
 
-		Destroy();
+		DisableAndDestroy();
 
 		return;
 	}
@@ -217,6 +231,7 @@ void AProjectile::DisableAndDestroy()
 	ProjectileMovementComp->StopMovementImmediately();
 	CollisionComp->SetCollisionResponseToAllChannels(ECollisionResponse::ECR_Ignore);
 	SetLifeSpan(2.0f);
+	SetActorHiddenInGame(true);
 }
 
 void AProjectile::Detonate()

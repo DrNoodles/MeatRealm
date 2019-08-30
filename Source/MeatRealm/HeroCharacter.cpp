@@ -1469,34 +1469,21 @@ void AHeroCharacter::RefreshWeaponAttachments()
 	const FAttachmentTransformRules Rules{ EAttachmentRule::SnapToTarget, true };
 	const auto CurrentInventorySlot = InventoryComp->GetCurrentInventorySlot();
 
-	// Show what's in the hand
+	// Put the current thingy in the hand
 	auto Equippable = InventoryComp->GetEquippable(CurrentInventorySlot);
-	if (Equippable)
-	{
-		Equippable->AttachToComponent(GetMesh(), Rules, HandSocketName);
-		Equippable->SetActorHiddenInGame(!Equippable->IsEquipped());
-	}
+	if (Equippable) Equippable->AttachToComponent(GetMesh(), Rules, HandSocketName);
 
 	// Holster Primary?
 	if (CurrentInventorySlot != EInventorySlots::Primary)
 	{
 		auto W = InventoryComp->GetWeapon(EInventorySlots::Primary);
-		if (W)
-		{
-			W->AttachToComponent(GetMesh(), Rules, Holster1SocketName);
-			W->SetActorHiddenInGame(false);
-		}
-	}
+		if (W) W->AttachToComponent(GetMesh(), Rules, Holster1SocketName);	}
 
 	// Holster Secondary?
 	if (CurrentInventorySlot != EInventorySlots::Secondary)
 	{
 		auto W = InventoryComp->GetWeapon(EInventorySlots::Secondary);
-		if (W)
-		{
-			W->AttachToComponent(GetMesh(), Rules, Holster2SocketName);
-			W->SetActorHiddenInGame(false);
-		}
+		if (W) W->AttachToComponent(GetMesh(), Rules, Holster2SocketName);
 	}
 }
 

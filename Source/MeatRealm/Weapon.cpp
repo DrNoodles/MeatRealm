@@ -338,7 +338,8 @@ bool AWeapon::SpawnAProjectile(const FVector& Direction)
 
 	Projectile->SetInstigatingControllerId(InstigatingControllerId);
 	Projectile->Instigator = Instigator;
-	Projectile->SetOwner(this);	//Projectile->SetOwner(GetOwner());
+	Projectile->SetOwner(this);
+	//Projectile->SetOwner(GetOwner());
 	//Projectile->InitVelocity(Direction);
 
 	UGameplayStatics::FinishSpawningActor(Projectile, SpawnTransform);

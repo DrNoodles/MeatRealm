@@ -63,8 +63,17 @@ protected:
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly)
 		int32 ThrowableSlotLimit = 3;
-	
-// Private Data ///////////////////////////////////////////////////////////////
+
+	UFUNCTION()
+		void OnEquipping(AEquippableBase* E);
+	UFUNCTION()
+		void OnEquipped(AEquippableBase* E);
+	UFUNCTION()
+		void OnUnEquipping(AEquippableBase* E);
+	UFUNCTION()
+		void OnUnEquipped(AEquippableBase* E);
+
+	// Private Data ///////////////////////////////////////////////////////////////
 private:
 	IInventoryCompDelegate* Delegate = nullptr;
 	
@@ -152,7 +161,7 @@ public:
 	AEquippableBase* SpawnEquippable(const TSubclassOf<AEquippableBase>& Class) const;
 	void AddToSlot(AEquippableBase* EquippableBase);
 
-	
+
 	void GiveWeaponToPlayer(TSubclassOf<class AWeapon> WeaponClass, FWeaponConfig& Config);
 
 	
@@ -168,6 +177,9 @@ protected:
 
 // Private Methods ////////////////////////////////////////////////////////////
 private:
+	void BindEventHandlers(AEquippableBase* E) const;
+	void UnbindEventHandlers(AEquippableBase* E) const;
+
 	AItemBase* GetFirstHealthItemOrNull() const;
 	AItemBase* GetFirstArmourItemOrNull() const;
 	AThrowable* GetFirstThrowableOrNull() const;
