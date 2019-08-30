@@ -75,7 +75,7 @@ void AProjectile::OnCompHit(UPrimitiveComponent* HitComponent, AActor* OtherActo
 	{
 		UE_LOG(LogTemp, Error, TEXT("AProjectile::OnCompHit() - WASTED HIT, OPTIMISE ME OUT WITH CHANNEL"));
 
-		Destroy();
+		DisableAndDestroy();
 
 		return;
 	}
@@ -229,6 +229,7 @@ void AProjectile::DisableAndDestroy()
 	ProjectileMovementComp->StopMovementImmediately();
 	CollisionComp->SetCollisionResponseToAllChannels(ECollisionResponse::ECR_Ignore);
 	SetLifeSpan(2.0f);
+	SetActorHiddenInGame(true);
 }
 
 void AProjectile::Detonate()

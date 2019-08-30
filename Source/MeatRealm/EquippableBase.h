@@ -7,7 +7,14 @@
 
 #include "EquippableBase.generated.h"
 
+class AEquippableBase;
 class UInventoryComp;
+
+// TODO Unify all events into one and pass along the EEquipStatus. Herpaderp.
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FEquipping, AEquippableBase*, Equippable);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FEquipped, AEquippableBase*, Equippable);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FUnEquipping, AEquippableBase*, Equippable);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FUnEquipped, AEquippableBase*, Equippable);
 
 UENUM()
 enum class EInventoryCategory : uint8
@@ -29,8 +36,19 @@ class MEATREALM_API AEquippableBase : public AActor
 
 	// Public Data ////////////////////////////////////////////////////////////////
 public:
+	UPROPERTY(BlueprintAssignable, Category = "Event Dispatchers")
+		FEquipping OnEquipping;
 
+	UPROPERTY(BlueprintAssignable, Category = "Event Dispatchers")
+		FEquipped OnEquipped;
 
+	UPROPERTY(BlueprintAssignable, Category = "Event Dispatchers")
+		FUnEquipping OnUnEquipping;
+	
+	UPROPERTY(BlueprintAssignable, Category = "Event Dispatchers")
+		FUnEquipped OnUnEquipped;
+
+	
 	// Protected Data /////////////////////////////////////////////////////////////
 protected:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly)
@@ -60,7 +78,7 @@ private:
 public:
 	AEquippableBase();
 
-	void Equip();
+	void Equip(float DurationOverride = -1);
 	void Unequip();
 
 	virtual void OnPrimaryPressed() PURE_VIRTUAL(AEquippableBase::OnPrimaryPressed, ;);

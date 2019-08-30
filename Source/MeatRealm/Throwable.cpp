@@ -56,7 +56,9 @@ void AThrowable::BeginPlay()
 void AThrowable::Tick(float DeltaSeconds)
 {
 	LogMsgWithRole("AThrowable::Tick");
-	VisualiseProjectile();
+
+	if (IsEquipped())
+		VisualiseProjectile();
 }
 
 FVector AThrowable::GetAimLocation() const
@@ -165,7 +167,9 @@ void AThrowable::OnPrimaryReleased()
 	if (bIsAiming)
 	{
 		SetAiming(false);
-		ServerRequestThrow();
+
+		if (IsEquipped())
+			ServerRequestThrow();
 	}
 }
 
@@ -285,9 +289,6 @@ bool AThrowable::ServerUnEquipFinished_Validate()
 
 void AThrowable::VisualiseProjectile() const
 {
-	// TODO In:  AimGoal
-	// TODO Out: AimActual, Arc Path Points.
-
 	const auto World = GetWorld();
 	if (!World)
 	{
@@ -316,7 +317,7 @@ void AThrowable::VisualiseProjectile() const
 	Params.bTraceWithChannel = true;
 	Params.bTraceWithCollision = true;
 	Params.TraceChannel = ECollisionChannel::ECC_Visibility;
-	Params.SimFrequency = 15;
+	Params.SimFrequency = 30;
 	Params.MaxSimTime = 3;
 
 	Params.ActorsToIgnore.Add((AActor*)GetOwner()); // Don't hit big daddy
