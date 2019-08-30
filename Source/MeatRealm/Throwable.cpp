@@ -58,7 +58,16 @@ void AThrowable::Tick(float DeltaSeconds)
 	LogMsgWithRole("AThrowable::Tick");
 
 	if (IsEquipped())
+	{
+		const float Delta = 1 - MinCharge;
+		const auto ChargePerSecond = Delta/ TimeToCharge;
+		Charge = FMath::Min<float>(1, Charge + ChargePerSecond * DeltaSeconds);
+
+		auto Str = FString::Printf(TEXT("Charge: %f"), Charge);
+		LogMsgWithRole(Str);
+		
 		VisualiseProjectile();
+	}
 }
 
 FVector AThrowable::GetAimLocation() const
@@ -111,11 +120,17 @@ void AThrowable::SpawnProjectile()
 	{
 		return;
 	}
-
+	
 	Projectile->SetInstigatingControllerId(InstigatingControllerId);
 	Projectile->Instigator = Instigator;
 	Projectile->SetOwner(this);
 
+
+	
+	const float InitialSpeed = Projectile->GetInitialSpeed() * (bUseChargeShot ? Charge : 1);
+	Projectile->SetInitialSpeed(/*GetAimRotator().Vector() * */InitialSpeed);
+	LogMsgWithRole(FString::Printf(TEXT("Setting Speed: %f"), InitialSpeed));
+	
 	UGameplayStatics::FinishSpawningActor(Projectile, SpawnTransform);
 }
 
@@ -205,6 +220,8 @@ void AThrowable::ExitInventory()
 
 void AThrowable::OnEquipStarted()
 {
+	SetAiming(false);
+	
 	// Only run on the authority - TODO Client side prediction, if needed.
 	if (!HasAuthority())
 	{
@@ -246,6 +263,8 @@ bool AThrowable::ServerEquipFinished_Validate()
 
 void AThrowable::OnUnEquipStarted()
 {
+	SetAiming(false);
+
 	// Only run on the authority - TODO Client side prediction, if needed.
 	if (!HasAuthority())
 	{
@@ -266,6 +285,8 @@ bool AThrowable::ServerUnEquipStarted_Validate()
 
 void AThrowable::OnUnEquipFinished()
 {
+	SetAiming(false);
+	
 	// Only run on the authority - TODO Client side prediction, if needed.
 	if (!HasAuthority())
 	{
@@ -303,7 +324,7 @@ void AThrowable::VisualiseProjectile() const
 
 
 	// Inputs
-	float InitialSpeed = ProjectileInstance->GetInitialSpeed();
+	float InitialSpeed = ProjectileInstance->GetInitialSpeed() * (bUseChargeShot ? Charge : 1);
 	float GravityZ = ProjectileInstance->GetGravityZ();
 	float CollisionRadius = ProjectileInstance->GetCollisionRadius();
 	Params.StartLocation = GetAimLocation();
@@ -349,19 +370,24 @@ void AThrowable::VisualiseProjectile() const
 void AThrowable::SetAiming(bool NewAiming)
 {
 	bIsAiming = NewAiming;
+	if (NewAiming) 
+		Charge = MinCharge;
+
+	// Tick on owning client to enable arc visualisation
+	SetActorTickEnabled(NewAiming);
+
+
+	// Make sure preview mesh is hidden
+	if (!NewAiming)
+	{
+		HitPreviewMeshComp->SetVisibility(false);
+	}
+
 	
+	// Run on server too
 	if (!HasAuthority())
 	{
 		ServerSetAiming(NewAiming);
-
-		// Tick on owning client to enable arc visualisation
-		SetActorTickEnabled(NewAiming);
-
-		// Make sure preview mesh is hidden
-		if (!NewAiming)
-		{
-			HitPreviewMeshComp->SetVisibility(false);
-		}
 	}
 }
 void AThrowable::ServerSetAiming_Implementation(bool NewAiming)

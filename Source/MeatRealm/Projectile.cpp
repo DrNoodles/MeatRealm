@@ -57,9 +57,11 @@ float AProjectile::GetInitialSpeed() const
 {
 	return ProjectileMovementComp->InitialSpeed;
 }
-void AProjectile::InitVelocity(const FVector& ShootDirection)
+
+void AProjectile::SetInitialSpeed(float Speed)
 {
-	ProjectileMovementComp->Velocity	= ShootDirection * ProjectileMovementComp->InitialSpeed;
+	//ProjectileMovementComp->Velocity	= Velocity/* *
+	ProjectileMovementComp->InitialSpeed = Speed;
 }
 
 void AProjectile::OnCompHit(UPrimitiveComponent* HitComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp,

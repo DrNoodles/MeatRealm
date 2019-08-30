@@ -60,7 +60,7 @@ public:
 	float GetInitialSpeed() const;
 
 	// Function that initializes the projectile's velocity in the shoot direction.
-	void InitVelocity(const FVector& ShootDirection);
+	void SetInitialSpeed(float Speed);
 
 	UFUNCTION()
 	void OnCompHit(UPrimitiveComponent* HitComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp,

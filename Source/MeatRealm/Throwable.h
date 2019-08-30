@@ -23,6 +23,16 @@ class MEATREALM_API AThrowable : public AEquippableBase
 public: // Data ///////////////////////////////////////////////////////////////
 	
 protected: // Data ////////////////////////////////////////////////////////////
+
+	UPROPERTY(EditAnywhere)
+		bool bUseChargeShot = false;
+
+	UPROPERTY(EditAnywhere)
+		float MinCharge = 0.25;
+	
+	UPROPERTY(EditAnywhere)
+		float TimeToCharge = 1;
+
 	UPROPERTY(EditAnywhere)
 		float AdsMovementScale = 0.50;
 	
@@ -58,6 +68,8 @@ protected: // Methods /////////////////////////////////////////////////////////
 	
 private: // Methods ///////////////////////////////////////////////////////////
 
+	float Charge = 0;
+	
 	void BeginPlay() override;
 	void Tick(float DeltaSeconds) override;
 
