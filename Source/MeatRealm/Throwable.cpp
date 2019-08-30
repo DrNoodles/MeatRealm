@@ -1,15 +1,26 @@
 // Fill out your copyright notice in the Description page of Project Settings.
 
-
 #include "Throwable.h"
-#include "UnrealNetwork.h"
 #include "Components/SkeletalMeshComponent.h"
+#include "UnrealNetwork.h"
+#include "Kismet/GameplayStatics.h"
+#include "InventoryComp.h"
+#include "HeroCharacter.h"
+#include "Projectile.h"
 
 
 DEFINE_LOG_CATEGORY(LogThrowable);
 
 // Lifecycle //////////////////////////////////////////////////////////////////
 
+
+void AThrowable::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
+{
+	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
+
+	// Just the owner
+	DOREPLIFETIME_CONDITION(AThrowable, bIsAiming, COND_OwnerOnly);
+}
 AThrowable::AThrowable()
 {
 	bAlwaysRelevant = true;
@@ -27,6 +38,7 @@ AThrowable::AThrowable()
 	SkeletalMeshComp->SetCollisionProfileName(TEXT("NoCollision"));
 	SkeletalMeshComp->CanCharacterStepUpOn = ECB_No;
 }
+
 void AThrowable::BeginPlay()
 {
 	LogMsgWithRole("AThrowable::BeginPlay");
@@ -36,22 +48,119 @@ void AThrowable::BeginPlay()
 
 
 
+// Throwing Projectile ///////////////////////////////////////////////////////////
+
+void AThrowable::SpawnProjectile()
+{
+	LogMsgWithRole("AThrowable::SpawnProjectile()");
+
+	check(HasAuthority());
+
+	if (ProjectileClass == nullptr)
+	{
+		UE_LOG(LogTemp, Error, TEXT("Set a Projectile Class in your Throwable Blueprint to spawn it"));
+		return;
+	}
+
+	UWorld* World = GetWorld();
+	if (World == nullptr) { return; }
+
+	const auto Hero = Cast<AHeroCharacter>(GetOwner());
+	if (!Hero) return;
+
+
+	const auto AimDirection = Hero->GetAimTransform().GetRotation().Vector();
+	const auto AimLocation = Hero->GetAimTransform().GetLocation();
+	
+	// Offset the aim up or down
+	const FRotator DirectionWithPitch{ PitchAimOffset, FMath::RadiansToDegrees(AimDirection.HeadingAngle()), 0 };
+	
+	const FTransform SpawnTransform{ DirectionWithPitch,  AimLocation };
+
+	// Spawn the projectile at the muzzle.
+	auto Projectile = (AProjectile*)UGameplayStatics::BeginDeferredActorSpawnFromClass(this, ProjectileClass, SpawnTransform, ESpawnActorCollisionHandlingMethod::AlwaysSpawn);
+
+	if (Projectile == nullptr)
+	{
+		return;
+	}
+
+	Projectile->SetInstigatingControllerId(InstigatingControllerId);
+	Projectile->Instigator = Instigator;
+	Projectile->SetOwner(this);
+
+	UGameplayStatics::FinishSpawningActor(Projectile, SpawnTransform);
+}
+
+void AThrowable::ProjectileThrown()
+{
+	LogMsgWithRole("AThrowable::ProjectileThrown()");
+}
+
+void AThrowable::ServerRequestThrow_Implementation()
+{
+	MultiDoThrow();
+}
+bool AThrowable::ServerRequestThrow_Validate()
+{
+	return true;
+}
+void AThrowable::MultiDoThrow_Implementation()
+{
+	if (HasAuthority())
+	{
+		// Throw the thing!
+		SpawnProjectile();
+		Delegate->NotifyItemIsExpended(this);
+	}
+	else
+	{
+		// Notify clients of throw for client side effects
+		ProjectileThrown();
+	}
+}
+bool AThrowable::MultiDoThrow_Validate()
+{
+	return true;
+}
+
+
+
 // Input //////////////////////////////////////////////////////////////////////
 
 void AThrowable::OnPrimaryPressed()
 {
-}
+	LogMsgWithRole("AThrowable::OnPrimaryPressed()");
 
+	bIsAiming = true;
+	ServerSetAiming(true); 
+}
 void AThrowable::OnPrimaryReleased()
 {
+	LogMsgWithRole("AThrowable::OnPrimaryReleased()");
+
+	if (bIsAiming)
+	{
+		bIsAiming = false;
+		ServerSetAiming(false);
+
+		ServerRequestThrow();
+	}
 }
 
 void AThrowable::OnSecondaryPressed()
 {
+	LogMsgWithRole("AThrowable::OnSecondaryPressed()");
+	if (bIsAiming)
+	{
+		bIsAiming = false;
+		ServerSetAiming(false);
+	}
 }
-
 void AThrowable::OnSecondaryReleased()
 {
+	LogMsgWithRole("AThrowable::OnSecondaryReleased()");
+
 }
 
 
@@ -63,6 +172,7 @@ void AThrowable::EnterInventory()
 	LogMsgWithRole("AThrowable::EnterInventory");
 	check(HasAuthority())
 }
+
 void AThrowable::ExitInventory()
 {
 	LogMsgWithRole("AThrowable::ExitInventory");
@@ -81,6 +191,14 @@ void AThrowable::OnEquipStarted()
 	LogMsgWithRole("AThrowable::OnEquipStarted");
 
 }
+void AThrowable::ServerEquipStarted_Implementation()
+{
+	OnEquipStarted();
+}
+bool AThrowable::ServerEquipStarted_Validate()
+{
+	return true;
+}
 
 void AThrowable::OnEquipFinished()
 {
@@ -92,6 +210,14 @@ void AThrowable::OnEquipFinished()
 	}
 
 	LogMsgWithRole("AThrowable::OnEquipFinished");
+}
+void AThrowable::ServerEquipFinished_Implementation()
+{
+	OnEquipFinished();
+}
+bool AThrowable::ServerEquipFinished_Validate()
+{
+	return true;
 }
 
 void AThrowable::OnUnEquipStarted()
@@ -105,6 +231,14 @@ void AThrowable::OnUnEquipStarted()
 
 	LogMsgWithRole("AThrowable::OnUnEquipStarted");
 }
+void AThrowable::ServerUnEquipStarted_Implementation()
+{
+	OnUnEquipStarted();
+}
+bool AThrowable::ServerUnEquipStarted_Validate()
+{
+	return true;
+}
 
 void AThrowable::OnUnEquipFinished()
 {
@@ -117,40 +251,23 @@ void AThrowable::OnUnEquipFinished()
 
 	LogMsgWithRole("AThrowable::OnUnEquipFinished");
 }
-
-
-
-// Replication ////////////////////////////////////////////////////////////////
-
-void AThrowable::ServerEquipStarted_Implementation()
-{
-	OnEquipStarted();
-}
-bool AThrowable::ServerEquipStarted_Validate()
-{
-	return true;
-}
-void AThrowable::ServerEquipFinished_Implementation()
-{
-	OnEquipFinished();
-}
-bool AThrowable::ServerEquipFinished_Validate()
-{
-	return true;
-}
-void AThrowable::ServerUnEquipStarted_Implementation()
-{
-	OnUnEquipStarted();
-}
-bool AThrowable::ServerUnEquipStarted_Validate()
-{
-	return true;
-}
 void AThrowable::ServerUnEquipFinished_Implementation()
 {
 	OnUnEquipFinished();
 }
 bool AThrowable::ServerUnEquipFinished_Validate()
+{
+	return true;
+}
+
+
+// Aiming /////////////////////////////////////////////////////////////////////
+
+void AThrowable::ServerSetAiming_Implementation(bool NewAiming)
+{
+	bIsAiming = NewAiming;
+}
+bool AThrowable::ServerSetAiming_Validate(bool NewAiming)
 {
 	return true;
 }
@@ -184,4 +301,3 @@ FString AThrowable::GetRoleText() const
 {
 	return GetEnumText(Role) + " " + GetEnumText(GetRemoteRole());
 }
-

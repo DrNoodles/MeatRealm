@@ -88,8 +88,6 @@ protected:
 protected:
 
 private:
-	
-	uint32 HeroControllerId;
 
 
 
@@ -97,6 +95,10 @@ public:
 	AWeapon();
 
 	/* AEquippableBase */
+	void OnPrimaryPressed() override;
+	void OnPrimaryReleased() override;
+	void OnSecondaryPressed() override;
+	void OnSecondaryReleased() override;
 	void OnEquipStarted() override;
 	void OnEquipFinished() override;
 	void OnUnEquipStarted() override;
@@ -109,16 +111,10 @@ public:
 
 	void ConfigWeapon(FWeaponConfig& Config) const;
 
-	void Input_PullTrigger();
-	void Input_ReleaseTrigger();
 	void Input_Reload();
-	void Input_AdsPressed();
-	void Input_AdsReleased();
 	bool CanGiveAmmo();
 	bool TryGiveAmmo();
-	void SetHeroControllerId(uint32 HeroControllerUid) { this->HeroControllerId = HeroControllerUid; }
 	float GetAdsMovementScale() const { return AdsMovementScale; }
-	//float GetHolsterDuration() const { return HolsterDuration; }
 
 	/* IReceiverComponentDelegate */
 	void ShotFired() override;
@@ -133,6 +129,7 @@ public:
 	float GetDrawDuration() override;
 	AActor* GetOwningPawn() override;
 	FString GetWeaponName() override;
+	bool IsTargeting()  const { return ReceiverComp->IsAds(); }
 	bool IsReloading() const { return ReceiverComp->IsReloading(); }
 	void CancelAnyReload();
 	int GetAmmoInClip() const { return ReceiverComp->GetState().AmmoInClip; }
@@ -147,7 +144,11 @@ public:
 
 protected:
 private:
-
+	void Input_PullTrigger();
+	void Input_ReleaseTrigger();
+	void Input_AdsPressed();
+	void Input_AdsReleased();
+	
 	UFUNCTION(Server, Reliable, WithValidation)
 		void ServerRPC_Equip();
 	

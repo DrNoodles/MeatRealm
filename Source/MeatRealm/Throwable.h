@@ -9,40 +9,68 @@
 
 DECLARE_LOG_CATEGORY_EXTERN(LogThrowable, Display, All);
 
+class AProjectile;
+
 /**
  * 
  */
-UCLASS()
+UCLASS(Abstract)
 class MEATREALM_API AThrowable : public AEquippableBase
 {
 	GENERATED_BODY()
 
 public: // Data ///////////////////////////////////////////////////////////////
+	
 protected: // Data ////////////////////////////////////////////////////////////
+	UPROPERTY(EditAnywhere)
+		float AdsMovementScale = 0.50;
+	
+	// How much the weapon should aim up or down in degrees. Eg 90 is up, 0 straight ahead, and -90 is down.
+	UPROPERTY(EditAnywhere, BlueprintReadOnly)
+		float PitchAimOffset = 0;
+	
+	// Projectile class to spawn.
+	UPROPERTY(EditDefaultsOnly)
+		TSubclassOf<AProjectile> ProjectileClass;
+	
 private: // Data //////////////////////////////////////////////////////////////
-		UPROPERTY(VisibleAnywhere)
+	UPROPERTY(VisibleAnywhere)
 		USceneComponent* RootComp = nullptr;
 
 	UPROPERTY(VisibleAnywhere)
 		USkeletalMeshComponent* SkeletalMeshComp = nullptr;
 
+	UPROPERTY(Replicated)
+	bool bIsAiming;
 
 
-
-
+	
 public: // Methods ////////////////////////////////////////////////////////////
 	AThrowable();
-	
+	bool IsTargeting() const { return bIsAiming; }
+	float GetAdsMovementScale() const { return AdsMovementScale; }
+
 protected: // Methods /////////////////////////////////////////////////////////
+	
 private: // Methods ///////////////////////////////////////////////////////////
 
+	// Throw Projectile
+	UFUNCTION(Server, Reliable, WithValidation)
+	void ServerRequestThrow();
+	UFUNCTION(NetMulticast, Reliable, WithValidation)
+	void MultiDoThrow();
+	// [Server]
+	void SpawnProjectile();
+	// [All Clients]
+	void ProjectileThrown();
+	
 	void BeginPlay() override;
 
 	// Input
-	void OnPrimaryPressed();
-	void OnPrimaryReleased();
-	void OnSecondaryPressed();
-	void OnSecondaryReleased();
+	void OnPrimaryPressed() override;
+	void OnPrimaryReleased() override;
+	void OnSecondaryPressed() override;
+	void OnSecondaryReleased() override;
 	
 	/* AEquippableBase */
 	void EnterInventory() override;
@@ -57,14 +85,17 @@ private: // Methods ///////////////////////////////////////////////////////////
 
 	// Replication
 	UFUNCTION(Server, Reliable, WithValidation)
-	void ServerEquipStarted();
+		void ServerEquipStarted();
 	UFUNCTION(Server, Reliable, WithValidation)
 		void ServerEquipFinished();
 	UFUNCTION(Server, Reliable, WithValidation)
 		void ServerUnEquipStarted();
 	UFUNCTION(Server, Reliable, WithValidation)
 		void ServerUnEquipFinished();
-	
+
+	UFUNCTION(Server, Reliable, WithValidation)
+	void ServerSetAiming(bool NewAiming);
+
 	// Helpers
 	void LogMsgWithRole(FString message) const;
 	static FString GetEnumText(ENetRole role);

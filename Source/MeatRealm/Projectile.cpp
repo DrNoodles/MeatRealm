@@ -104,8 +104,17 @@ void AProjectile::OnCompBeginOverlap(UPrimitiveComponent* OverlappedComp, AActor
 
 	if (bIsAoe)
 	{
-		const FVector NudgedImpactLocation = SweepResult.ImpactPoint + SweepResult.ImpactNormal * 10.0f;
-		AoeDamage(NudgedImpactLocation);
+		// TODO Implement bounce off players
+		if (true || bDetonateOnPlayerImpact)
+		{
+			const FVector NudgedImpactLocation = SweepResult.ImpactPoint + SweepResult.ImpactNormal * 10.0f;
+			AoeDamage(NudgedImpactLocation);
+		}
+		else
+		{
+			//TODO Needs to bounce!
+			return;
+		}
 	}
 	else // Point Damage
 	{

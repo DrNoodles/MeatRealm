@@ -32,6 +32,9 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly)
 	bool bIsAoe = false;
 
+	UPROPERTY(EditAnywhere, BlueprintReadOnly)
+		bool bDetonateOnPlayerImpact;
+	
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, meta = (EditCondition = "bIsAoe"))
 	float FuseTime = -1;
 
@@ -50,6 +53,7 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, meta = (EditCondition = "bDebugVisualiseAoe"))
 	TSubclassOf<AActor> DebugVisClass;
 	FTimerHandle DetonationTimerHandle;
+
 
 	// Function that initializes the projectile's velocity in the shoot direction.
 	void InitVelocity(const FVector& ShootDirection);
