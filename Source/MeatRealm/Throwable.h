@@ -27,10 +27,10 @@ protected: // Data ////////////////////////////////////////////////////////////
 	UPROPERTY(EditAnywhere)
 		bool bUseChargeShot = false;
 
-	UPROPERTY(EditAnywhere)
+	UPROPERTY(EditAnywhere, meta = (EditCondition = "bUseChargeShot"))
 		float MinCharge = 0.25;
 	
-	UPROPERTY(EditAnywhere)
+	UPROPERTY(EditAnywhere, meta = (EditCondition = "bUseChargeShot"))
 		float TimeToCharge = 1;
 
 	UPROPERTY(EditAnywhere)
