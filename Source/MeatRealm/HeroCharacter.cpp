@@ -296,55 +296,65 @@ void AHeroCharacter::TickWalking(float DT)
 
 
 	// Calculate Look Vector for mouse or gamepad
-	FVector LookVec;
-
+	FAimInfo Info;
 	if (bUseMouseAim)
 	{
+		
 		FVector WorldLocation, WorldDirection;
 		const auto Success = HeroCont->DeprojectMousePositionToWorld(OUT WorldLocation, OUT WorldDirection);
 		if (Success)
 		{
-			const FVector AimStart = GetAimTransform().GetLocation();
+			Info.Muzzle = GetAimTransform();
+			
 
-			const FVector CursorHit = FMath::LinePlaneIntersection(
+
+			
+			const FVector MuzzleLocation = GetAimTransform().GetLocation();
+
+			Info.CursorOnAimPlane = FMath::LinePlaneIntersection(
 				WorldLocation,
 				WorldLocation + (WorldDirection * 5000),
-				AimStart,
+				MuzzleLocation,
 				FVector(0, 0, 1));
 
 
+			
+			
 			// TODO FIXME This is a hacky fix to stop the character spazzing out when the cursor is close to the weapon.
-			const FVector PawnLocationOnAimPlane = FVector{ GetActorLocation().X, GetActorLocation().Y, AimStart.Z };
-			const float PawnDistToCursor = FVector::Dist(CursorHit, PawnLocationOnAimPlane);
-			const float PawnDistToBarrel = FVector::Dist(AimStart, PawnLocationOnAimPlane);
+			Info.PawnLocationOnAimPlane = FVector{ GetActorLocation().X, GetActorLocation().Y, MuzzleLocation.Z };
+			const float PawnDistToCursor = FVector::Dist(Info.CursorOnAimPlane, Info.PawnLocationOnAimPlane);
+			const float PawnDistToBarrel = FVector::Dist(MuzzleLocation, Info.PawnLocationOnAimPlane);
 			
 			// If cursor is between our pawn and the barrel, aim from our location, not the gun's.
 			if (PawnDistToCursor < PawnDistToBarrel * 2)
 			{
 				//LogMsgWithRole("Short aim");
-				LookVec = CursorHit - PawnLocationOnAimPlane;
+				Info.PawnLookVec = Info.CursorOnAimPlane - Info.PawnLocationOnAimPlane;
 			}
 			else
 			{
-				LookVec = CursorHit - AimStart;
+				Info.PawnLookVec = Info.CursorOnAimPlane - MuzzleLocation;
 			}
 
 		}
 	}
 	else // Gamepad
 	{
-		LookVec = FVector{ AxisFaceUp, AxisFaceRight, 0 };
+		Info.PawnLookVec = FVector{ AxisFaceUp, AxisFaceRight, 0 };
 	}
 
 	// Apply Look Vector - Aim character with look, if look is below deadzone then try use move vec
-	if (LookVec.SizeSquared() >= deadzoneSquared)
+	if (Info.PawnLookVec.SizeSquared() >= deadzoneSquared)
 	{
-		Controller->SetControlRotation(LookVec.Rotation());
+		Controller->SetControlRotation(Info.PawnLookVec.Rotation());
 	}
 	else if (MoveVec.SizeSquared() >= deadzoneSquared)
 	{
 		Controller->SetControlRotation(MoveVec.Rotation());
 	}
+
+	
+	LastAimInfo = Info;
 }
 
 void AHeroCharacter::TickRunning(float DT)
@@ -1463,6 +1473,10 @@ void AHeroCharacter::GetReachLine(OUT FVector& outStart, OUT FVector& outEnd) co
 
 
 // Other //////////////////////////////////////////////////////////////////////
+FAimInfo AHeroCharacter::GetAimInfo()
+{
+	return LastAimInfo;
+}
 
 void AHeroCharacter::RefreshWeaponAttachments()
 {

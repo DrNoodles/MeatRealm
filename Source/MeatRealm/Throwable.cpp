@@ -8,7 +8,7 @@
 #include "HeroCharacter.h"
 #include "Projectile.h"
 #include "Components/StaticMeshComponent.h"
-
+#include "Structs/AimInfo.h"
 
 DEFINE_LOG_CATEGORY(LogThrowable);
 
@@ -70,8 +70,11 @@ void AThrowable::Tick(float DeltaSeconds)
 	}
 }
 
+
 FVector AThrowable::GetAimLocation() const
 {
+	const auto AimInfo = Delegate->GetAimInfo();
+	//return AimInfo.Muzzle.GetLocation();
 	const auto Hero = Cast<AHeroCharacter>(GetOwner());
 	if (!Hero)
 		return FVector::ZeroVector;
@@ -80,11 +83,13 @@ FVector AThrowable::GetAimLocation() const
 }
 FRotator AThrowable::GetAimRotator() const
 {
-	const auto Hero = Cast<AHeroCharacter>(GetOwner());
+	const auto AimInfo = Delegate->GetAimInfo();
+	
+	/*const auto Hero = Cast<AHeroCharacter>(GetOwner());
 	if (!Hero) 
 		return FRotator::ZeroRotator;
-
-	const auto AimDirection = Hero->GetAimTransform().GetRotation().Vector();
+*/
+	const auto AimDirection = AimInfo.Muzzle.GetRotation().Vector();
 	const FRotator DirectionWithPitch{ PitchAimOffset, FMath::RadiansToDegrees(AimDirection.HeadingAngle()), 0 };
 
 	return DirectionWithPitch;

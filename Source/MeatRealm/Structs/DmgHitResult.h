@@ -6,7 +6,7 @@
 
 // TODO Use something built in already?
 USTRUCT(BlueprintType)
-struct MEATREALM_API FMRHitResult
+struct FMRHitResult
 {
 	GENERATED_BODY()
 

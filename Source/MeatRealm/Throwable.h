@@ -73,7 +73,7 @@ private: // Methods ///////////////////////////////////////////////////////////
 	void BeginPlay() override;
 	void Tick(float DeltaSeconds) override;
 
-	
+
 	// Throw Projectile
 	UFUNCTION(Server, Reliable, WithValidation)
 	void ServerRequestThrow();

@@ -6,6 +6,7 @@
 #include "Components/ActorComponent.h"
 #include "ItemArmour.h"
 #include "Throwable.h"
+#include "Structs/AimInfo.h"
 
 #include "InventoryComp.generated.h"
 
@@ -24,6 +25,7 @@ public:
 	virtual uint32 GetControllerId() = 0;
 	virtual FTransform GetHandSocketTransform() = 0;
 	virtual void RefreshWeaponAttachments() = 0;
+	virtual FAimInfo GetAimInfo() = 0;
 };
 
 
@@ -169,7 +171,7 @@ public:
 
 	void SetDelegate(IInventoryCompDelegate* Dgate) { Delegate = Dgate; }
 	bool RemoveEquippableFromInventory(AEquippableBase* Equippable);
-
+	FAimInfo GetAimInfo() const { return Delegate->GetAimInfo(); }
 
 
 	// Protected Methods //////////////////////////////////////////////////////////

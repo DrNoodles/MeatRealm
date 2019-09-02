@@ -6,6 +6,7 @@
 #include "GameFramework/Character.h"
 #include "Interfaces/AffectableInterface.h"
 #include "InventoryComp.h" // For IInventoryCompDelegate - TODO Split that interface out of InventoryComp for leaner compiling
+#include "Structs/AimInfo.h"
 
 #include "HeroCharacter.generated.h"
 
@@ -112,6 +113,8 @@ public:
 
 	UPROPERTY(EditAnywhere, Category = Debug)
 		bool bDrawMovementSpeed;
+	
+	FAimInfo LastAimInfo;
 
 
 protected:
@@ -348,6 +351,7 @@ private:
 	FHitResult GetFirstPhysicsBodyInReach() const;
 
 	void GetReachLine(FVector& outStart, FVector& outEnd) const;
+	FAimInfo GetAimInfo() override;
 
 	void LogMsgWithRole(FString message) const;
 	FString GetRoleText() const;
